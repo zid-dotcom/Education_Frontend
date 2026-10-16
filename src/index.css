@@ -1,0 +1,164 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+html {
+  scroll-behavior: smooth;
+}
+
+:root {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  color-scheme: light;
+  --bg-cream: #ffffff;
+  --yellow-gold: #F5B718;
+  --yellow-light: #FFEAA5;
+  --card-cream: #ffffff;
+  --dark-main: #1C1917;
+}
+
+body {
+  background-color: #ffffff;
+  color: #1C1917;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Outfit', sans-serif;
+}
+
+/* Custom scrollbar styling - clean, neutral, modern (no yellow lines) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.custom-staff-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.custom-staff-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-staff-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+.custom-staff-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #10b981;
+}
+
+/* Utility to hide scrollbar while preserving scroll behavior */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+/* Color Tokens matching reference design */
+.bg-theme-cream {
+  background-color: #FAF6ED;
+}
+
+.bg-theme-yellow {
+  background-color: #F5B718;
+}
+
+.bg-theme-yellow-light {
+  background-color: #FFEAA5;
+}
+
+.bg-theme-card {
+  background-color: #FFFDF5;
+}
+
+.bg-theme-dark {
+  background-color: #1C1917;
+}
+
+/* Scroll reveal animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes heroPopIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.hero-pop-in {
+  animation: heroPopIn 1.2s ease-in-out both;
+}
+
+.hero-pop-in-delay {
+  animation: heroPopIn 1.2s 0.15s ease-in-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-pop-in,
+  .hero-pop-in-delay {
+    animation: none;
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+/* Micro hover lift */
+.card-hover-lift {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover-lift:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 35px -10px rgba(245, 183, 24, 0.25), 0 10px 15px -5px rgba(0, 0, 0, 0.04);
+}
+
+@media (max-width: 1023px) {
+  .login-page {
+    background-image: none !important;
+  }
+}
