@@ -23,9 +23,33 @@ const Navbar = ({ onOpenApplyModal }) => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Close menu on route change
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
+
+  // Close mobile menu on resize to desktop view
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
     <header
@@ -190,24 +214,43 @@ const Navbar = ({ onOpenApplyModal }) => {
         </div>
       </div>
 
-      {/* MOBILE MENU FLYOUT - OVERLAY (DOES NOT PUSH HERO CONTENT DOWN) */}
+      {/* FULL-SCREEN MOBILE MENU OVERLAY */}
       {isMobileMenuOpen && (
-        <>
-          {/* Transparent dismiss layer - tap outside to close with no dark shadow */}
-          <div
-            className="fixed inset-0 z-30 md:hidden"
-            onClick={() => setIsMobileMenuOpen(false)}
-          />
+        <div className="fixed inset-0 z-[100] bg-white flex flex-col h-[100dvh] w-full md:hidden overflow-y-auto animate-in fade-in duration-200">
+          {/* TOP BAR */}
+          <div className="w-full px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
+            <Link
+              to="/"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex items-center gap-3 group"
+            >
+              <img src={logoImage} alt="AurumFX Logo" className="h-11 w-11 object-contain transition-transform group-hover:scale-105" />
+              <span className="flex items-baseline whitespace-nowrap font-black tracking-tight" aria-label="Aurum FX Academy">
+                <span className="text-2xl text-amber-500">Aurum</span>
+                <span className="text-2xl text-slate-400">FX</span>
+                <span className="ml-2 border-l border-slate-300 pl-2 text-xs font-extrabold uppercase tracking-[0.16em] text-slate-950">Academy</span>
+              </span>
+            </Link>
 
-          {/* Absolute floating menu positioned right under the header bar */}
-          <div className="md:hidden absolute top-full left-0 right-0 bg-white border-b border-slate-200 shadow-xl z-40 animate-in slide-in-from-top-2 duration-200 px-4 pt-3 pb-6 space-y-3">
-            <div className="flex flex-col space-y-1">
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="p-2.5 rounded-xl text-slate-900 bg-amber-100/80 hover:bg-amber-200 transition-colors focus:outline-none cursor-pointer"
+              aria-label="Close mobile menu"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* MENU NAVIGATION LIST */}
+          <div className="flex-1 flex flex-col justify-between overflow-y-auto">
+            <nav className="flex flex-col">
               <NavLink
                 to="/"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={({ isActive }) =>
-                  `px-4 py-2.5 rounded-xl text-sm font-bold ${
-                    isActive ? 'bg-amber-100 text-amber-900' : 'text-slate-700 hover:bg-slate-50'
+                  `px-6 py-4 text-base font-bold border-b border-slate-100 transition-colors flex items-center justify-between ${
+                    isActive ? 'text-amber-500 font-extrabold' : 'text-slate-900 hover:text-amber-500'
                   }`
                 }
               >
@@ -218,8 +261,8 @@ const Navbar = ({ onOpenApplyModal }) => {
                 to="/courses"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={({ isActive }) =>
-                  `px-4 py-2.5 rounded-xl text-sm font-bold ${
-                    isActive ? 'bg-amber-100 text-amber-900' : 'text-slate-700 hover:bg-slate-50'
+                  `px-6 py-4 text-base font-bold border-b border-slate-100 transition-colors flex items-center justify-between ${
+                    isActive ? 'text-amber-500 font-extrabold' : 'text-slate-900 hover:text-amber-500'
                   }`
                 }
               >
@@ -230,8 +273,8 @@ const Navbar = ({ onOpenApplyModal }) => {
                 to="/about"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={({ isActive }) =>
-                  `px-4 py-2.5 rounded-xl text-sm font-bold ${
-                    isActive ? 'bg-amber-100 text-amber-900' : 'text-slate-700 hover:bg-slate-50'
+                  `px-6 py-4 text-base font-bold border-b border-slate-100 transition-colors flex items-center justify-between ${
+                    isActive ? 'text-amber-500 font-extrabold' : 'text-slate-900 hover:text-amber-500'
                   }`
                 }
               >
@@ -242,8 +285,8 @@ const Navbar = ({ onOpenApplyModal }) => {
                 to="/admissions"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={({ isActive }) =>
-                  `px-4 py-2.5 rounded-xl text-sm font-bold ${
-                    isActive ? 'bg-amber-100 text-amber-900' : 'text-slate-700 hover:bg-slate-50'
+                  `px-6 py-4 text-base font-bold border-b border-slate-100 transition-colors flex items-center justify-between ${
+                    isActive ? 'text-amber-500 font-extrabold' : 'text-slate-900 hover:text-amber-500'
                   }`
                 }
               >
@@ -254,23 +297,24 @@ const Navbar = ({ onOpenApplyModal }) => {
                 to="/contact"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={({ isActive }) =>
-                  `px-4 py-2.5 rounded-xl text-sm font-bold ${
-                    isActive ? 'bg-amber-100 text-amber-900' : 'text-slate-700 hover:bg-slate-50'
+                  `px-6 py-4 text-base font-bold border-b border-slate-100 transition-colors flex items-center justify-between ${
+                    isActive ? 'text-amber-500 font-extrabold' : 'text-slate-900 hover:text-amber-500'
                   }`
                 }
               >
                 Contact Us
               </NavLink>
-            </div>
+            </nav>
 
-            <div className="pt-2 border-t border-slate-100">
+            {/* BOTTOM ACTIONS / AUTH */}
+            <div className="px-6 py-6 border-t border-slate-100 mt-auto bg-white space-y-3">
               {isAuthenticated ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {user?.role === 'staff' && (
                     <Link
                       to="/staff/dashboard"
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-xl text-sm font-bold text-slate-800"
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-amber-50 hover:bg-amber-100 border border-amber-200/60 rounded-xl text-sm font-bold text-slate-800 transition-colors"
                     >
                       <User className="w-4 h-4 text-amber-600" />
                       <span>Open Staff Portal</span>
@@ -280,42 +324,47 @@ const Navbar = ({ onOpenApplyModal }) => {
                     <Link
                       to="/student-dashboard"
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-xl text-sm font-bold text-slate-800"
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-amber-50 hover:bg-amber-100 border border-amber-200/60 rounded-xl text-sm font-bold text-slate-800 transition-colors"
                     >
                       <User className="w-4 h-4 text-amber-600" />
                       <span>Open Student Dashboard</span>
                     </Link>
                   )}
                   {['admin', 'super_admin'].includes(user?.role) && (
-                    <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-xl text-sm font-bold text-slate-800">
-                      <User className="w-4 h-4 text-amber-600" />
-                      <span>Hello, {user?.name || 'User'}</span>
-                    </div>
+                    <Link
+                      to="/admin/announcements"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-[#1C1917] hover:bg-slate-800 text-[#F5B718] rounded-xl text-sm font-extrabold uppercase tracking-wider transition-colors"
+                    >
+                      <span>Admin Portal ({user?.name || 'Admin'})</span>
+                    </Link>
                   )}
                   <button
                     onClick={() => {
                       logout();
                       setIsMobileMenuOpen(false);
                     }}
-                    className="w-full py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 border border-rose-200"
+                    className="w-full py-3 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 border border-rose-200 transition-colors cursor-pointer"
                   >
                     <LogOut className="w-4 h-4" />
                     <span>Sign Out</span>
                   </button>
                 </div>
               ) : (
-                <Link
-                  to="/login"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="w-full py-3 bg-amber-300 hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider rounded-full shadow-md flex items-center justify-center gap-1.5"
-                >
-                  <span>Get Started</span>
-                  <span className="text-slate-950 font-bold">&rarr;</span>
-                </Link>
+                <div className="space-y-3">
+                  <Link
+                    to="/login"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="w-full py-3.5 bg-amber-400 hover:bg-amber-500 text-slate-950 font-extrabold text-xs uppercase tracking-wider rounded-full shadow-sm hover:shadow flex items-center justify-center gap-2 active:scale-98 transition-all"
+                  >
+                    <span>Get Started</span>
+                    <span className="text-slate-950 font-bold">&rarr;</span>
+                  </Link>
+                </div>
               )}
             </div>
           </div>
-        </>
+        </div>
       )}
     </header>
   );
