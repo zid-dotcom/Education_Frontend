@@ -792,6 +792,7 @@ const StaffDashboard = ({ defaultTab }) => {
       (s.name || s.student_name || '').toLowerCase().includes(q) ||
       (s.email || '').toLowerCase().includes(q) ||
       (s.phone || '').includes(q) ||
+      (s.address || s.residential_address || '').toLowerCase().includes(q) ||
       String(s.enrollment_id || s.id || '').includes(q)
     );
   }, [courseStudents, studentsSearch]);
@@ -871,7 +872,7 @@ const StaffDashboard = ({ defaultTab }) => {
         {/* Part 2: Center Main Content Area (Independent Scroll Container) */}
         <main className="min-w-0 flex-1 relative flex flex-col h-full bg-[#F8FAF9] overflow-hidden">
           {/* Top Header Bar - Pinned at Top */}
-          <div className="shrink-0 px-5 sm:px-8 pt-5 pb-3 border-b border-slate-100 bg-[#F8FAF9]">
+          <div className="shrink-0 px-3.5 sm:px-8 pt-3.5 sm:pt-5 pb-2.5 sm:pb-3 border-b border-slate-100 bg-[#F8FAF9]">
             <StaffHeader
               title={getTabTitle()}
               loading={loading}
@@ -906,7 +907,7 @@ const StaffDashboard = ({ defaultTab }) => {
           </div>
 
           {/* Content Container - Only this section scrolls */}
-          <div className="w-full px-5 sm:px-8 py-5 flex-1 overflow-y-auto space-y-6 custom-staff-scrollbar">
+          <div className="w-full px-3.5 sm:px-8 py-4 sm:py-5 flex-1 overflow-y-auto space-y-5 sm:space-y-6 custom-staff-scrollbar">
             {error && (
               <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-800 text-xs font-semibold flex items-center justify-between">
                 <span>{error}</span>

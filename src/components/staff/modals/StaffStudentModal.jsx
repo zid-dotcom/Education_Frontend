@@ -19,25 +19,25 @@ const StaffStudentModal = ({
   if (!isOpen || !selectedStudent) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 sa-fade">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 md:p-6 sa-fade">
       <div
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs"
         onClick={onClose}
       />
-      <div className="relative flex w-full max-w-2xl flex-col max-h-[90vh] overflow-hidden rounded-3xl bg-white shadow-2xl border border-slate-100 sa-rise">
+      <div className="relative flex w-full max-w-2xl flex-col max-h-[92vh] sm:max-h-[90vh] overflow-hidden rounded-3xl bg-white shadow-2xl border border-slate-100 sa-rise">
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-slate-50/50">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
+        <div className="flex items-center justify-between border-b border-slate-100 px-4 sm:px-6 py-3.5 sm:py-4 bg-slate-50/50">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
               {(selectedStudent.name || selectedStudent.student_name || 'S').charAt(0).toUpperCase()}
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-base text-slate-800">
+                <h3 className="font-bold text-sm sm:text-base text-slate-800 truncate">
                   {selectedStudent.name || selectedStudent.student_name || 'Student Details'}
                 </h3>
                 <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider shrink-0 ${
                     String(selectedStudent.account_status || 'active').toLowerCase() === 'active'
                       ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                       : 'bg-slate-100 text-slate-600'
@@ -46,7 +46,7 @@ const StaffStudentModal = ({
                   {selectedStudent.account_status || 'Active'}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 truncate">
                 Course: <span className="font-semibold text-emerald-700">{activeCourseObj?.title || 'Assigned Course'}</span>
               </p>
             </div>
@@ -54,14 +54,14 @@ const StaffStudentModal = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer shrink-0 ml-2"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Modal Content - Structured Tables */}
-        <div className="p-6 overflow-y-auto space-y-5">
+        <div className="p-3.5 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5">
           {/* Table 1: Personal & Contact Information */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2.5 flex items-center gap-1.5">
@@ -74,12 +74,12 @@ const StaffStudentModal = ({
               <table className="w-full text-left text-xs">
                 <tbody className="divide-y divide-slate-100">
                   <tr className="bg-slate-50/40">
-                    <td className="px-4 py-2.5 font-semibold text-slate-500 w-1/3">Full Name</td>
-                    <td className="px-4 py-2.5 font-bold text-slate-800">{selectedStudent.name || '—'}</td>
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5 font-semibold text-slate-500 w-2/5 sm:w-1/3 text-[11px] sm:text-xs">Full Name</td>
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5 font-bold text-slate-800 text-[11px] sm:text-xs">{selectedStudent.name || '—'}</td>
                   </tr>
                   <tr>
-                    <td className="px-4 py-2.5 font-semibold text-slate-500 w-1/3">Email Address</td>
-                    <td className="px-4 py-2.5 text-slate-800">
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5 font-semibold text-slate-500 w-2/5 sm:w-1/3 text-[11px] sm:text-xs">Email Address</td>
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-slate-800 text-[11px] sm:text-xs">
                       {selectedStudent.email ? (
                         <a
                           href={`mailto:${selectedStudent.email}`}
@@ -94,8 +94,8 @@ const StaffStudentModal = ({
                     </td>
                   </tr>
                   <tr className="bg-slate-50/40">
-                    <td className="px-4 py-2.5 font-semibold text-slate-500 w-1/3">Phone Number</td>
-                    <td className="px-4 py-2.5 font-mono font-medium text-slate-800">
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5 font-semibold text-slate-500 w-2/5 sm:w-1/3 text-[11px] sm:text-xs">Phone Number</td>
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5 font-mono font-medium text-slate-800 text-[11px] sm:text-xs">
                       {selectedStudent.phone ? (
                         <a
                           href={`tel:${selectedStudent.phone}`}
@@ -110,8 +110,8 @@ const StaffStudentModal = ({
                     </td>
                   </tr>
                   <tr>
-                    <td className="px-4 py-2.5 font-semibold text-slate-500 w-1/3">Residential Address</td>
-                    <td className="px-4 py-2.5 text-slate-700 capitalize">
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5 font-semibold text-slate-500 w-2/5 sm:w-1/3 text-[11px] sm:text-xs">Residential Address</td>
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-slate-700 capitalize text-[11px] sm:text-xs">
                       {selectedStudent.address ? (
                         <span className="inline-flex items-center gap-1.5">
                           <MapPin className="h-3 w-3 text-slate-400" />
@@ -123,8 +123,8 @@ const StaffStudentModal = ({
                     </td>
                   </tr>
                   <tr className="bg-slate-50/40">
-                    <td className="px-4 py-2.5 font-semibold text-slate-500 w-1/3">Highest Qualification</td>
-                    <td className="px-4 py-2.5 text-slate-700 capitalize">
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5 font-semibold text-slate-500 w-2/5 sm:w-1/3 text-[11px] sm:text-xs">Highest Qualification</td>
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-slate-700 capitalize text-[11px] sm:text-xs">
                       {selectedStudent.highest_qualification ? (
                         <span className="inline-flex items-center gap-1.5 font-medium">
                           <GraduationCap className="h-3.5 w-3.5 text-emerald-600" />
@@ -152,14 +152,14 @@ const StaffStudentModal = ({
               <table className="w-full text-left text-xs">
                 <tbody className="divide-y divide-slate-100">
                   <tr className="bg-slate-50/40">
-                    <td className="px-4 py-2.5 font-semibold text-slate-500 w-1/3">Guardian / Parent Name</td>
-                    <td className="px-4 py-2.5 font-bold text-slate-800 capitalize">
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5 font-semibold text-slate-500 w-2/5 sm:w-1/3 text-[11px] sm:text-xs">Guardian / Parent Name</td>
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5 font-bold text-slate-800 capitalize text-[11px] sm:text-xs">
                       {selectedStudent.parent_name || '—'}
                     </td>
                   </tr>
                   <tr>
-                    <td className="px-4 py-2.5 font-semibold text-slate-500 w-1/3">Guardian Contact Phone</td>
-                    <td className="px-4 py-2.5 font-mono text-slate-800">
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5 font-semibold text-slate-500 w-2/5 sm:w-1/3 text-[11px] sm:text-xs">Guardian Contact Phone</td>
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5 font-mono text-slate-800 text-[11px] sm:text-xs">
                       {selectedStudent.parent_phone ? (
                         <a
                           href={`tel:${selectedStudent.parent_phone}`}
@@ -190,14 +190,14 @@ const StaffStudentModal = ({
               <table className="w-full text-left text-xs">
                 <tbody className="divide-y divide-slate-100">
                   <tr className="bg-slate-50/40">
-                    <td className="px-4 py-2.5 font-semibold text-slate-500 w-1/3">Enrollment ID</td>
-                    <td className="px-4 py-2.5 font-mono font-bold text-slate-800">
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5 font-semibold text-slate-500 w-2/5 sm:w-1/3 text-[11px] sm:text-xs">Enrollment ID</td>
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5 font-mono font-bold text-slate-800 text-[11px] sm:text-xs">
                       #{selectedStudent.enrollment?.enrollment_id ?? selectedStudent.enrollment_id ?? selectedStudent.id ?? '—'}
                     </td>
                   </tr>
                   <tr>
-                    <td className="px-4 py-2.5 font-semibold text-slate-500 w-1/3">Enrolled At</td>
-                    <td className="px-4 py-2.5 text-slate-700">
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5 font-semibold text-slate-500 w-2/5 sm:w-1/3 text-[11px] sm:text-xs">Enrolled At</td>
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-slate-700 text-[11px] sm:text-xs">
                       {(() => {
                         const raw =
                           selectedStudent.enrolled_at ||
@@ -219,8 +219,8 @@ const StaffStudentModal = ({
                     </td>
                   </tr>
                   <tr className="bg-slate-50/40">
-                    <td className="px-4 py-2.5 font-semibold text-slate-500 w-1/3">Admission Date</td>
-                    <td className="px-4 py-2.5 text-slate-700">
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5 font-semibold text-slate-500 w-2/5 sm:w-1/3 text-[11px] sm:text-xs">Admission Date</td>
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-slate-700 text-[11px] sm:text-xs">
                       {(() => {
                         const raw =
                           selectedStudent.admission_date ||
@@ -242,8 +242,8 @@ const StaffStudentModal = ({
                     </td>
                   </tr>
                   <tr>
-                    <td className="px-4 py-2.5 font-semibold text-slate-500 w-1/3">Course Status</td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5 font-semibold text-slate-500 w-2/5 sm:w-1/3 text-[11px] sm:text-xs">Course Status</td>
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5">
                       <span
                         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                           String(
@@ -261,8 +261,8 @@ const StaffStudentModal = ({
                     </td>
                   </tr>
                   <tr className="bg-slate-50/40">
-                    <td className="px-4 py-2.5 font-semibold text-slate-500 w-1/3">Branch Approval</td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5 font-semibold text-slate-500 w-2/5 sm:w-1/3 text-[11px] sm:text-xs">Branch Approval</td>
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5">
                       <span
                         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                           String(selectedStudent.enrollment?.branch_approval_status || 'pending')
@@ -277,8 +277,8 @@ const StaffStudentModal = ({
                     </td>
                   </tr>
                   <tr>
-                    <td className="px-4 py-2.5 font-semibold text-slate-500 w-1/3">Super Admin Approval</td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5 font-semibold text-slate-500 w-2/5 sm:w-1/3 text-[11px] sm:text-xs">Super Admin Approval</td>
+                    <td className="px-3 sm:px-4 py-2 sm:py-2.5">
                       <span
                         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                           String(selectedStudent.enrollment?.super_admin_approval_status || 'pending')
@@ -299,11 +299,11 @@ const StaffStudentModal = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="border-t border-slate-100 px-6 py-4 bg-slate-50/50 flex justify-end">
+        <div className="border-t border-slate-100 px-4 sm:px-6 py-3 sm:py-4 bg-slate-50/50 flex justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl px-5 py-2 text-xs font-bold border border-slate-200 transition hover:bg-white text-slate-700 cursor-pointer"
+            className="w-full sm:w-auto rounded-xl px-5 py-2.5 sm:py-2 text-xs font-bold border border-slate-200 transition bg-white hover:bg-slate-50 text-slate-700 shadow-2xs cursor-pointer text-center"
           >
             Close
           </button>

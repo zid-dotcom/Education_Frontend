@@ -103,7 +103,21 @@ export const AuthProvider = ({ children }) => {
     } finally {
       // 3. Navigate if redirect is not explicitly disabled
       if (options.redirect !== false) {
-        const stateObj = options.message ? { message: options.message } : undefined;
+        const defaultTitle =
+          targetPath === '/staff-login'
+            ? 'Staff Session Expired'
+            : targetPath === '/branch-admin-login'
+            ? 'Branch Admin Session Expired'
+            : targetPath === '/super-admin/login'
+            ? 'Admin Session Expired'
+            : 'Student Session Expired';
+
+        const stateObj = options.message
+          ? {
+              message: options.message,
+              title: options.title || (options.message?.toLowerCase().includes('expired') ? defaultTitle : undefined),
+            }
+          : undefined;
         navigate(targetPath, { replace: true, state: stateObj });
       }
 

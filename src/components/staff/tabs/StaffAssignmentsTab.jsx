@@ -33,16 +33,16 @@ const StaffAssignmentsTab = ({
   return (
     <div className="space-y-6 sa-fade">
       {/* Header with course selector, filter tabs, & New Assignment button */}
-      <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <div>
+      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-100 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 w-full md:w-auto">
+          <div className="w-full sm:w-auto">
             <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
               Select Course
             </label>
             <select
               value={selectedCourseId || ''}
               onChange={(e) => setSelectedCourseId(e.target.value)}
-              className="rounded-2xl border border-slate-200 px-4 py-2 font-bold text-xs bg-slate-50/80 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer"
+              className="w-full sm:w-auto rounded-2xl border border-slate-200 px-4 py-2 font-bold text-xs bg-slate-50/80 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer"
             >
               {assignedCourses.map((c) => {
                 const id = c.id || c.course_id;
@@ -56,7 +56,7 @@ const StaffAssignmentsTab = ({
           </div>
 
           {/* Filter toggle: All vs Graded/Verified */}
-          <div className="flex items-center gap-1.5 pt-2 sm:pt-4">
+          <div className="flex items-center gap-1.5 pt-0 sm:pt-4 flex-wrap">
             <button
               type="button"
               onClick={() => setAssignmentFilterTab('all')}
@@ -86,7 +86,7 @@ const StaffAssignmentsTab = ({
         <button
           type="button"
           onClick={onOpenCreateAssignment}
-          className="rounded-2xl px-5 py-2.5 text-xs font-bold text-white shadow-sm shadow-emerald-500/20 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 flex items-center gap-2 transition cursor-pointer"
+          className="w-full sm:w-auto justify-center rounded-2xl px-5 py-2.5 text-xs font-bold text-white shadow-sm shadow-emerald-500/20 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 flex items-center gap-2 transition cursor-pointer"
         >
           <Plus className="h-4 w-4" />
           Create Assignment

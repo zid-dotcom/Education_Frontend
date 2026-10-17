@@ -27,16 +27,16 @@ const StaffAnnouncementsTab = ({
   return (
     <div className="space-y-6 sa-fade">
       {/* Header with course selector & New Announcement button */}
-      <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <div>
+      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-100 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
+          <div className="w-full sm:w-auto">
             <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
               Filter Announcements
             </label>
             <select
               value={selectedAnnouncementCourseId}
               onChange={(e) => setSelectedAnnouncementCourseId(e.target.value)}
-              className="rounded-2xl border border-slate-200 px-4 py-2 font-bold text-xs bg-slate-50/80 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer"
+              className="w-full sm:w-auto rounded-2xl border border-slate-200 px-4 py-2 font-bold text-xs bg-slate-50/80 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer"
             >
               {assignedCourses.map((c) => {
                 const id = c.id || c.course_id;
@@ -48,7 +48,7 @@ const StaffAnnouncementsTab = ({
               })}
             </select>
           </div>
-          <div className="pt-2 sm:pt-4 text-xs font-semibold text-slate-500">
+          <div className="pt-0 sm:pt-4 text-xs font-semibold text-slate-500">
             <span className="font-bold text-slate-800">{staffAnnouncements.length}</span> announcement
             {staffAnnouncements.length === 1 ? '' : 's'}
           </div>
@@ -57,7 +57,7 @@ const StaffAnnouncementsTab = ({
         <button
           type="button"
           onClick={onOpenCreateAnnouncement}
-          className="rounded-2xl px-5 py-2.5 text-xs font-bold text-white shadow-sm shadow-emerald-500/20 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 flex items-center gap-2 transition cursor-pointer"
+          className="rounded-2xl px-5 py-2.5 text-xs font-bold text-white shadow-sm shadow-emerald-500/20 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 flex items-center justify-center gap-2 transition cursor-pointer w-full sm:w-auto shrink-0"
         >
           <Plus className="h-4 w-4" />
           Create Announcement

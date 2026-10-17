@@ -57,25 +57,6 @@ const StaffSidebar = ({
 
   return (
     <>
-      {/* Mobile top bar */}
-      <div className="sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-[#EBF5EE] border-b border-emerald-100 md:hidden">
-        <div className="flex items-center gap-2.5">
-          <img src={logoImage} alt="Aurum FX" className="h-8 w-8 object-contain" />
-          <div>
-            <p className="text-sm font-bold text-slate-800 leading-none">Aurum FX</p>
-            <p className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider">Staff Portal</p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => setSidebarOpen((o) => !o)}
-          className="rounded-xl p-2 bg-white text-slate-700 border border-emerald-100 shadow-xs cursor-pointer"
-          aria-label="Toggle navigation"
-        >
-          {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
-      </div>
-
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <button
@@ -163,13 +144,23 @@ const StaffSidebar = ({
         <aside className="w-56 sm:w-60 shrink-0 bg-white border-r border-slate-100 flex flex-col py-6 px-4 justify-between shadow-xs h-full overflow-y-auto custom-staff-scrollbar">
           <div className="w-full">
             {/* Brand Text Area (Logo image removed as requested) */}
-            <div className="h-10 flex flex-col justify-center px-2 mb-5">
-              <p className="text-base font-black text-slate-800 tracking-tight leading-none">
-                Aurum FX
-              </p>
-              <p className="text-[10px] font-bold text-emerald-600 tracking-wider uppercase mt-1">
-                Staff Portal
-              </p>
+            <div className="h-10 flex items-center justify-between px-2 mb-5">
+              <div>
+                <p className="text-base font-black text-slate-800 tracking-tight leading-none">
+                  Aurum FX
+                </p>
+                <p className="text-[10px] font-bold text-emerald-600 tracking-wider uppercase mt-1">
+                  Staff Portal
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeSidebar}
+                className="md:hidden p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                aria-label="Close navigation"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
             {/* "+ New Assignment" Button (matching Tier 1 height & margin) */}

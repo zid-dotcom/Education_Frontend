@@ -19,7 +19,7 @@ const StaffAssignmentModal = ({
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs"
         onClick={onClose}
       />
-      <div className="relative flex w-full max-w-xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl border border-slate-100 sa-rise">
+      <div className="relative flex w-full max-w-xl max-h-[90vh] overflow-y-auto flex-col rounded-3xl bg-white shadow-2xl border border-slate-100 sa-rise">
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5 bg-slate-50/50">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">

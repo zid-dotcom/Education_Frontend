@@ -398,68 +398,114 @@ const StaffOverviewTab = ({
           </button>
         </div>
 
-        <div className="overflow-x-auto">
-          {studentsLoading ? (
-            <div className="py-12 flex flex-col items-center justify-center text-slate-400">
-              <Loader2 className="h-6 w-6 animate-spin text-emerald-600 mb-2" />
-              <p className="text-xs font-medium">Loading enrolled students...</p>
-            </div>
-          ) : recentStudents.length === 0 ? (
-            <div className="py-10 text-center text-xs text-slate-400">
-              No students enrolled in this course yet.
-            </div>
-          ) : (
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="text-slate-400 border-b border-slate-100">
-                  <th className="pb-3 font-semibold">Student Name</th>
-                  <th className="pb-3 font-semibold">Enrolled Date</th>
-                  <th className="pb-3 font-semibold">Contact / Email</th>
-                  <th className="pb-3 font-semibold text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {recentStudents.map((s, idx) => (
-                  <tr
-                    key={s.id || s.enrollment_id || idx}
-                    onClick={() => onSelectStudent && onSelectStudent(s)}
-                    className="hover:bg-slate-50/70 transition-colors cursor-pointer group"
-                  >
-                    <td className="py-3 pr-3">
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-xl bg-emerald-50 text-emerald-700 font-bold flex items-center justify-center text-xs shrink-0 shadow-2xs">
-                          {(s.name || s.student_name || 'S').charAt(0).toUpperCase()}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-bold text-slate-800 group-hover:text-emerald-600 transition-colors truncate">
-                            {s.name || s.student_name || 'Student'}
-                          </p>
-                          <p className="text-[10px] text-slate-400 truncate">
-                            {activeCourseObj?.title || 'Enrolled Course'}
-                          </p>
-                        </div>
+        {studentsLoading ? (
+          <div className="py-12 flex flex-col items-center justify-center text-slate-400">
+            <Loader2 className="h-6 w-6 animate-spin text-emerald-600 mb-2" />
+            <p className="text-xs font-medium">Loading enrolled students...</p>
+          </div>
+        ) : recentStudents.length === 0 ? (
+          <div className="py-10 text-center text-xs text-slate-400">
+            No students enrolled in this course yet.
+          </div>
+        ) : (
+          <>
+            {/* Mobile Cards View (Visible on small screens) */}
+            <div className="space-y-3 sm:hidden">
+              {recentStudents.map((s, idx) => (
+                <div
+                  key={s.id || s.enrollment_id || idx}
+                  onClick={() => onSelectStudent && onSelectStudent(s)}
+                  className="p-3.5 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-emerald-50/30 transition-all cursor-pointer flex flex-col gap-2.5 shadow-2xs"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="h-8 w-8 rounded-xl bg-emerald-50 text-emerald-700 font-bold flex items-center justify-center text-xs shrink-0 shadow-2xs">
+                        {(s.name || s.student_name || 'S').charAt(0).toUpperCase()}
                       </div>
-                    </td>
-                    <td className="py-3 text-slate-500 font-medium">
-                      {getStudentEnrolledDate(s)}
-                    </td>
-                    <td className="py-3 text-slate-500 font-medium">
+                      <div className="min-w-0">
+                        <p className="font-bold text-xs text-slate-800 truncate">
+                          {s.name || s.student_name || 'Student'}
+                        </p>
+                        <p className="text-[10px] text-slate-400 truncate">
+                          {activeCourseObj?.title || 'Enrolled Course'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-white text-emerald-700 border border-emerald-200 shrink-0"
+                    >
+                      View
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] pt-2 border-t border-slate-100 text-slate-500">
+                    <span className="truncate max-w-[170px] text-[10px] text-slate-600">
                       {s.email || s.phone || '—'}
-                    </td>
-                    <td className="py-3 text-right">
-                      <button
-                        type="button"
-                        className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 transition"
-                      >
-                        View
-                      </button>
-                    </td>
+                    </span>
+                    <span className="inline-flex items-center gap-1 font-semibold text-[10px] text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+                      {getStudentEnrolledDate(s)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View (Hidden on mobile) */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="text-slate-400 border-b border-slate-100">
+                    <th className="pb-3 font-semibold">Student Name</th>
+                    <th className="pb-3 font-semibold">Enrolled Date</th>
+                    <th className="pb-3 font-semibold">Contact / Email</th>
+                    <th className="pb-3 font-semibold text-right">Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {recentStudents.map((s, idx) => (
+                    <tr
+                      key={s.id || s.enrollment_id || idx}
+                      onClick={() => onSelectStudent && onSelectStudent(s)}
+                      className="hover:bg-slate-50/70 transition-colors cursor-pointer group"
+                    >
+                      <td className="py-3 pr-3">
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-xl bg-emerald-50 text-emerald-700 font-bold flex items-center justify-center text-xs shrink-0 shadow-2xs">
+                            {(s.name || s.student_name || 'S').charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-800 group-hover:text-emerald-600 transition-colors truncate">
+                              {s.name || s.student_name || 'Student'}
+                            </p>
+                            <p className="text-[10px] text-slate-400 truncate">
+                              {activeCourseObj?.title || 'Enrolled Course'}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 text-slate-500 font-medium">
+                        {getStudentEnrolledDate(s)}
+                      </td>
+                      <td className="py-3 text-slate-500 font-medium">
+                        {s.email || s.phone || '—'}
+                      </td>
+                      <td className="py-3 text-right">
+                        <button
+                          type="button"
+                          className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 transition"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

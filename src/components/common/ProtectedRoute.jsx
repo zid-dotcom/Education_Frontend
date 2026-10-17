@@ -43,15 +43,15 @@ const ProtectedRoute = ({ children, adminOnly = false, studentOnly = false, bran
 
   if (!effectiveAuth) {
     if (staffOnly) {
-      return <Navigate to="/staff-login" state={{ from: location, message: 'Please sign in to access the staff portal.' }} replace />;
+      return <Navigate to="/staff-login" state={{ from: location, message: 'Please sign in to access the staff portal.', title: 'Staff Login Required' }} replace />;
     }
     if (branchAdminOnly) {
-      return <Navigate to="/branch-admin-login" state={{ from: location, message: 'Please sign in to access the branch admin portal.' }} replace />;
+      return <Navigate to="/branch-admin-login" state={{ from: location, message: 'Please sign in to access the branch admin portal.', title: 'Branch Admin Login Required' }} replace />;
     }
     if (adminOnly) {
-      return <Navigate to="/super-admin/login" state={{ from: location, message: 'Please sign in to access the admin portal.' }} replace />;
+      return <Navigate to="/super-admin/login" state={{ from: location, message: 'Please sign in to access the admin portal.', title: 'Admin Login Required' }} replace />;
     }
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/login" state={{ from: location, title: 'Student Login Required' }} replace />;
   }
 
   const isAdminUser = ['admin', 'super_admin'].includes(effectiveUser?.role);

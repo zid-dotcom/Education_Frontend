@@ -29,13 +29,13 @@ const Navbar = ({ onOpenApplyModal }) => {
 
   return (
     <header
-      className={`sticky top-0 z-40 transition-all duration-300 ${
+      className={`sticky top-0 z-50 relative transition-all duration-300 bg-white ${
         isScrolled
-          ? 'bg-white/95 backdrop-blur-md shadow-xs py-3 border-b border-slate-200/80'
-          : 'bg-white py-4 sm:py-5 border-b border-slate-100'
+          ? 'shadow-xs py-3 border-b border-slate-200/80'
+          : 'py-4 sm:py-5 border-b border-slate-100'
       }`}
     >
-      <div className="w-full px-3 sm:px-5 lg:px-7">
+      <div className="w-full px-3 sm:px-5 lg:px-7 relative z-50 bg-white">
         <div className="flex items-center justify-between">
           
           {/* LOGO */}
@@ -190,118 +190,132 @@ const Navbar = ({ onOpenApplyModal }) => {
         </div>
       </div>
 
-      {/* MOBILE MENU FLYOUT */}
+      {/* MOBILE MENU FLYOUT - OVERLAY (DOES NOT PUSH HERO CONTENT DOWN) */}
       {isMobileMenuOpen && (
-        <div className="md:hidden bg-white border-b border-amber-200 shadow-2xl animate-in slide-in-from-top duration-200 px-4 pt-3 pb-6 space-y-3 mt-2">
-          <div className="flex flex-col space-y-1">
-            <NavLink
-              to="/"
-              className={({ isActive }) =>
-                `px-4 py-2.5 rounded-xl text-sm font-bold ${
-                  isActive ? 'bg-amber-100 text-amber-900' : 'text-slate-700 hover:bg-slate-50'
-                }`
-              }
-            >
-              Home
-            </NavLink>
+        <>
+          {/* Transparent dismiss layer - tap outside to close with no dark shadow */}
+          <div
+            className="fixed inset-0 z-30 md:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
 
-            <NavLink
-              to="/courses"
-              className={({ isActive }) =>
-                `px-4 py-2.5 rounded-xl text-sm font-bold ${
-                  isActive ? 'bg-amber-100 text-amber-900' : 'text-slate-700 hover:bg-slate-50'
-                }`
-              }
-            >
-              Courses
-            </NavLink>
-
-            <NavLink
-              to="/about"
-              className={({ isActive }) =>
-                `px-4 py-2.5 rounded-xl text-sm font-bold ${
-                  isActive ? 'bg-amber-100 text-amber-900' : 'text-slate-700 hover:bg-slate-50'
-                }`
-              }
-            >
-              About Us
-            </NavLink>
-
-            <NavLink
-              to="/admissions"
-              className={({ isActive }) =>
-                `px-4 py-2.5 rounded-xl text-sm font-bold ${
-                  isActive ? 'bg-amber-100 text-amber-900' : 'text-slate-700 hover:bg-slate-50'
-                }`
-              }
-            >
-              Admissions
-            </NavLink>
-
-            <NavLink
-              to="/contact"
-              className={({ isActive }) =>
-                `px-4 py-2.5 rounded-xl text-sm font-bold ${
-                  isActive ? 'bg-amber-100 text-amber-900' : 'text-slate-700 hover:bg-slate-50'
-                }`
-              }
-            >
-              Contact Us
-            </NavLink>
-          </div>
-
-          <div className="pt-2 border-t border-slate-100">
-            {isAuthenticated ? (
-              <div className="space-y-2">
-                {user?.role === 'staff' && (
-                  <Link
-                    to="/staff/dashboard"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-xl text-sm font-bold text-slate-800"
-                  >
-                    <User className="w-4 h-4 text-amber-600" />
-                    <span>Open Staff Portal</span>
-                  </Link>
-                )}
-                {user?.role !== 'staff' && !['admin', 'super_admin'].includes(user?.role) && (
-                  <Link
-                    to="/student-dashboard"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-xl text-sm font-bold text-slate-800"
-                  >
-                    <User className="w-4 h-4 text-amber-600" />
-                    <span>Open Student Dashboard</span>
-                  </Link>
-                )}
-                {['admin', 'super_admin'].includes(user?.role) && (
-                  <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-xl text-sm font-bold text-slate-800">
-                    <User className="w-4 h-4 text-amber-600" />
-                    <span>Hello, {user?.name || 'User'}</span>
-                  </div>
-                )}
-                <button
-                  onClick={() => {
-                    logout();
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="w-full py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 border border-rose-200"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>Sign Out</span>
-                </button>
-              </div>
-            ) : (
-              <Link
-                to="/login"
+          {/* Absolute floating menu positioned right under the header bar */}
+          <div className="md:hidden absolute top-full left-0 right-0 bg-white border-b border-slate-200 shadow-xl z-40 animate-in slide-in-from-top-2 duration-200 px-4 pt-3 pb-6 space-y-3">
+            <div className="flex flex-col space-y-1">
+              <NavLink
+                to="/"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="w-full py-3 bg-amber-300 hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider rounded-full shadow-md flex items-center justify-center gap-1.5"
+                className={({ isActive }) =>
+                  `px-4 py-2.5 rounded-xl text-sm font-bold ${
+                    isActive ? 'bg-amber-100 text-amber-900' : 'text-slate-700 hover:bg-slate-50'
+                  }`
+                }
               >
-                <span>Get Started</span>
-                <span className="text-slate-950 font-bold">&rarr;</span>
-              </Link>
-            )}
+                Home
+              </NavLink>
+
+              <NavLink
+                to="/courses"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={({ isActive }) =>
+                  `px-4 py-2.5 rounded-xl text-sm font-bold ${
+                    isActive ? 'bg-amber-100 text-amber-900' : 'text-slate-700 hover:bg-slate-50'
+                  }`
+                }
+              >
+                Courses
+              </NavLink>
+
+              <NavLink
+                to="/about"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={({ isActive }) =>
+                  `px-4 py-2.5 rounded-xl text-sm font-bold ${
+                    isActive ? 'bg-amber-100 text-amber-900' : 'text-slate-700 hover:bg-slate-50'
+                  }`
+                }
+              >
+                About Us
+              </NavLink>
+
+              <NavLink
+                to="/admissions"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={({ isActive }) =>
+                  `px-4 py-2.5 rounded-xl text-sm font-bold ${
+                    isActive ? 'bg-amber-100 text-amber-900' : 'text-slate-700 hover:bg-slate-50'
+                  }`
+                }
+              >
+                Admissions
+              </NavLink>
+
+              <NavLink
+                to="/contact"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={({ isActive }) =>
+                  `px-4 py-2.5 rounded-xl text-sm font-bold ${
+                    isActive ? 'bg-amber-100 text-amber-900' : 'text-slate-700 hover:bg-slate-50'
+                  }`
+                }
+              >
+                Contact Us
+              </NavLink>
+            </div>
+
+            <div className="pt-2 border-t border-slate-100">
+              {isAuthenticated ? (
+                <div className="space-y-2">
+                  {user?.role === 'staff' && (
+                    <Link
+                      to="/staff/dashboard"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-xl text-sm font-bold text-slate-800"
+                    >
+                      <User className="w-4 h-4 text-amber-600" />
+                      <span>Open Staff Portal</span>
+                    </Link>
+                  )}
+                  {user?.role !== 'staff' && !['admin', 'super_admin'].includes(user?.role) && (
+                    <Link
+                      to="/student-dashboard"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-xl text-sm font-bold text-slate-800"
+                    >
+                      <User className="w-4 h-4 text-amber-600" />
+                      <span>Open Student Dashboard</span>
+                    </Link>
+                  )}
+                  {['admin', 'super_admin'].includes(user?.role) && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-xl text-sm font-bold text-slate-800">
+                      <User className="w-4 h-4 text-amber-600" />
+                      <span>Hello, {user?.name || 'User'}</span>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => {
+                      logout();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 border border-rose-200"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  to="/login"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full py-3 bg-amber-300 hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider rounded-full shadow-md flex items-center justify-center gap-1.5"
+                >
+                  <span>Get Started</span>
+                  <span className="text-slate-950 font-bold">&rarr;</span>
+                </Link>
+              )}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </header>
   );

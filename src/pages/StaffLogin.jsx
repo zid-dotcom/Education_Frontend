@@ -186,12 +186,17 @@ const StaffLogin = () => {
             </button>
           </div>
           
-          {/* Redirect Notice Banner (e.g. when unauthenticated user clicks Apply) */}
+          {/* Redirect Notice Banner (e.g. when session expires or unauthenticated access) */}
           {location.state?.message && !successMsg && !errorMsg && (
             <div className="mb-5 p-4 rounded-2xl bg-amber-50 border border-amber-300 flex items-center gap-3 text-amber-950 text-sm font-semibold animate-in fade-in duration-200">
               <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
               <div>
-                <div className="font-extrabold text-slate-900">Student Login Required</div>
+                <div className="font-extrabold text-slate-900">
+                  {location.state?.title ||
+                    (location.state?.message?.toLowerCase().includes('expired')
+                      ? 'Staff Session Expired'
+                      : 'Staff Login Required')}
+                </div>
                 <div className="text-xs text-amber-900 font-medium mt-0.5">{location.state.message}</div>
               </div>
             </div>

@@ -76,7 +76,7 @@ const StaffProfileTab = ({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 1. Personal & Contact Information */}
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
             <h4 className="font-bold text-xs uppercase tracking-wider text-slate-800 flex items-center gap-2">
               <div className="h-6 w-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
                 <User className="h-3.5 w-3.5" />
@@ -88,12 +88,12 @@ const StaffProfileTab = ({
             <table className="w-full text-left text-xs">
               <tbody className="divide-y divide-slate-100 font-medium">
                 <tr className="bg-slate-50/30">
-                  <td className="px-6 py-3.5 text-slate-500 w-1/3 font-semibold">Full Name</td>
-                  <td className="px-6 py-3.5 text-slate-800 font-bold">{profileData?.name || '—'}</td>
+                  <td className="px-4 sm:px-6 py-3 sm:py-3.5 text-slate-500 w-1/3 font-semibold">Full Name</td>
+                  <td className="px-4 sm:px-6 py-3 sm:py-3.5 text-slate-800 font-bold">{profileData?.name || '—'}</td>
                 </tr>
                 <tr>
-                  <td className="px-6 py-3.5 text-slate-500 w-1/3 font-semibold">Email Address</td>
-                  <td className="px-6 py-3.5 text-slate-800 font-medium">
+                  <td className="px-4 sm:px-6 py-3 sm:py-3.5 text-slate-500 w-1/3 font-semibold">Email Address</td>
+                  <td className="px-4 sm:px-6 py-3 sm:py-3.5 text-slate-800 font-medium">
                     {profileData?.email ? (
                       <a href={`mailto:${profileData.email}`} className="text-emerald-700 hover:text-emerald-800 hover:underline inline-flex items-center gap-1.5 font-semibold">
                         <Mail className="h-3 w-3" />
@@ -105,8 +105,8 @@ const StaffProfileTab = ({
                   </td>
                 </tr>
                 <tr className="bg-slate-50/30">
-                  <td className="px-6 py-3.5 text-slate-500 w-1/3 font-semibold">Phone Number</td>
-                  <td className="px-6 py-3.5 text-slate-800 font-mono">
+                  <td className="px-4 sm:px-6 py-3 sm:py-3.5 text-slate-500 w-1/3 font-semibold">Phone Number</td>
+                  <td className="px-4 sm:px-6 py-3 sm:py-3.5 text-slate-800 font-mono">
                     {profileData?.phone ? (
                       <a href={`tel:${profileData.phone}`} className="hover:text-emerald-700 inline-flex items-center gap-1.5 font-bold">
                         <Phone className="h-3 w-3 text-emerald-600" />
@@ -118,8 +118,8 @@ const StaffProfileTab = ({
                   </td>
                 </tr>
                 <tr>
-                  <td className="px-6 py-3.5 text-slate-500 w-1/3 font-semibold">Residential Address</td>
-                  <td className="px-6 py-3.5 text-slate-700 font-medium">
+                  <td className="px-4 sm:px-6 py-3 sm:py-3.5 text-slate-500 w-1/3 font-semibold">Residential Address</td>
+                  <td className="px-4 sm:px-6 py-3 sm:py-3.5 text-slate-700 font-medium">
                     {profileData?.address ? (
                       <span className="inline-flex items-center gap-1.5">
                         <MapPin className="h-3.5 w-3.5 text-slate-400" />
@@ -137,7 +137,7 @@ const StaffProfileTab = ({
 
         {/* 2. Employment & Branch Profile */}
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
             <h4 className="font-bold text-xs uppercase tracking-wider text-slate-800 flex items-center gap-2">
               <div className="h-6 w-6 rounded-lg bg-teal-100 text-teal-700 flex items-center justify-center">
                 <Building2 className="h-3.5 w-3.5" />
@@ -149,14 +149,14 @@ const StaffProfileTab = ({
             <table className="w-full text-left text-xs">
               <tbody className="divide-y divide-slate-100 font-medium">
                 <tr className="bg-slate-50/30">
-                  <td className="px-6 py-3.5 text-slate-500 w-1/3 font-semibold">Assigned Branch</td>
-                  <td className="px-6 py-3.5 text-slate-800 font-bold">
+                  <td className="px-4 sm:px-6 py-3 sm:py-3.5 text-slate-500 w-1/3 font-semibold">Assigned Branch</td>
+                  <td className="px-4 sm:px-6 py-3 sm:py-3.5 text-slate-800 font-bold">
                     {profileData?.branch?.branch_name || profileData?.branch_name || branchName || '—'}
                   </td>
                 </tr>
                 <tr>
-                  <td className="px-6 py-3.5 text-slate-500 w-1/3 font-semibold">Branch Location</td>
-                  <td className="px-6 py-3.5 text-slate-700 font-medium">
+                  <td className="px-4 sm:px-6 py-3 sm:py-3.5 text-slate-500 w-1/3 font-semibold">Branch Location</td>
+                  <td className="px-4 sm:px-6 py-3 sm:py-3.5 text-slate-700 font-medium">
                     <span className="inline-flex items-center gap-1.5">
                       <MapPin className="h-3.5 w-3.5 text-emerald-600" />
                       {profileData?.branch?.branch_location || profileData?.branch_location || branchLocation || '—'}
@@ -164,8 +164,8 @@ const StaffProfileTab = ({
                   </td>
                 </tr>
                 <tr className="bg-slate-50/30">
-                  <td className="px-6 py-3.5 text-slate-500 w-1/3 font-semibold">Employment Status</td>
-                  <td className="px-6 py-3.5">
+                  <td className="px-4 sm:px-6 py-3 sm:py-3.5 text-slate-500 w-1/3 font-semibold">Employment Status</td>
+                  <td className="px-4 sm:px-6 py-3 sm:py-3.5">
                     <span
                       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                         String(profileData?.employment_status || 'active').toLowerCase() === 'active'
@@ -178,16 +178,16 @@ const StaffProfileTab = ({
                   </td>
                 </tr>
                 <tr>
-                  <td className="px-6 py-3.5 text-slate-500 w-1/3 font-semibold">Monthly Salary</td>
-                  <td className="px-6 py-3.5 text-emerald-700 font-bold font-mono text-sm">
+                  <td className="px-4 sm:px-6 py-3 sm:py-3.5 text-slate-500 w-1/3 font-semibold">Monthly Salary</td>
+                  <td className="px-4 sm:px-6 py-3 sm:py-3.5 text-emerald-700 font-bold font-mono text-sm">
                     {profileData?.salary != null
                       ? `₹${Number(profileData.salary).toLocaleString('en-IN')}`
                       : '—'}
                   </td>
                 </tr>
                 <tr className="bg-slate-50/30">
-                  <td className="px-6 py-3.5 text-slate-500 w-1/3 font-semibold">Staff Code</td>
-                  <td className="px-6 py-3.5 text-slate-800 font-mono font-bold">
+                  <td className="px-4 sm:px-6 py-3 sm:py-3.5 text-slate-500 w-1/3 font-semibold">Staff Code</td>
+                  <td className="px-4 sm:px-6 py-3 sm:py-3.5 text-slate-800 font-mono font-bold">
                     {profileData?.staff_code || '—'}
                   </td>
                 </tr>
@@ -285,67 +285,87 @@ const StaffProfileTab = ({
             </span>
           </div>
 
-          <div className="p-0">
-            <table className="w-full text-left text-xs">
-              <tbody className="divide-y divide-slate-100 font-medium">
-                <tr className="bg-slate-50/30">
-                  <td className="px-6 py-3.5 text-slate-500 w-1/4 font-semibold">Aadhaar Number</td>
-                  <td className="px-6 py-3.5 text-slate-800 font-mono">
-                    {profileData?.aadhaar_number || <span className="text-slate-400 italic">Not submitted</span>}
-                  </td>
-                  <td className="px-6 py-3.5 text-slate-500 w-1/4 font-semibold">PAN Card Number</td>
-                  <td className="px-6 py-3.5 text-slate-800 font-mono">
-                    {profileData?.pan_number || <span className="text-slate-400 italic">Not submitted</span>}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="px-6 py-3.5 text-slate-500 w-1/4 font-semibold">Bank Account Number</td>
-                  <td className="px-6 py-3.5 text-slate-800 font-mono">
-                    {profileData?.bank_account_number || <span className="text-slate-400 italic">Not submitted</span>}
-                  </td>
-                  <td className="px-6 py-3.5 text-slate-500 w-1/4 font-semibold">Bank IFSC Code</td>
-                  <td className="px-6 py-3.5 text-slate-800 font-mono">
-                    {profileData?.bank_ifsc || <span className="text-slate-400 italic">Not submitted</span>}
-                  </td>
-                </tr>
-                <tr className="bg-slate-50/30">
-                  <td className="px-6 py-3.5 text-slate-500 w-1/4 font-semibold">Verification Submitted At</td>
-                  <td className="px-6 py-3.5 text-slate-700">
-                    {profileData?.verification_submitted_at
-                      ? new Date(profileData.verification_submitted_at).toLocaleString('en-IN')
-                      : '—'}
-                  </td>
-                  {Boolean(
-                    profileData?.verification_approved_at &&
-                    (String(profileData?.verification_status || '').toLowerCase() === 'approved' ||
-                      Boolean(profileData?.is_verified) ||
-                      !profileData?.verification_status)
-                  ) ? (
-                    <>
-                      <td className="px-6 py-3.5 text-slate-500 w-1/4 font-semibold">Verification Approved At</td>
-                      <td className="px-6 py-3.5 text-slate-700 font-medium">
-                        {new Date(profileData.verification_approved_at).toLocaleString('en-IN')}
-                      </td>
-                    </>
-                  ) : (
-                    <td colSpan={2} className="px-6 py-3.5">
-                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
-                        <Clock className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                        Verification is not approved yet
-                      </span>
-                    </td>
-                  )}
-                </tr>
-                {profileData?.verification_rejection_reason && (
-                  <tr className="bg-rose-50/50">
-                    <td className="px-6 py-3.5 text-rose-700 w-1/4 font-semibold">Rejection Reason</td>
-                    <td colSpan={3} className="px-6 py-3.5 text-rose-900 font-medium">
-                      {profileData.verification_rejection_reason}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+          {/* Responsive Grid for KYC & Banking Records */}
+          <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+            <div className="bg-slate-50/70 rounded-2xl p-4 border border-slate-100 flex flex-col justify-between">
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">
+                Aadhaar Number
+              </p>
+              <p className="font-mono font-bold text-slate-800 text-xs sm:text-sm">
+                {profileData?.aadhaar_number || <span className="text-slate-400 font-sans font-normal italic">Not submitted</span>}
+              </p>
+            </div>
+
+            <div className="bg-slate-50/70 rounded-2xl p-4 border border-slate-100 flex flex-col justify-between">
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">
+                PAN Card Number
+              </p>
+              <p className="font-mono font-bold text-slate-800 text-xs sm:text-sm uppercase">
+                {profileData?.pan_number || <span className="text-slate-400 font-sans font-normal italic">Not submitted</span>}
+              </p>
+            </div>
+
+            <div className="bg-slate-50/70 rounded-2xl p-4 border border-slate-100 flex flex-col justify-between">
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">
+                Bank Account Number
+              </p>
+              <p className="font-mono font-bold text-slate-800 text-xs sm:text-sm">
+                {profileData?.bank_account_number || <span className="text-slate-400 font-sans font-normal italic">Not submitted</span>}
+              </p>
+            </div>
+
+            <div className="bg-slate-50/70 rounded-2xl p-4 border border-slate-100 flex flex-col justify-between">
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">
+                Bank IFSC Code
+              </p>
+              <p className="font-mono font-bold text-slate-800 text-xs sm:text-sm uppercase">
+                {profileData?.bank_ifsc || <span className="text-slate-400 font-sans font-normal italic">Not submitted</span>}
+              </p>
+            </div>
+
+            <div className="bg-slate-50/70 rounded-2xl p-4 border border-slate-100 flex flex-col justify-between sm:col-span-1 lg:col-span-2">
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">
+                Verification Submitted At
+              </p>
+              <p className="font-semibold text-slate-700 text-xs sm:text-sm">
+                {profileData?.verification_submitted_at
+                  ? new Date(profileData.verification_submitted_at).toLocaleString('en-IN')
+                  : '—'}
+              </p>
+            </div>
+
+            <div className="bg-slate-50/70 rounded-2xl p-4 border border-slate-100 flex flex-col justify-between sm:col-span-1 lg:col-span-2">
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">
+                Verification Approved At
+              </p>
+              {Boolean(
+                profileData?.verification_approved_at &&
+                (String(profileData?.verification_status || '').toLowerCase() === 'approved' ||
+                  Boolean(profileData?.is_verified) ||
+                  !profileData?.verification_status)
+              ) ? (
+                <p className="font-semibold text-emerald-800 text-xs sm:text-sm">
+                  {new Date(profileData.verification_approved_at).toLocaleString('en-IN')}
+                </p>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 w-fit">
+                  <Clock className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                  Verification is not approved yet
+                </span>
+              )}
+            </div>
+
+            {profileData?.verification_rejection_reason && (
+              <div className="bg-rose-50/80 rounded-2xl p-4 border border-rose-200 sm:col-span-2 lg:col-span-4">
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-rose-700 mb-1">
+                  Rejection Reason
+                </p>
+                <p className="text-xs sm:text-sm text-rose-900 font-medium">
+                  {profileData.verification_rejection_reason}
+                </p>
+              </div>
+            )}
+          </div>
 
             {/* Uploaded Document Files List */}
             <div className="p-6 border-t border-slate-100 bg-slate-50/30">
@@ -386,7 +406,6 @@ const StaffProfileTab = ({
           </div>
         </div>
       </div>
-    </div>
   );
 };
 

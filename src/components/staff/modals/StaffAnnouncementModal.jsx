@@ -18,7 +18,7 @@ const StaffAnnouncementModal = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs sa-fade">
-      <div className="w-full max-w-lg rounded-3xl bg-white border border-slate-100 shadow-2xl overflow-hidden sa-rise">
+      <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl bg-white border border-slate-100 shadow-2xl sa-rise">
         {/* Modal Header */}
         <div className="border-b border-slate-100 px-6 py-4 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-2.5">
