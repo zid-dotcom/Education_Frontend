@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Bell,
   BookOpen,
@@ -14,6 +15,7 @@ import {
   UserPlus,
   UserRoundSearch,
   Users,
+  Activity,
   X,
 } from "lucide-react";
 import { getBranchUnreadMessageCountApi } from "../../services/branchadminmessages";
@@ -42,6 +44,23 @@ const FOCUS_RING =
 const serif = { fontFamily: "'Fraunces', ui-serif, Georgia, serif" };
 const sans = { fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" };
 
+const SIDEBAR_CSS = `
+.ba-sidebar-nav::-webkit-scrollbar,
+.branch-admin-sidebar::-webkit-scrollbar,
+.branch-admin-sidebar *::-webkit-scrollbar {
+  display: none !important;
+  width: 0px !important;
+  height: 0px !important;
+  background: transparent !important;
+}
+.ba-sidebar-nav,
+.branch-admin-sidebar,
+.branch-admin-sidebar * {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+`;
+
 const NAV_GROUPS = [
   {
     label: "Workspace",
@@ -49,7 +68,9 @@ const NAV_GROUPS = [
       { id: "dashboard", backendKey: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/branch-admin/dashboard" },
       { id: "courses", backendKey: "courses", label: "Courses", icon: BookOpen, path: "/branch-admin/courses" },
       { id: "staff", backendKey: "staff", label: "Staff", icon: UserPlus, path: "/branch-admin/staff" },
+      { id: "all-staff", backendKey: "all_staff", label: "All staffs", icon: Users, path: "/branch-admin/all-staff" },
       { id: "staff-verification", backendKey: "staff_verification", label: "Staff verification", icon: ShieldCheck, path: "/branch-admin/staff-verification" },
+      { id: "staff-monitoring", backendKey: "staff_monitoring", label: "Staff monitoring", icon: Activity, path: "/branch-admin/staff-monitoring" },
       { id: "attendance", backendKey: "my_attendance", label: "My attendance", icon: CalendarCheck, path: "/branch-admin/attendance" },
     ],
   },
@@ -141,14 +162,21 @@ const BranchAdminSidebar = ({
     };
   }, [activePage]);
 
+  const routerNavigate = useNavigate();
+  const effectiveNavigate = typeof navigate === "function" ? navigate : routerNavigate;
+
   const closeSidebar = () => setSidebarOpen(false);
   const goTo = (path) => {
     if (path === "/branch-admin/messages") setUnreadMessageCount(0);
     closeSidebar();
-    navigate(path);
+    if (typeof effectiveNavigate === "function") {
+      effectiveNavigate(path);
+    }
   };
   const handleLogout = () => {
-    logout({ redirectTo: "/branch-admin-login" });
+    if (typeof logout === "function") {
+      logout({ redirectTo: "/branch-admin-login" });
+    }
   };
 
   // Close the mobile drawer with Escape
@@ -180,24 +208,6 @@ const BranchAdminSidebar = ({
 
   return (
     <>
-      {/* ---- Mobile top bar ---- */}
-      <div
-        className="branch-admin-mobile-header sticky top-0 z-30 flex items-center justify-start gap-3 px-4 py-3 md:hidden"
-        style={{ ...sans, background: "#faf8f4", borderBottom: "1px solid #e3ddd0" }}
-      >
-        <button
-          type="button"
-          onClick={() => setSidebarOpen((open) => !open)}
-          className={`rounded-lg p-2 transition-colors hover:bg-[#f1ede4] ${FOCUS_RING}`}
-          style={{ color: "#17140f", border: "1px solid #e3ddd0", background: "#ffffff" }}
-          aria-label="Toggle branch navigation"
-          aria-expanded={sidebarOpen}
-        >
-          {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
-        <Brand />
-      </div>
-
       {sidebarOpen && (
         <button
           type="button"
@@ -210,7 +220,7 @@ const BranchAdminSidebar = ({
 
       {/* ---- Sidebar ---- */}
       <aside
-        className={`branch-admin-sidebar fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col transition-transform duration-300 md:static md:h-auto md:translate-x-0 ${
+        className={`branch-admin-sidebar fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col transition-transform duration-300 md:sticky md:top-0 md:h-screen md:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
         style={{
@@ -220,11 +230,28 @@ const BranchAdminSidebar = ({
           boxShadow: sidebarOpen ? "0 30px 80px -30px rgba(23,20,15,.5)" : "none",
         }}
       >
-        <div className="px-6 pb-5 pt-8" style={{ borderBottom: "1px solid #e3ddd0" }}>
+        <style>{SIDEBAR_CSS}</style>
+        <div
+          className="flex h-[92px] items-center justify-between px-6 shrink-0"
+          style={{ borderBottom: "1px solid #e3ddd0" }}
+        >
           <Brand />
+          <button
+            type="button"
+            onClick={closeSidebar}
+            className={`rounded-lg p-1.5 transition-colors hover:bg-[#f1ede4] md:hidden ${FOCUS_RING}`}
+            style={{ color: "#17140f", border: "1px solid #e3ddd0", background: "#ffffff" }}
+            aria-label="Close branch navigation"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
-        <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5 md:overflow-visible" aria-label="Branch navigation">
+        <nav
+          className="ba-sidebar-nav no-scrollbar flex-1 space-y-6 overflow-y-auto px-3 py-5"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          aria-label="Branch navigation"
+        >
           {NAV_GROUPS.map((group) => {
             const visibleItems = group.items.filter((item) => {
               if (!navSettings) return true;
@@ -296,7 +323,7 @@ const BranchAdminSidebar = ({
         </nav>
 
         {/* ---- Account ---- */}
-        <div className="p-4" style={{ borderTop: "1px solid #e3ddd0" }}>
+        <div className="p-4 shrink-0 mt-auto" style={{ borderTop: "1px solid #e3ddd0" }}>
           <div className="flex items-center gap-3 px-1">
             <div
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-medium"

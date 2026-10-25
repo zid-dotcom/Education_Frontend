@@ -71,11 +71,11 @@ const StudentCourses = () => {
   return (
     <div className="w-full max-w-6xl mx-auto pb-10 space-y-6 font-['Plus_Jakarta_Sans',sans-serif]">
       {/* 1. Header Banner */}
-      <header className="rounded-2xl border border-purple-100 bg-white p-6 sm:p-8 shadow-[0_8px_25px_rgba(0,0,0,0.03)]">
+      <header className="rounded-2xl border border-[#E3DDD0] bg-white p-6 sm:p-8 shadow-[0_8px_25px_rgba(0,0,0,0.03)]">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-2xl space-y-1.5">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 px-3 py-1 text-[11px] font-bold text-purple-700 border border-purple-200/70">
-              <BookOpen className="h-3 w-3 text-purple-600" />
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F1EDE4] px-3 py-1 text-[11px] font-bold text-[#9C6B2E] border border-[#E3DDD0]">
+              <BookOpen className="h-3 w-3 text-[#9C6B2E]" />
               <span>Academic Programs & Courses</span>
             </span>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
@@ -86,8 +86,8 @@ const StudentCourses = () => {
             </p>
           </div>
 
-          <div className="flex shrink-0 items-center gap-4 rounded-2xl border border-purple-100 bg-[#FAF8FE] px-5 py-4">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-100 text-[#7C3AED]">
+          <div className="flex shrink-0 items-center gap-4 rounded-2xl border border-[#E3DDD0] bg-[#FAF8F4] px-5 py-4">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F1EDE4] text-[#9C6B2E]">
               <GraduationCap className="h-5 w-5" />
             </div>
             <div>
@@ -121,8 +121,8 @@ const StudentCourses = () => {
                 onClick={() => setSelectedCategory(category)}
                 className={`rounded-full px-4 py-2 text-xs font-bold capitalize transition ${
                   selectedCategory === category
-                    ? 'bg-[#7C3AED] text-white shadow-sm'
-                    : 'bg-white text-slate-600 border border-purple-100 hover:bg-purple-50'
+                    ? 'bg-[#9C6B2E] text-white shadow-xs'
+                    : 'bg-white text-[#5B5346] border border-[#E3DDD0] hover:bg-[#FAF8F4]'
                 }`}
               >
                 {category === 'all' ? 'All courses' : category}
@@ -136,12 +136,12 @@ const StudentCourses = () => {
         )}
 
         <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-purple-400" />
+          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9C6B2E]" />
           <input
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             placeholder="Search courses..."
-            className="w-full rounded-full border border-purple-100 bg-white py-2.5 pl-10 pr-4 text-xs text-slate-800 placeholder:text-purple-300 outline-none transition focus:border-purple-300 focus:bg-white focus:ring-2 focus:ring-purple-200 shadow-[0_4px_15px_rgba(0,0,0,0.02)]"
+            className="w-full rounded-full border border-[#E3DDD0] bg-white py-2.5 pl-10 pr-4 text-xs text-slate-800 placeholder:text-[#8A8175] outline-none transition focus:border-[#9C6B2E] focus:bg-white focus:ring-2 focus:ring-[#9C6B2E]/20 shadow-[0_4px_15px_rgba(0,0,0,0.02)]"
           />
         </div>
       </section>
@@ -149,8 +149,8 @@ const StudentCourses = () => {
       {/* 4. Course Catalog Grid */}
       <main className="w-full">
         {loading && (
-          <div className="rounded-2xl border border-purple-100 bg-purple-50/30 py-20 text-center">
-            <Loader2 className="mx-auto mb-3 h-6 w-6 animate-spin text-[#7C3AED]" />
+          <div className="rounded-2xl border border-[#E3DDD0] bg-[#FAF8F4] py-20 text-center">
+            <Loader2 className="mx-auto mb-3 h-6 w-6 animate-spin text-[#9C6B2E]" />
             <p className="text-xs font-bold text-slate-600">Loading course catalog…</p>
           </div>
         )}
@@ -162,8 +162,8 @@ const StudentCourses = () => {
         )}
 
         {!loading && !error && !selectedBranch && (
-          <div className="rounded-2xl border border-dashed border-purple-200 bg-[#FAF8FE] px-6 py-16 text-center">
-            <BookOpen className="mx-auto h-8 w-8 text-purple-300" />
+          <div className="rounded-2xl border border-dashed border-[#E3DDD0] bg-[#FAF8F4] px-6 py-16 text-center">
+            <BookOpen className="mx-auto h-8 w-8 text-[#8A8175]" />
             <h2 className="mt-4 text-base font-extrabold text-slate-800">
               Select a branch first
             </h2>
@@ -172,8 +172,8 @@ const StudentCourses = () => {
         )}
 
         {!loading && !error && selectedBranch && filteredCourses.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-purple-200 bg-[#FAF8FE] px-6 py-16 text-center">
-            <BookOpen className="mx-auto h-9 w-9 text-purple-300" />
+          <div className="rounded-2xl border border-dashed border-[#E3DDD0] bg-[#FAF8F4] px-6 py-16 text-center">
+            <BookOpen className="mx-auto h-9 w-9 text-[#8A8175]" />
             <h2 className="mt-4 text-base font-extrabold text-slate-800">
               No matching courses
             </h2>

@@ -19,6 +19,18 @@ export async function getBranchAnnouncementsApi(token) {
   return parseResponse(response, 'Failed to load branch announcements.');
 }
 
+/**
+ * Branch admin: announcements targeted to them
+ * GET /announcements/branch-admin/branch
+ */
+export async function getBranchAdminTargetedAnnouncementsApi(token) {
+  const response = await fetch(`${API_BASE_URL}/announcements/branch-admin/branch`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    credentials: 'include',
+  });
+  return parseResponse(response, 'Failed to load announcements for branch admin.');
+}
+
 export async function getBranchAnnouncementApi(announcementId, token) {
   const response = await fetch(`${API_BASE_URL}/branch-announcements/${announcementId}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},

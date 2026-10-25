@@ -6,6 +6,7 @@ import {
   ClipboardCheck,
   Edit3,
   History,
+  IndianRupee,
   Loader2,
   Mail,
   Phone,
@@ -14,9 +15,11 @@ import {
   Trash2,
   UserCheck,
   UserPlus,
+  Activity,
+  Menu,
   X,
 } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import BranchAdminSidebar from "../components/layout/BranchAdminSidebar";
 import { getMyCoursesApi } from "../services/branchadmincourses";
@@ -27,6 +30,7 @@ import {
   getStaffAttendanceApi,
   markStaffAttendanceApi,
   updateBranchStaffApi,
+  updateBranchAdminStaffStatusApi,
   updateStaffAttendanceApi,
 } from "../services/branchadminstaff";
 
@@ -133,6 +137,7 @@ const BranchAdminStaff = () => {
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [attendanceSaving, setAttendanceSaving] = useState(null);
   const [attendanceDrafts, setAttendanceDrafts] = useState({});
+  const [statusUpdatingId, setStatusUpdatingId] = useState(null);
 
   const loadStaff = async () => {
     if (!token) return;
@@ -336,6 +341,30 @@ const BranchAdminStaff = () => {
     }
   };
 
+  const handleToggleStaffStatus = async (member, targetStatus) => {
+    const staffId = member.id ?? member.staff_id ?? member.user_id;
+    if (!staffId || !token) return;
+    const normalizedStatus = String(targetStatus).toLowerCase() === 'active' ? 'Active' : 'Inactive';
+    try {
+      setStatusUpdatingId(staffId);
+      setError("");
+      await updateBranchAdminStaffStatusApi(staffId, normalizedStatus, token);
+      setStaff((current) =>
+        current.map((item) =>
+          (item.id === member.id || item.staff_id === member.id || item.user_id === member.id)
+            ? { ...item, status: normalizedStatus, is_active: normalizedStatus === 'Active' }
+            : item
+        )
+      );
+      setSuccess(`${member.name}'s status changed to ${normalizedStatus} successfully.`);
+      setTimeout(() => setSuccess(""), 4000);
+    } catch (err) {
+      setError(err?.message || "Failed to update staff status.");
+    } finally {
+      setStatusUpdatingId(null);
+    }
+  };
+
   const filteredAttendanceHistory = attendanceHistory.filter(
     (record) =>
       (!attendanceStartDate || record.date >= attendanceStartDate) &&
@@ -381,34 +410,41 @@ const BranchAdminStaff = () => {
       />
       <main className="min-w-0 flex-1">
         {/* ---- Header ---- */}
-        <header
-          className="flex flex-col gap-5 px-6 pb-8 pt-10 sm:flex-row sm:items-end sm:justify-between sm:px-10"
-          style={{ borderBottom: "1px solid #e3ddd0" }}
-        >
-          <div>
-            <h1
-              className="text-[2.1rem] leading-none tracking-tight sm:text-[2.5rem]"
-              style={{ ...serif, fontWeight: 500, color: "#17140f" }}
+        <header className="sticky top-0 z-20 flex h-[92px] items-center justify-between border-b border-[#e3ddd0] bg-[#faf8f4]/95 px-6 backdrop-blur-md sm:px-10 shrink-0">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e3ddd0] bg-white text-slate-600 shadow-sm transition hover:bg-[#f0ebe1] md:hidden"
+              aria-label="Open sidebar"
             >
-              Staff management
-            </h1>
-            <p className="mt-2 max-w-md text-[0.95rem]" style={{ color: "#8a8175" }}>
-              Create and manage staff accounts assigned to your branch.
-            </p>
+              <Menu className="h-5 w-5" />
+            </button>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#9c6b2e]">
+                Branch Portal
+              </span>
+              <h1 className="text-xl font-extrabold tracking-tight text-slate-900 leading-tight">
+                Staff Management
+              </h1>
+            </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className="text-sm font-medium" style={{ color: "#17140f" }}>
-                {user?.name || "Branch admin"}
+            <Link
+              to="/branch-admin/staff-monitoring"
+              className="hidden sm:inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition hover:bg-[#f1ede4] border border-[#e3ddd0] text-[#17140f] bg-white shadow-2xs"
+            >
+              <Activity className="h-4 w-4 text-[#9c6b2e]" />
+              <span>Staff Monitoring</span>
+            </Link>
+            <div className="hidden text-right md:block">
+              <p className="text-xs font-extrabold text-slate-900 leading-tight">
+                {user?.name || "Branch Admin"}
               </p>
-              <p className="text-xs" style={{ color: "#a39a8c" }}>
-                Branch administrator
+              <p className="text-[10px] font-semibold text-slate-400">
+                {user?.branch_name || "Branch Administrator"}
               </p>
             </div>
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium"
-              style={{ background: "#17140f", color: "#f4b942" }}
-            >
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#17140f] text-sm font-extrabold text-[#f4b942] shadow-sm ring-2 ring-[#e3ddd0]">
               {user?.name?.charAt(0).toUpperCase() || "B"}
             </div>
           </div>
@@ -836,10 +872,58 @@ const BranchAdminStaff = () => {
                                 {member.address}
                               </p>
                             )}
+                            {member.salary !== undefined && member.salary !== null && member.salary !== "" && (
+                              <div className="mt-2.5 flex items-center gap-2">
+                                <IndianRupee className="h-3.5 w-3.5 shrink-0" style={{ color: "#5c7a5a" }} />
+                                <div className="min-w-0">
+                                  <span className="text-xs font-semibold" style={{ color: "#5c7a5a" }}>
+                                    Salary: {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(Number(member.salary) || 0)}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
                           </div>
                           <span className="shrink-0 text-xs" style={{ color: "#a39a8c" }}>
                             #{member.staff_code || member.id}
                           </span>
+                        </div>
+                        <div
+                          className="mt-3.5 flex items-center justify-between pt-2.5"
+                          style={{ borderTop: "1px dashed #efe9dd" }}
+                        >
+                          {(() => {
+                            const staffId = member.id ?? member.staff_id ?? member.user_id;
+                            const currentStatus = String(member.status || (member.is_active === false ? "inactive" : "active")).toLowerCase();
+                            const isActive = currentStatus === "active";
+                            const isUpdating = statusUpdatingId === staffId;
+                            return (
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  disabled={isUpdating}
+                                  onClick={() => handleToggleStaffStatus(member, isActive ? "Inactive" : "Active")}
+                                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                    isActive ? "bg-emerald-600" : "bg-stone-300"
+                                  } ${isUpdating ? "opacity-60 cursor-not-allowed" : ""}`}
+                                  title={`Click to set ${isActive ? "Inactive" : "Active"}`}
+                                >
+                                  <span
+                                    aria-hidden="true"
+                                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out flex items-center justify-center ${
+                                      isActive ? "translate-x-4" : "translate-x-0"
+                                    }`}
+                                  >
+                                    {isUpdating && (
+                                      <Loader2 className="h-2.5 w-2.5 animate-spin text-stone-500" />
+                                    )}
+                                  </span>
+                                </button>
+                                <span className={`text-xs font-semibold ${isActive ? "text-emerald-700" : "text-stone-500"}`}>
+                                  {isActive ? "Active" : "Inactive"}
+                                </span>
+                              </div>
+                            );
+                          })()}
                         </div>
                         <div
                           className="mt-4 flex gap-4 pt-3"

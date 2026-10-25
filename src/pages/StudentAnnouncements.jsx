@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Bell,
   CalendarDays,
@@ -18,10 +19,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import {
-  getStudentAnnouncementsApi,
+  getStudentAllCourseAnnouncementsApi,
   getStudentCourseAnnouncementsApi,
 } from '../services/userannouncements';
 import { getMyEnrollmentsApi } from '../services/enrollments';
+import { getCourseImageUrl } from '../services/courses';
+import { useStudentModalBlur } from '../utils/useStudentModalBlur';
 
 const useAnnouncementFonts = () => {
   useEffect(() => {
@@ -84,8 +87,11 @@ const StudentAnnouncements = () => {
   const [selectedCourseId, setSelectedCourseId] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
+  const [viewingImage, setViewingImage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  useStudentModalBlur(Boolean(selectedAnnouncement || viewingImage));
 
   // 1. Fetch Student Approved Enrolled Courses for filter dropdown
   useEffect(() => {
@@ -128,27 +134,27 @@ const StudentAnnouncements = () => {
 
       let data;
       if (selectedCourseId === 'ALL') {
-        data = await getStudentAnnouncementsApi(token);
-      } else {
         try {
-          data = await getStudentCourseAnnouncementsApi(selectedCourseId, token);
-        } catch (courseErr) {
-          console.warn(
-            `Direct fetch for course ${selectedCourseId} failed, falling back to all announcements:`,
-            courseErr
-          );
-          // Fallback: fetch all student announcements and filter by course_id client-side
-          const allData = await getStudentAnnouncementsApi(token);
-          const allList = Array.isArray(allData)
-            ? allData
-            : Array.isArray(allData?.announcements)
-            ? allData.announcements
-            : [];
-          data = allList.filter((a) => {
-            const aCourseId = a.course_id ?? a.course?.id ?? a.course?.course_id;
-            return String(aCourseId) === String(selectedCourseId);
-          });
+          data = await getStudentAllCourseAnnouncementsApi(token);
+        } catch {
+          data = [];
         }
+
+        // If global list is empty, aggregate announcements from enrolled courses
+        if ((!data || data.length === 0) && enrolledCourses.length > 0) {
+          const results = await Promise.allSettled(
+            enrolledCourses.map((c) => getStudentCourseAnnouncementsApi(c.id, token))
+          );
+          const collected = [];
+          results.forEach((r) => {
+            if (r.status === 'fulfilled' && Array.isArray(r.value)) {
+              collected.push(...r.value);
+            }
+          });
+          if (collected.length > 0) data = collected;
+        }
+      } else {
+        data = await getStudentCourseAnnouncementsApi(selectedCourseId, token);
       }
 
       const list = Array.isArray(data)
@@ -200,29 +206,29 @@ const StudentAnnouncements = () => {
 
       <div className="w-full space-y-6">
         {/* Header Banner */}
-        <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-r from-[#8651E8] via-[#7B3FE4] to-[#9962F7] p-6 sm:p-8 text-white shadow-lg shadow-purple-500/15">
-          <div className="pointer-events-none absolute -right-12 -top-12 h-64 w-64 rounded-full bg-white/10 blur-2xl" />
+        <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-r from-[#FAF8F4] via-[#F5EFE6] to-[#FAF8F4] border border-[#E3DDD0] p-6 sm:p-8 text-[#17140F] shadow-sm">
+          <div className="pointer-events-none absolute -right-12 -top-12 h-64 w-64 rounded-full bg-[#9C6B2E]/5 blur-2xl" />
           <div className="relative z-10 flex flex-col justify-between gap-5 md:flex-row md:items-center">
             <div className="max-w-2xl space-y-1.5">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-md px-3 py-1 text-[11px] font-bold text-white border border-white/25">
-                <Megaphone className="h-3 w-3 text-purple-200" />
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-[11px] font-bold text-[#17140F] border border-[#E3DDD0]">
+                <Megaphone className="h-3 w-3 text-[#9C6B2E]" />
                 <span>Course & Academic Bulletins</span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white leading-tight">
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[#17140F] leading-tight">
                 Course Announcements
               </h1>
-              <p className="text-xs sm:text-sm text-purple-100/90 font-normal">
+              <p className="text-xs sm:text-sm text-[#5B5346] font-normal">
                 Stay informed with the latest course notices, schedule changes, exam times, and learning updates from your instructors.
               </p>
             </div>
 
             <div className="flex shrink-0 items-center gap-3 self-start md:self-auto">
-              <div className="flex items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md border border-white/25 px-5 py-3 text-center">
+              <div className="flex items-center justify-center rounded-2xl bg-white border border-[#E3DDD0] px-5 py-3 text-center shadow-2xs">
                 <div>
-                  <div className="text-2xl sm:text-3xl font-black text-white leading-none">
+                  <div className="text-2xl sm:text-3xl font-black text-[#17140F] leading-none">
                     {announcements.length}
                   </div>
-                  <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-purple-200">
+                  <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-[#9C6B2E]">
                     Updates
                   </div>
                 </div>
@@ -232,9 +238,9 @@ const StudentAnnouncements = () => {
                 type="button"
                 onClick={fetchAnnouncements}
                 disabled={loading}
-                className="inline-flex items-center gap-2 rounded-xl bg-white/20 backdrop-blur-md px-4 py-2.5 text-xs font-bold text-white border border-white/30 shadow-sm transition hover:bg-white/30 disabled:opacity-50 cursor-pointer"
+                className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-[#17140F] border border-[#E3DDD0] shadow-2xs transition hover:bg-[#F1EDE4] disabled:opacity-50 cursor-pointer"
               >
-                <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`h-3.5 w-3.5 text-[#9C6B2E] ${loading ? 'animate-spin' : ''}`} />
                 <span>Refresh</span>
               </button>
             </div>
@@ -242,7 +248,7 @@ const StudentAnnouncements = () => {
         </section>
 
         {/* Filter and Search Bar */}
-        <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_8px_25px_rgba(0,0,0,0.03)] sm:p-5">
+        <section className="rounded-2xl border border-[#E3DDD0] bg-white p-4 shadow-[0_8px_25px_rgba(0,0,0,0.03)] sm:p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             {/* Course Filter Dropdown */}
             <div className="flex flex-wrap items-center gap-2">
@@ -252,7 +258,7 @@ const StudentAnnouncements = () => {
               <select
                 value={selectedCourseId}
                 onChange={(e) => setSelectedCourseId(e.target.value)}
-                className="rounded-xl border border-purple-100 bg-[#F5F2FC] py-2 px-3 text-xs font-semibold text-slate-800 focus:border-purple-300 focus:bg-white focus:outline-none transition cursor-pointer"
+                className="rounded-xl border border-[#E3DDD0] bg-[#FAF8F4] py-2 px-3 text-xs font-semibold text-slate-800 focus:border-[#9C6B2E] focus:bg-white focus:outline-none transition cursor-pointer"
               >
                 <option value="ALL">All Approved Courses</option>
                 {enrolledCourses.map((c) => (
@@ -265,13 +271,13 @@ const StudentAnnouncements = () => {
 
             {/* Search Input */}
             <div className="relative min-w-[240px]">
-              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-purple-400" />
+              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#9C6B2E]" />
               <input
                 type="text"
                 placeholder="Search notices, exams, instructors..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-xl border border-purple-100 bg-[#F5F2FC] py-2 pl-9 pr-8 text-xs text-slate-800 placeholder:text-purple-300 focus:border-purple-300 focus:bg-white focus:outline-none transition"
+                className="w-full rounded-xl border border-[#E3DDD0] bg-[#FAF8F4] py-2 pl-9 pr-8 text-xs text-slate-800 placeholder:text-[#8A8175] focus:border-[#9C6B2E] focus:bg-white focus:outline-none transition"
               />
               {searchQuery && (
                 <button
@@ -288,8 +294,8 @@ const StudentAnnouncements = () => {
 
         {/* Announcements Content */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-purple-100 bg-purple-50/30 py-20 text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-[#7C3AED]" />
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-[#E3DDD0] bg-[#FAF8F4] py-20 text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-[#9C6B2E]" />
             <p className="mt-3 text-xs font-bold text-slate-600">Loading announcements...</p>
           </div>
         ) : error ? (
@@ -305,8 +311,8 @@ const StudentAnnouncements = () => {
             </button>
           </div>
         ) : filteredAnnouncements.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-purple-200 bg-[#FAF8FE] px-6 py-20 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-50 text-purple-600">
+          <div className="rounded-2xl border border-dashed border-[#E3DDD0] bg-[#FAF8F4] px-6 py-20 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F1EDE4] text-[#9C6B2E]">
               <Bell className="h-7 w-7" />
             </div>
             <h2 className="mt-4 text-base font-extrabold text-slate-800">
@@ -323,7 +329,7 @@ const StudentAnnouncements = () => {
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#7C3AED] px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#6D28D9] transition"
+                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#9C6B2E] px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#855923] transition"
               >
                 Clear Search
               </button>
@@ -333,18 +339,24 @@ const StudentAnnouncements = () => {
           <section className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {filteredAnnouncements.map((announcement) => {
               const aId = announcement.id || announcement.announcement_id;
-              const courseTitle =
-                announcement.course_title ||
-                announcement.course?.title ||
-                announcement.course?.course_title ||
-                announcement.course_name ||
-                'Course Notice';
+              const isInstitutional =
+                !announcement.course_id &&
+                (announcement.branch_name || announcement.audience || announcement.branch_id);
+              const courseTitle = isInstitutional
+                ? (announcement.branch_name ? `Branch: ${announcement.branch_name}` : 'Institutional Notice')
+                : (
+                    announcement.course_title ||
+                    announcement.course?.title ||
+                    announcement.course?.course_title ||
+                    announcement.course_name ||
+                    'Course Notice'
+                  );
               const staffName =
                 announcement.staff_name ||
                 announcement.staff?.name ||
                 announcement.instructor_name ||
                 announcement.created_by_name ||
-                null;
+                (isInstitutional ? 'Branch Administration' : null);
               const eventTime =
                 announcement.scheduled_event_time ||
                 announcement.event_time ||
@@ -355,24 +367,46 @@ const StudentAnnouncements = () => {
               return (
                 <article
                   key={aId || Math.random()}
-                  className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-purple-100/80 bg-white p-5 sm:p-6 shadow-[0_8px_25px_rgba(0,0,0,0.03)] transition-all duration-300 hover:border-purple-300 hover:shadow-md"
+                  className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#E3DDD0] bg-white p-5 sm:p-6 shadow-[0_8px_25px_rgba(0,0,0,0.03)] transition-all duration-300 hover:border-[#9C6B2E] hover:shadow-md"
                 >
                   <div>
+                    {/* Announcement Image Thumbnail */}
+                    {announcement.image && (
+                      <div
+                        className="-mx-5 -mt-5 sm:-mx-6 sm:-mt-6 mb-4 h-48 overflow-hidden bg-[#FAF8F4] border-b border-[#E3DDD0] flex items-center justify-center cursor-pointer relative group/img"
+                        onClick={() => setSelectedAnnouncement(announcement)}
+                      >
+                        <img
+                          src={getCourseImageUrl(announcement.image)}
+                          alt={announcement.title}
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover/img:scale-105"
+                          loading="lazy"
+                        />
+                      </div>
+                    )}
+
                     {/* Top Row: Course Badge & Date */}
                     <div className="flex items-start justify-between gap-2 mb-3">
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-200/70 bg-[#F5F2FC] px-3 py-1 text-[11px] font-bold text-purple-700">
-                        <BookOpen className="h-3 w-3 text-purple-600" />
-                        <span className="max-w-[150px] truncate">{courseTitle}</span>
-                      </span>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#E3DDD0] bg-[#FAF8F4] px-3 py-1 text-[11px] font-bold text-[#9C6B2E]">
+                          <BookOpen className="h-3 w-3 text-[#9C6B2E]" />
+                          <span className="max-w-[150px] truncate">{courseTitle}</span>
+                        </span>
+                        {announcement.audience && (
+                          <span className="inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold bg-[#fef3c7] text-[#92400e] border border-[#fde68a]">
+                            Target: {announcement.audience === 'both' ? 'Students & Staff' : announcement.audience === 'all' ? 'Everyone' : announcement.audience}
+                          </span>
+                        )}
+                      </div>
 
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400">
-                        <CalendarDays className="h-3.5 w-3.5 text-purple-600" />
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400 shrink-0">
+                        <CalendarDays className="h-3.5 w-3.5 text-[#9C6B2E]" />
                         {formatDate(announcement.created_at)}
                       </span>
                     </div>
 
                     {/* Title */}
-                    <h2 className="text-base font-extrabold text-slate-900 line-clamp-2 leading-snug group-hover:text-[#7C3AED] transition">
+                    <h2 className="text-base font-extrabold text-slate-900 line-clamp-2 leading-snug group-hover:text-[#9C6B2E] transition">
                       {announcement.title}
                     </h2>
 
@@ -390,21 +424,13 @@ const StudentAnnouncements = () => {
                     </p>
                   </div>
 
-                  {/* Footer: Instructor & Read Modal Button */}
-                  <div className="mt-5 pt-4 border-t border-purple-100/80 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-full bg-purple-100 border border-purple-200 flex items-center justify-center font-bold text-[10px] text-[#7C3AED]">
-                        <GraduationCap className="h-3.5 w-3.5" />
-                      </div>
-                      <span className="text-[11px] font-semibold text-slate-700 truncate max-w-[120px]">
-                        {staffName ? `By ${staffName}` : 'Instructor'}
-                      </span>
-                    </div>
+                  {/* Footer: Read Modal Button */}
+                  <div className="mt-5 pt-4 border-t border-[#E3DDD0] flex items-center justify-end">
 
                     <button
                       type="button"
                       onClick={() => setSelectedAnnouncement(announcement)}
-                      className="inline-flex items-center gap-1 text-xs font-bold text-purple-700 hover:text-purple-900 transition cursor-pointer"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-[#9C6B2E] hover:text-[#855923] transition cursor-pointer"
                     >
                       <span>Read Notice</span>
                       <ChevronRight className="h-3.5 w-3.5" />
@@ -418,105 +444,172 @@ const StudentAnnouncements = () => {
       </div>
 
       {/* Full Notice Modal */}
-      {selectedAnnouncement && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs animate-[modalPop_0.2s_ease-out]"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="relative max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-3xl border border-purple-200 bg-white shadow-2xl p-6 sm:p-8">
-            <button
-              type="button"
+      {selectedAnnouncement &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 sa-fade"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
               onClick={() => setSelectedAnnouncement(null)}
-              className="absolute right-4 top-4 z-10 rounded-xl bg-slate-50 p-2 text-slate-400 border border-slate-200 transition hover:bg-slate-100 hover:text-slate-700 cursor-pointer"
-              aria-label="Close announcement"
+            />
+            <div
+              className="relative max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-3xl border border-[#E3DDD0] bg-white shadow-2xl p-6 sm:p-8 sa-rise"
+              onClick={(e) => e.stopPropagation()}
             >
-              <X className="h-5 w-5" />
-            </button>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-100 px-3 py-1 text-[11px] font-bold text-purple-800">
-                <Bell className="h-3.5 w-3.5 text-purple-700" /> Course Notice
-              </span>
-              <span className="text-xs text-slate-400">
-                • {formatDate(selectedAnnouncement.created_at)}
-              </span>
-            </div>
-
-            <h2 className="mt-3 text-xl font-extrabold text-slate-900 leading-snug">
-              {selectedAnnouncement.title}
-            </h2>
-
-            {/* Course & Instructor details */}
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200">
-              <div className="flex items-center gap-1.5 font-medium">
-                <BookOpen className="h-3.5 w-3.5 text-purple-700" />
-                <span>
-                  Course:{' '}
-                  <strong>
-                    {selectedAnnouncement.course_title ||
-                      selectedAnnouncement.course?.title ||
-                      selectedAnnouncement.course_name ||
-                      'Enrolled Course'}
-                  </strong>
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 font-medium">
-                <User className="h-3.5 w-3.5 text-blue-700" />
-                <span>
-                  Staff:{' '}
-                  <strong>
-                    {selectedAnnouncement.staff_name ||
-                      selectedAnnouncement.staff?.name ||
-                      selectedAnnouncement.instructor_name ||
-                      'Course Instructor'}
-                  </strong>
-                </span>
-              </div>
-            </div>
-
-            {/* Scheduled Event / Exam Time Highlight */}
-            {(selectedAnnouncement.scheduled_event_time ||
-              selectedAnnouncement.event_time ||
-              selectedAnnouncement.scheduled_time ||
-              selectedAnnouncement.exam_time) && (
-              <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-900 font-bold">
-                <CalendarCheck className="h-5 w-5 text-rose-600 shrink-0" />
-                <div>
-                  <span className="block text-[10px] uppercase tracking-wider text-rose-700">
-                    Scheduled Event / Exam Time
-                  </span>
-                  <span>
-                    {formatEventTime(
-                      selectedAnnouncement.scheduled_event_time ||
-                        selectedAnnouncement.event_time ||
-                        selectedAnnouncement.scheduled_time ||
-                        selectedAnnouncement.exam_time
-                    )}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Message Body */}
-            <div className="mt-5 border-t border-purple-100 pt-4">
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
-                {selectedAnnouncement.message}
-              </p>
-            </div>
-
-            <div className="mt-7 flex justify-end">
               <button
                 type="button"
                 onClick={() => setSelectedAnnouncement(null)}
-                className="rounded-xl bg-[#7C3AED] px-6 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#6D28D9]"
+                className="absolute right-4 top-4 z-10 rounded-xl bg-slate-50 p-2 text-slate-400 border border-slate-200 transition hover:bg-slate-100 hover:text-slate-700 cursor-pointer"
+                aria-label="Close announcement"
               >
-                Close
+                <X className="h-5 w-5" />
               </button>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F1EDE4] px-3 py-1 text-[11px] font-bold text-[#9C6B2E] border border-[#E3DDD0]">
+                  <Bell className="h-3.5 w-3.5 text-[#9C6B2E]" /> Course Notice
+                </span>
+                <span className="text-xs text-slate-400">
+                  • {formatDate(selectedAnnouncement.created_at)}
+                </span>
+              </div>
+
+              <h2 className="mt-3 text-xl font-extrabold text-slate-900 leading-snug">
+                {selectedAnnouncement.title}
+              </h2>
+
+              {/* Modal Image (if present) */}
+              {selectedAnnouncement.image && (
+                <div className="mt-4 relative group overflow-hidden rounded-2xl border border-[#E3DDD0] bg-[#FAF8F4] p-2 flex items-center justify-center">
+                  <img
+                    src={getCourseImageUrl(selectedAnnouncement.image)}
+                    alt={selectedAnnouncement.title}
+                    className="max-h-80 w-auto max-w-full rounded-xl object-contain shadow-xs cursor-pointer transition hover:scale-[1.01]"
+                    onClick={() =>
+                      setViewingImage({
+                        url: getCourseImageUrl(selectedAnnouncement.image),
+                        title: selectedAnnouncement.title,
+                      })
+                    }
+                  />
+                </div>
+              )}
+
+              {/* Course & Instructor details */}
+              <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <div className="flex items-center gap-1.5 font-medium">
+                  <BookOpen className="h-3.5 w-3.5 text-[#9C6B2E]" />
+                  <span>
+                    Scope:{' '}
+                    <strong>
+                      {selectedAnnouncement.branch_name
+                        ? `Branch (${selectedAnnouncement.branch_name})`
+                        : selectedAnnouncement.course_title ||
+                          selectedAnnouncement.course?.title ||
+                          selectedAnnouncement.course_name ||
+                          'Enrolled Course'}
+                    </strong>
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 font-medium">
+                  <User className="h-3.5 w-3.5 text-[#9C6B2E]" />
+                  <span>
+                    Sender:{' '}
+                    <strong>
+                      {selectedAnnouncement.staff_name ||
+                        selectedAnnouncement.staff?.name ||
+                        selectedAnnouncement.instructor_name ||
+                        (selectedAnnouncement.branch_name || selectedAnnouncement.audience
+                          ? 'Branch Administration'
+                          : 'Course Instructor')}
+                    </strong>
+                  </span>
+                </div>
+              </div>
+
+              {/* Scheduled Event / Exam Time Highlight */}
+              {(selectedAnnouncement.scheduled_event_time ||
+                selectedAnnouncement.event_time ||
+                selectedAnnouncement.scheduled_time ||
+                selectedAnnouncement.exam_time) && (
+                <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-900 font-bold">
+                  <CalendarCheck className="h-5 w-5 text-rose-600 shrink-0" />
+                  <div>
+                    <span className="block text-[10px] uppercase tracking-wider text-rose-700">
+                      Scheduled Event / Exam Time
+                    </span>
+                    <span>
+                      {formatEventTime(
+                        selectedAnnouncement.scheduled_event_time ||
+                          selectedAnnouncement.event_time ||
+                          selectedAnnouncement.scheduled_time ||
+                          selectedAnnouncement.exam_time
+                      )}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Message Body */}
+              <div className="mt-5 border-t border-[#E3DDD0] pt-4">
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
+                  {selectedAnnouncement.message}
+                </p>
+              </div>
+
+              <div className="mt-7 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSelectedAnnouncement(null)}
+                  className="rounded-xl bg-[#9C6B2E] px-6 py-2.5 text-xs font-bold text-white shadow-xs transition hover:bg-[#855923] cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
+
+      {/* Lightbox Modal for full image */}
+      {viewingImage &&
+        createPortal(
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6 sa-fade">
+            <div
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              onClick={() => setViewingImage(null)}
+            />
+            <div
+              className="relative max-h-[92vh] max-w-4xl w-full overflow-hidden rounded-3xl bg-white shadow-2xl flex flex-col border border-[#E3DDD0] sa-rise"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b px-5 py-3 bg-[#faf8f4]">
+                <h3 className="text-sm font-bold text-slate-800 truncate pr-4">
+                  {viewingImage.title || 'Announcement Image'}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setViewingImage(null)}
+                  className="rounded-lg p-1.5 hover:bg-slate-200 text-slate-500 hover:text-slate-900 transition cursor-pointer"
+                  title="Close"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="p-3 bg-[#f1ede4] flex items-center justify-center overflow-auto max-h-[calc(92vh-60px)]">
+                <img
+                  src={viewingImage.url}
+                  alt={viewingImage.title || 'Full announcement image'}
+                  className="max-h-[80vh] w-auto max-w-full rounded-lg object-contain shadow-md"
+                />
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

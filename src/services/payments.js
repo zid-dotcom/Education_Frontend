@@ -35,14 +35,38 @@ async function parsePaymentResponse(response, fallbackMessage) {
   return resData;
 }
 
-export async function createPaymentOrderApi(courseId, paymentType = 'full', installmentNumber = 1, token) {
-  const payload = {
-    course_id: Number(courseId),
-    payment_type: paymentType,
-  };
+export { getEnrollmentInstallmentsApi } from './enrollments';
 
-  if (paymentType === 'installment') {
-    payload.installment_number = Number(installmentNumber) || 1;
+/**
+ * Create a payment order.
+ * Supports:
+ * - New course enrollment order: createPaymentOrderApi(courseId, paymentType, installmentNumber, token)
+ * - Existing student installment order: createPaymentOrderApi({ enrollment_id, payment_type: 'installment' }, token)
+ */
+export async function createPaymentOrderApi(courseIdOrParams, paymentType = 'full', installmentNumber = 1, tokenArg) {
+  let payload = {};
+  let token = tokenArg;
+
+  if (typeof courseIdOrParams === 'object' && courseIdOrParams !== null) {
+    // Called as: createPaymentOrderApi({ enrollment_id, course_id, payment_type, installment_number }, token)
+    token = paymentType;
+    const { enrollment_id, course_id, payment_type = 'installment', installment_number } = courseIdOrParams;
+    payload = {
+      ...(enrollment_id !== undefined ? { enrollment_id: Number(enrollment_id) } : {}),
+      ...(course_id !== undefined ? { course_id: Number(course_id) } : {}),
+      payment_type: payment_type,
+      ...(installment_number !== undefined ? { installment_number: Number(installment_number) } : {}),
+    };
+  } else {
+    // Called as: createPaymentOrderApi(courseId, paymentType, installmentNumber, token)
+    payload = {
+      course_id: Number(courseIdOrParams),
+      payment_type: paymentType,
+    };
+
+    if (paymentType === 'installment') {
+      payload.installment_number = Number(installmentNumber) || 1;
+    }
   }
 
   const response = await fetch(`${API_BASE_URL}/payments/create-order`, {
@@ -59,6 +83,22 @@ export async function createPaymentOrderApi(courseId, paymentType = 'full', inst
   return parsePaymentResponse(response, 'Failed to create payment order.');
 }
 
+/**
+ * Convenience helper to create a Razorpay order for an existing student's next unpaid installment.
+ * POST /payments/create-order
+ * @param {number|string} enrollmentId
+ * @param {string} token
+ */
+export async function createInstallmentOrderApi(enrollmentId, token) {
+  return createPaymentOrderApi(
+    {
+      enrollment_id: Number(enrollmentId),
+      payment_type: 'installment',
+    },
+    token
+  );
+}
+
 export async function verifyPaymentApi(paymentData, token) {
   const response = await fetch(`${API_BASE_URL}/payments/verify`, {
     method: 'POST',
@@ -72,4 +112,4 @@ export async function verifyPaymentApi(paymentData, token) {
   });
 
   return parsePaymentResponse(response, 'Payment verification failed.');
-}
+}

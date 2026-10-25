@@ -116,24 +116,24 @@ const StudentEnquiries = () => {
         }
       `}</style>
       <div className="w-full space-y-6">
-        <section className="rounded-2xl border border-purple-100 bg-white p-6 sm:p-8 shadow-[0_8px_25px_rgba(0,0,0,0.03)]">
+        <section className="rounded-2xl border border-[#E3DDD0] bg-white p-6 sm:p-8 shadow-2xs">
           <div className="flex items-start gap-4">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-[#7C3AED]">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F1EDE4] text-[#9C6B2E]">
               <MessageCircle className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-purple-600">Student Portal</p>
-              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Enquiries</h1>
-              <p className="mt-1 text-xs sm:text-sm text-slate-500 font-normal">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[#9C6B2E]">Student Portal</p>
+              <h1 className="text-2xl sm:text-3xl font-black text-[#17140F] tracking-tight">Enquiries</h1>
+              <p className="mt-1 text-xs sm:text-sm text-[#5B5346] font-normal">
                 Send admission requests or general queries directly to your branch administrator.
               </p>
             </div>
           </div>
         </section>
 
-        <div className="bg-white rounded-3xl border border-purple-100 shadow-[0_8px_25px_rgba(0,0,0,0.03)] overflow-hidden">
+        <div className="bg-white rounded-3xl border border-[#E3DDD0] shadow-2xs overflow-hidden">
           {/* Tabs */}
-          <div className="flex border-b border-purple-100 bg-[#FAF8FE]">
+          <div className="flex border-b border-[#E3DDD0] bg-[#FAF8F4]">
             <button
               type="button"
               onClick={() => {
@@ -144,8 +144,8 @@ const StudentEnquiries = () => {
               }}
               className={`flex-1 py-4 text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
                 activeTab === 'admission'
-                  ? 'text-[#7C3AED] bg-white border-b-2 border-[#7C3AED]'
-                  : 'text-slate-400 hover:bg-purple-50 hover:text-purple-700'
+                  ? 'text-[#9C6B2E] bg-white border-b-2 border-[#9C6B2E]'
+                  : 'text-[#8A8175] hover:bg-[#F1EDE4] hover:text-[#17140F]'
               }`}
             >
               <GraduationCap className="h-4 w-4" />
@@ -161,8 +161,8 @@ const StudentEnquiries = () => {
               }}
               className={`flex-1 py-4 text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
                 activeTab === 'general'
-                  ? 'text-[#7C3AED] bg-white border-b-2 border-[#7C3AED]'
-                  : 'text-slate-400 hover:bg-purple-50 hover:text-purple-700'
+                  ? 'text-[#9C6B2E] bg-white border-b-2 border-[#9C6B2E]'
+                  : 'text-[#8A8175] hover:bg-[#F1EDE4] hover:text-[#17140F]'
               }`}
             >
               <MessageCircle className="h-4 w-4" />
@@ -173,16 +173,16 @@ const StudentEnquiries = () => {
           <div className="p-6 sm:p-8 lg:p-10">
             {isSubmitted ? (
               <div className="py-10 text-center flex flex-col items-center">
-                <div className="w-16 h-16 bg-purple-50 text-[#7C3AED] rounded-full flex items-center justify-center border border-purple-200 mb-4 shadow-sm">
+                <div className="w-16 h-16 bg-[#F1EDE4] text-[#9C6B2E] rounded-full flex items-center justify-center border border-[#E3DDD0] mb-4 shadow-xs">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
-                <h3 className="text-xl font-extrabold text-slate-900 mb-2">Message sent successfully!</h3>
-                <p className="text-slate-500 text-xs sm:text-sm mb-6 max-w-md">
+                <h3 className="text-xl font-extrabold text-[#17140F] mb-2">Message sent successfully!</h3>
+                <p className="text-[#5B5346] text-xs sm:text-sm mb-6 max-w-md">
                   Thank you for reaching out. The branch administrator has received your {activeTab === 'admission' ? 'admission application' : 'general enquiry'} and will get back to you shortly.
                 </p>
                 <button
                   onClick={resetForm}
-                  className="px-6 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold rounded-xl border border-purple-200 transition"
+                  className="px-6 py-2.5 bg-[#F1EDE4] hover:bg-[#E8E2D5] text-[#9C6B2E] text-xs font-bold rounded-xl border border-[#E3DDD0] transition"
                 >
                   Send another message
                 </button>
@@ -196,10 +196,10 @@ const StudentEnquiries = () => {
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className={`w-full px-4 py-2.5 rounded-xl border text-xs focus:outline-none focus:ring-2 bg-[#F5F2FC] transition ${
+                      className={`w-full px-4 py-2.5 rounded-xl border text-xs focus:outline-none focus:ring-1 bg-[#FAF8F4] text-[#17140F] transition ${
                         errors.name
                           ? 'border-rose-500 focus:ring-rose-200'
-                          : 'border-purple-100 focus:bg-white focus:border-purple-300 focus:ring-purple-200'
+                          : 'border-[#E3DDD0] focus:bg-white focus:border-[#9C6B2E] focus:ring-[#9C6B2E]'
                       }`}
                     />
                     {errors.name && <p className="text-rose-500 text-xs mt-1">{errors.name}</p>}
@@ -211,10 +211,10 @@ const StudentEnquiries = () => {
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className={`w-full px-4 py-2.5 rounded-xl border text-xs focus:outline-none focus:ring-2 bg-[#F5F2FC] transition ${
+                      className={`w-full px-4 py-2.5 rounded-xl border text-xs focus:outline-none focus:ring-1 bg-[#FAF8F4] text-[#17140F] transition ${
                         errors.email
                           ? 'border-rose-500 focus:ring-rose-200'
-                          : 'border-purple-100 focus:bg-white focus:border-purple-300 focus:ring-purple-200'
+                          : 'border-[#E3DDD0] focus:bg-white focus:border-[#9C6B2E] focus:ring-[#9C6B2E]'
                       }`}
                     />
                     {errors.email && <p className="text-rose-500 text-xs mt-1">{errors.email}</p>}
@@ -228,10 +228,10 @@ const StudentEnquiries = () => {
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className={`w-full px-4 py-2.5 rounded-xl border text-xs focus:outline-none focus:ring-2 bg-[#F5F2FC] transition ${
+                      className={`w-full px-4 py-2.5 rounded-xl border text-xs focus:outline-none focus:ring-1 bg-[#FAF8F4] text-[#17140F] transition ${
                         errors.phone
                           ? 'border-rose-500 focus:ring-rose-200'
-                          : 'border-purple-100 focus:bg-white focus:border-purple-300 focus:ring-purple-200'
+                          : 'border-[#E3DDD0] focus:bg-white focus:border-[#9C6B2E] focus:ring-[#9C6B2E]'
                       }`}
                     />
                     {errors.phone && <p className="text-rose-500 text-xs mt-1">{errors.phone}</p>}
@@ -242,10 +242,10 @@ const StudentEnquiries = () => {
                     <select
                       value={formData.branchId}
                       onChange={(e) => setFormData({ ...formData, branchId: e.target.value, course: '' })}
-                      className={`w-full px-4 py-2.5 rounded-xl border text-xs focus:outline-none focus:ring-2 bg-[#F5F2FC] transition ${
+                      className={`w-full px-4 py-2.5 rounded-xl border text-xs focus:outline-none focus:ring-1 bg-[#FAF8F4] text-[#17140F] transition ${
                         errors.branchId
                           ? 'border-rose-500 focus:ring-rose-200'
-                          : 'border-purple-100 focus:bg-white focus:border-purple-300 focus:ring-purple-200'
+                          : 'border-[#E3DDD0] focus:bg-white focus:border-[#9C6B2E] focus:ring-[#9C6B2E]'
                       }`}
                     >
                       <option value="">-- Select a Branch --</option>
@@ -266,10 +266,10 @@ const StudentEnquiries = () => {
                       <select
                         value={formData.course}
                         onChange={(e) => setFormData({ ...formData, course: e.target.value })}
-                        className={`w-full px-4 py-2.5 rounded-xl border text-xs focus:outline-none focus:ring-2 bg-[#F5F2FC] transition ${
+                        className={`w-full px-4 py-2.5 rounded-xl border text-xs focus:outline-none focus:ring-1 bg-[#FAF8F4] text-[#17140F] transition ${
                           errors.course
                             ? 'border-rose-500 focus:ring-rose-200'
-                            : 'border-purple-100 focus:bg-white focus:border-purple-300 focus:ring-purple-200'
+                            : 'border-[#E3DDD0] focus:bg-white focus:border-[#9C6B2E] focus:ring-[#9C6B2E]'
                         }`}
                       >
                         <option value="">-- Select a Course --</option>
@@ -289,7 +289,7 @@ const StudentEnquiries = () => {
                       <select
                         value={formData.qualification}
                         onChange={(e) => setFormData({ ...formData, qualification: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-xl border border-purple-100 focus:bg-white focus:border-purple-300 focus:ring-purple-200 text-xs focus:outline-none focus:ring-2 bg-[#F5F2FC] transition"
+                        className="w-full px-4 py-2.5 rounded-xl border border-[#E3DDD0] focus:bg-white focus:border-[#9C6B2E] text-xs focus:outline-none focus:ring-1 focus:ring-[#9C6B2E] bg-[#FAF8F4] text-[#17140F] transition"
                       >
                         <option value="10th Pass">10th Pass</option>
                         <option value="12th Pass">12th Pass</option>
@@ -318,10 +318,10 @@ const StudentEnquiries = () => {
                         ? 'Tell us about your background and interest in this course...'
                         : 'Write your questions here...'
                     }
-                    className={`w-full px-4 py-3 rounded-xl border text-xs focus:outline-none focus:ring-2 bg-[#F5F2FC] transition resize-none ${
+                    className={`w-full px-4 py-3 rounded-xl border text-xs focus:outline-none focus:ring-1 bg-[#FAF8F4] text-[#17140F] transition resize-none ${
                       errors.message
                         ? 'border-rose-500 focus:ring-rose-200'
-                        : 'border-purple-100 focus:bg-white focus:border-purple-300 focus:ring-purple-200'
+                        : 'border-[#E3DDD0] focus:bg-white focus:border-[#9C6B2E] focus:ring-[#9C6B2E]'
                     }`}
                   ></textarea>
                   {errors.message && <p className="text-rose-500 text-xs mt-1">{errors.message}</p>}
@@ -337,7 +337,7 @@ const StudentEnquiries = () => {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-xs font-bold rounded-xl shadow-sm transition disabled:opacity-70 disabled:cursor-not-allowed"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 bg-[#9C6B2E] hover:bg-[#855923] text-white text-xs font-bold rounded-xl shadow-xs transition disabled:opacity-70 disabled:cursor-not-allowed"
                   >
                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     {loading ? 'Sending message...' : 'Send message'}

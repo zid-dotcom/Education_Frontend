@@ -7,34 +7,34 @@ const BranchCourseSelector = ({ branches = [], selectedBranchId, onBranchChange,
 
   if (isStudent) {
     return (
-      <div className="rounded-2xl border border-purple-100 bg-white p-5 sm:p-6 shadow-[0_8px_25px_rgba(0,0,0,0.03)] transition">
+      <div className="rounded-2xl border border-[#E3DDD0] bg-white p-5 sm:p-6 shadow-2xs transition">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-50 text-purple-700 border border-purple-200/70">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F1EDE4] text-[#9C6B2E] border border-[#E3DDD0]">
                 <MapPin className="h-4 w-4" />
               </span>
               <div>
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-purple-600">
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-[#9C6B2E]">
                   Location Selection
                 </span>
-                <h3 className="text-base font-extrabold text-slate-900 leading-tight">
+                <h3 className="text-base font-extrabold text-[#17140F] leading-tight">
                   Choose your branch
                 </h3>
               </div>
             </div>
-            <p className="mt-2 text-xs text-slate-500 font-normal">
+            <p className="mt-2 text-xs text-[#5B5346] font-normal">
               Select a campus to browse available courses and schedules.
             </p>
           </div>
 
           <label className="relative block w-full sm:max-w-md">
-            <span className="mb-1.5 block text-xs font-bold text-slate-700">Campus Branch</span>
-            <Building2 className="pointer-events-none absolute bottom-3.5 left-3.5 h-4 w-4 text-purple-400" />
+            <span className="mb-1.5 block text-xs font-bold text-[#17140F]">Campus Branch</span>
+            <Building2 className="pointer-events-none absolute bottom-3.5 left-3.5 h-4 w-4 text-[#8A8175]" />
             <select
               value={selectedBranchId || ''}
               onChange={(event) => onBranchChange(event.target.value)}
-              className="w-full appearance-none rounded-xl border border-purple-200 bg-[#F5F2FC] py-2.5 pl-10 pr-9 text-xs font-semibold text-slate-800 outline-none transition hover:border-purple-300 focus:border-purple-400 focus:bg-white focus:ring-2 focus:ring-purple-200 cursor-pointer"
+              className="w-full appearance-none rounded-xl border border-[#E3DDD0] bg-[#FAF8F4] py-2.5 pl-10 pr-9 text-xs font-semibold text-[#17140F] outline-none transition hover:border-[#9C6B2E]/50 focus:border-[#9C6B2E] focus:bg-white cursor-pointer"
             >
               <option value="">Select your branch</option>
               {branches.map((branch) => (
@@ -43,29 +43,29 @@ const BranchCourseSelector = ({ branches = [], selectedBranchId, onBranchChange,
                 </option>
               ))}
             </select>
-            <ChevronDown className="pointer-events-none absolute bottom-3.5 right-3 h-4 w-4 text-purple-400" />
+            <ChevronDown className="pointer-events-none absolute bottom-3.5 right-3 h-4 w-4 text-[#8A8175]" />
           </label>
         </div>
 
         {selectedBranch && (
-          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-purple-100/80 pt-4 text-xs text-slate-600">
-            <span className="font-extrabold text-slate-900 flex items-center gap-1.5">
+          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-[#E3DDD0] pt-4 text-xs text-[#5B5346]">
+            <span className="font-extrabold text-[#17140F] flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
               {selectedBranch.name}
             </span>
             {selectedBranch.location && (
-              <span className="inline-flex items-center gap-1 text-slate-500">
-                <MapPin className="h-3 w-3 text-purple-500" /> {selectedBranch.location}
+              <span className="inline-flex items-center gap-1 text-[#5B5346]">
+                <MapPin className="h-3 w-3 text-[#9C6B2E]" /> {selectedBranch.location}
               </span>
             )}
             {selectedBranch.phone && (
-              <span className="inline-flex items-center gap-1 text-slate-500">
-                <Phone className="h-3 w-3 text-purple-500" /> {selectedBranch.phone}
+              <span className="inline-flex items-center gap-1 text-[#5B5346]">
+                <Phone className="h-3 w-3 text-[#9C6B2E]" /> {selectedBranch.phone}
               </span>
             )}
             {selectedBranch.email && (
-              <span className="inline-flex items-center gap-1 text-slate-500">
-                <Mail className="h-3 w-3 text-purple-500" /> {selectedBranch.email}
+              <span className="inline-flex items-center gap-1 text-[#5B5346]">
+                <Mail className="h-3 w-3 text-[#9C6B2E]" /> {selectedBranch.email}
               </span>
             )}
           </div>

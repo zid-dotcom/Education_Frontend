@@ -11,6 +11,8 @@ import FAQAccordion from '../components/common/FAQAccordion';
 import CTASection from '../components/sections/CTASection';
 import ScrollReveal from '../components/common/ScrollReveal';
 import { faqs } from '../data/faqs';
+import { instituteInfo } from '../data/instituteInfo';
+import { Quote } from 'lucide-react';
 
 const Home = ({ onOpenApplyModal }) => {
   return (
@@ -36,6 +38,25 @@ const Home = ({ onOpenApplyModal }) => {
       {/* Institute Story & Stats */}
       <ScrollReveal>
         <AboutSection />
+      </ScrollReveal>
+
+      {/* Managing Director Quote */}
+      <ScrollReveal>
+        <section className="relative py-16 sm:py-20 bg-stone-900 text-white overflow-hidden">
+          <div className="pointer-events-none absolute -top-20 -left-20 w-80 h-80 rounded-full bg-amber-500/10 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-20 -right-20 w-80 h-80 rounded-full bg-amber-500/10 blur-3xl" />
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center relative z-10">
+            <div className="w-12 h-12 rounded-full bg-amber-400 text-stone-900 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-amber-400/20">
+              <Quote className="w-6 h-6" />
+            </div>
+            <blockquote className="italic text-xl sm:text-2xl text-stone-100 leading-relaxed font-serif">
+              "{instituteInfo.mdQuote}"
+            </blockquote>
+            <p className="mt-4 text-xs sm:text-sm font-bold uppercase tracking-widest text-amber-400">
+              Managing Director, AurumFX
+            </p>
+          </div>
+        </section>
       </ScrollReveal>
 
       {/* Dedicated Placement & Career Opportunities */}

@@ -55,6 +55,28 @@ export async function deleteBranchStaffApi(staffId, token) {
   return parseResponse(response, 'Failed to delete staff member.');
 }
 
+/**
+ * Change staff member active/inactive status:
+ * PATCH /branch-admin/staff/{staff_id}/status
+ */
+export async function updateBranchAdminStaffStatusApi(staffId, status, token) {
+  const formattedStatus = String(status).toLowerCase() === 'active' ? 'Active' : 'Inactive';
+  const query = `?status=${encodeURIComponent(formattedStatus)}`;
+  const response = await fetch(`${API_BASE_URL}/branch-admin/staff/${staffId}/status${query}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: 'include',
+    body: JSON.stringify({
+      status: formattedStatus,
+      is_active: formattedStatus === 'Active',
+    }),
+  });
+  return parseResponse(response, 'Failed to update staff status.');
+}
+
 export async function markStaffAttendanceApi(payload, token) {
   const response = await fetch(
     `${API_BASE_URL}/staff-attendance/mark`,

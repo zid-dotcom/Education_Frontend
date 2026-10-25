@@ -220,14 +220,23 @@ export async function getStaffCourseAnnouncementsApi(courseId, token) {
 }
 
 /**
- * Get My Staff Announcements (all courses): GET /staff/announcements
+ * Staff view announcements: GET /announcements/staff/branch
+ * Global announcements and announcements for the staff member's branch, targeted to staff, all, or legacy both.
+ * Fallback: GET /staff/announcements
  * @param {string} token
  */
 export async function getStaffAnnouncementsApi(token) {
-  const response = await fetch(`${API_BASE_URL}/staff/announcements`, {
+  let response = await fetch(`${API_BASE_URL}/announcements/staff/branch`, {
     method: 'GET',
     headers: getHeaders(token),
   });
+
+  if (response.status === 404) {
+    response = await fetch(`${API_BASE_URL}/staff/announcements`, {
+      method: 'GET',
+      headers: getHeaders(token),
+    });
+  }
 
   const resData = await response.json().catch(() => ({}));
   if (!response.ok) {

@@ -4,7 +4,6 @@ import Button from '../components/common/Button';
 import { instituteInfo } from '../data/instituteInfo';
 import { createEnquiryApi } from '../services/enquiries';
 import { getPublicBranchesWithCoursesApi } from '../services/branches';
-import { getSettingsApi } from '../services/settings';
 import { useAuth } from '../context/AuthContext';
 
 // Reveals its children with a fade-up once scrolled into view
@@ -58,35 +57,16 @@ const Contact = () => {
   const [submitError, setSubmitError] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const [contactInfo, setContactInfo] = useState({
+  const contactInfo = {
     address: instituteInfo.address,
     phone: instituteInfo.phone,
     altPhone: instituteInfo.altPhone,
     email: instituteInfo.email,
     admissionsEmail: instituteInfo.admissionsEmail,
     workingHours: instituteInfo.workingHours,
-  });
+  };
 
   useEffect(() => {
-    const fetchDynamicSettings = async () => {
-      try {
-        const data = await getSettingsApi();
-        if (data) {
-          setContactInfo({
-            address: data.address || instituteInfo.address,
-            phone: data.phone || instituteInfo.phone,
-            altPhone: data.alt_phone || instituteInfo.altPhone,
-            email: data.email || instituteInfo.email,
-            admissionsEmail: data.admissions_email || instituteInfo.admissionsEmail,
-            workingHours: data.working_hours || instituteInfo.workingHours,
-          });
-        }
-      } catch (err) {
-        console.error('Error fetching settings:', err);
-      }
-    };
-    fetchDynamicSettings();
-
     const fetchBranches = async () => {
       try {
         const data = await getPublicBranchesWithCoursesApi();

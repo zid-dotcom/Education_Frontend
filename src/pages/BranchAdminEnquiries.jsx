@@ -8,8 +8,8 @@ import {
   GraduationCap,
   Calendar,
   CheckCircle2,
-  Clock,
   CheckCheck,
+  Menu,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -142,34 +142,34 @@ const BranchAdminEnquiries = () => {
       />
 
       <main className="min-w-0 flex-1 h-screen overflow-y-auto">
-        <header
-          className="ba-fade flex flex-col gap-5 px-6 pb-8 pt-10 sm:flex-row sm:items-end sm:justify-between sm:px-10"
-          style={{ borderBottom: "1px solid #e3ddd0", background: "#faf8f4", position: "sticky", top: 0, zIndex: 10 }}
-        >
-          <div>
-            <h1
-              className="text-[2.1rem] leading-none tracking-tight sm:text-[2.5rem]"
-              style={{ ...serif, fontWeight: 500, color: "#17140f" }}
+        <header className="sticky top-0 z-20 flex h-[92px] items-center justify-between border-b border-[#e3ddd0] bg-[#faf8f4]/95 px-6 backdrop-blur-md sm:px-10 shrink-0">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e3ddd0] bg-white text-slate-600 shadow-sm transition hover:bg-[#f0ebe1] md:hidden"
+              aria-label="Open sidebar"
             >
-              Enquiries
-            </h1>
-            <p className="mt-2 max-w-md text-[0.95rem]" style={{ color: "#8a8175" }}>
-              Admission queries and messages for your branch.
-            </p>
+              <Menu className="h-5 w-5" />
+            </button>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#9c6b2e]">
+                Branch Portal
+              </span>
+              <h1 className="text-xl font-extrabold tracking-tight text-slate-900 leading-tight">
+                Enquiries
+              </h1>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <div className="hidden text-right sm:block">
-              <p className="text-sm font-medium" style={{ color: "#17140f" }}>
-                {user?.name || "Branch admin"}
+              <p className="text-xs font-extrabold text-slate-900 leading-tight">
+                {user?.name || "Branch Admin"}
               </p>
-              <p className="text-xs" style={{ color: "#a39a8c" }}>
-                Branch administrator
+              <p className="text-[10px] font-semibold text-slate-400">
+                {user?.branch_name || "Branch Administrator"}
               </p>
             </div>
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium"
-              style={{ background: "#17140f", color: "#f4b942" }}
-            >
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#17140f] text-sm font-extrabold text-[#f4b942] shadow-sm ring-2 ring-[#e3ddd0]">
               {user?.name?.charAt(0).toUpperCase() || "B"}
             </div>
           </div>

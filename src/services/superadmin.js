@@ -127,6 +127,27 @@ export async function getSuperAdminAnnouncementBranchesApi(token) {
   return parseResponse(res, 'Failed to load announcement branches.');
 }
 
+/**
+ * Lists branch announcements with branch name and location.
+ * Supports optional branch_id, offset, and limit.
+ * GET /super-admin/announcements/all
+ * GET /super-admin/announcements/all?branch_id=2
+ */
+export async function getSuperAdminAllAnnouncementsApi(branchId, token, { offset = 0, limit = 100 } = {}) {
+  const params = new URLSearchParams();
+  if (branchId && branchId !== 'all') {
+    params.append('branch_id', String(branchId));
+  }
+  if (offset !== undefined && offset !== null) params.append('offset', String(offset));
+  if (limit !== undefined && limit !== null) params.append('limit', String(limit));
+
+  const query = params.toString() ? `?${params.toString()}` : '';
+  const res = await fetch(`${API_BASE_URL}/super-admin/announcements/all${query}`, {
+    headers: getHeaders(token),
+  });
+  return parseResponse(res, 'Failed to load branch announcements.');
+}
+
 export async function getSuperAdminBranchAnnouncementsApi(branchId, token) {
   const res = await fetch(`${API_BASE_URL}/super-admin/announcements/branches/${branchId}`, { headers: getHeaders(token) });
   return parseResponse(res, 'Failed to load branch announcements.');
@@ -198,6 +219,28 @@ export async function deleteSuperAdminBranchStaffApi(branchId, staffId, token) {
     headers: getHeaders(token),
   });
   return parseResponse(res, 'Failed to delete staff member.');
+}
+
+/**
+ * Change staff member active/inactive status as super admin:
+ * PATCH /super-admin/staff/{staff_id}/status
+ */
+export async function updateSuperAdminStaffStatusApi(staffId, status, token) {
+  const formattedStatus = String(status).toLowerCase() === 'active' ? 'Active' : 'Inactive';
+  const query = `?status=${encodeURIComponent(formattedStatus)}`;
+  const res = await fetch(`${API_BASE_URL}/super-admin/staff/${staffId}/status${query}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: 'include',
+    body: JSON.stringify({
+      status: formattedStatus,
+      is_active: formattedStatus === 'Active',
+    }),
+  });
+  return parseResponse(res, 'Failed to update staff status.');
 }
 
 // ─── Profit ───────────────────────────────────────────────────────────────────
@@ -385,3 +428,72 @@ export async function getSuperAdminBranchStudentsApi(branchId, token) {
   const res = await fetch(`${API_BASE_URL}/super-admin/records/branches/${branchId}/students`, { headers: getHeaders(token) });
   return parseResponse(res, 'Failed to load branch students.');
 }
+
+/**
+ * Change a student's status as super admin:
+ * PATCH /super-admin/students/{student_id}/status
+ */
+export async function updateSuperAdminStudentStatusApi(studentId, status, token) {
+  const formattedStatus = String(status).toLowerCase() === 'active' ? 'Active' : 'Inactive';
+  const query = `?status=${encodeURIComponent(formattedStatus)}`;
+  const res = await fetch(`${API_BASE_URL}/super-admin/students/${studentId}/status${query}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: 'include',
+    body: JSON.stringify({
+      status: formattedStatus,
+      is_active: formattedStatus === 'Active',
+    }),
+  });
+  return parseResponse(res, 'Failed to update student status.');
+}
+
+/**
+ * Super Admin - Installment Students with balance (optionally filtered by branch_id)
+ * GET /enrollments/super-admin/installment-students?branch_id=...
+ */
+export async function getSuperAdminInstallmentStudentsApi(branchId, token) {
+  const query = branchId ? `?branch_id=${encodeURIComponent(branchId)}` : '';
+  const res = await fetch(`${API_BASE_URL}/enrollments/super-admin/installment-students${query}`, {
+    headers: getHeaders(token),
+  });
+  return parseResponse(res, 'Failed to load installment students.');
+}
+
+/**
+ * Super Admin - Fully Paid Students (optionally filtered by branch_id)
+ * GET /enrollments/super-admin/fully-paid-students?branch_id=...
+ */
+export async function getSuperAdminFullyPaidStudentsApi(branchId, token) {
+  const query = branchId ? `?branch_id=${encodeURIComponent(branchId)}` : '';
+  const res = await fetch(`${API_BASE_URL}/enrollments/super-admin/fully-paid-students${query}`, {
+    headers: getHeaders(token),
+  });
+  return parseResponse(res, 'Failed to load fully paid students.');
+}
+
+/**
+ * Super Admin - Installment Payment History (optionally filtered by branch_id)
+ * GET /enrollments/super-admin/branch-admin-installment-history?branch_id=...
+ */
+export async function getSuperAdminBranchAdminInstallmentHistoryApi(branchId, token) {
+  const query = branchId ? `?branch_id=${encodeURIComponent(branchId)}` : '';
+  const res = await fetch(`${API_BASE_URL}/enrollments/super-admin/branch-admin-installment-history${query}`, {
+    headers: getHeaders(token),
+  });
+  return parseResponse(res, 'Failed to load installment payment history.');
+}
+
+// ─── Staff Verification ───────────────────────────────────────────────────────
+export {
+  getSuperAdminStaffVerificationPendingApi,
+  getSuperAdminStaffVerificationApi,
+  getSuperAdminStaffVerificationApprovedApi,
+  getSuperAdminStaffVerificationRejectedApi,
+  approveSuperAdminStaffVerificationApi,
+  rejectSuperAdminStaffVerificationApi,
+} from './superadminstaffverification';
+

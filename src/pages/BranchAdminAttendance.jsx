@@ -3,6 +3,7 @@ import {
   CalendarDays,
   Circle,
   Loader2,
+  Menu,
   Save,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -192,39 +193,35 @@ const BranchAdminAttendance = () => {
       />
       <main className="min-w-0 flex-1">
         {/* ---- Header ---- */}
-        <header
-          className="px-6 pb-8 pt-10 sm:px-10"
-          style={{ borderBottom: "1px solid #e3ddd0" }}
-        >
-          <div className="mx-auto flex max-w-6xl flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <header className="sticky top-0 z-20 flex h-[92px] items-center justify-between border-b border-[#e3ddd0] bg-[#faf8f4]/95 px-6 backdrop-blur-md sm:px-10 shrink-0">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e3ddd0] bg-white text-slate-600 shadow-sm transition hover:bg-[#f0ebe1] md:hidden"
+              aria-label="Open sidebar"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
             <div>
-              <h1
-                className="text-[2.1rem] leading-none tracking-tight sm:text-[2.5rem]"
-                style={{ ...serif, fontWeight: 500, color: "#17140f" }}
-              >
-                My attendance
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#9c6b2e]">
+                Branch Portal
+              </span>
+              <h1 className="text-xl font-extrabold tracking-tight text-slate-900 leading-tight">
+                My Attendance
               </h1>
-              <p className="mt-2 max-w-md text-[0.95rem]" style={{ color: "#8a8175" }}>
-                Mark today's status and keep track of how your month is shaping
-                up.
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="hidden text-right sm:block">
+              <p className="text-xs font-extrabold text-slate-900 leading-tight">
+                {user?.name || "Branch Admin"}
+              </p>
+              <p className="text-[10px] font-semibold text-slate-400">
+                {user?.branch_name || "Branch Administrator"}
               </p>
             </div>
-
-            <div className="flex items-center gap-3 self-end">
-              <div className="text-right">
-                <p className="text-sm font-medium" style={{ color: "#17140f" }}>
-                  {user?.name || "Branch admin"}
-                </p>
-                <p className="text-xs" style={{ color: "#a39a8c" }}>
-                  Branch administrator
-                </p>
-              </div>
-              <div
-                className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium"
-                style={{ background: "#17140f", color: "#f4b942" }}
-              >
-                {(user?.name || "B").charAt(0).toUpperCase()}
-              </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#17140f] text-sm font-extrabold text-[#f4b942] shadow-sm ring-2 ring-[#e3ddd0]">
+              {(user?.name || "B").charAt(0).toUpperCase()}
             </div>
           </div>
         </header>

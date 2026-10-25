@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import {
   Award,
   X,
@@ -9,6 +10,7 @@ import {
   Check,
   Loader2,
 } from 'lucide-react';
+import { useStaffModalBlur } from '../../../utils/useStaffModalBlur';
 
 const StaffGradingModal = ({
   gradingAssignment,
@@ -23,6 +25,8 @@ const StaffGradingModal = ({
   handleSaveMarks,
   gradingSubmitting,
 }) => {
+  useStaffModalBlur(Boolean(gradingAssignment));
+
   if (!gradingAssignment) return null;
 
   const studentsList = Array.isArray(gradingAssignment.students)
@@ -65,17 +69,17 @@ const StaffGradingModal = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 md:p-6 sa-fade">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-2.5 sm:p-4 md:p-6 sa-fade">
       <div
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs"
+        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative flex w-full max-w-2xl flex-col max-h-[92vh] sm:max-h-[90vh] overflow-hidden rounded-3xl bg-white shadow-2xl border border-slate-100 sa-rise">
+      <div className="relative flex w-full max-w-2xl flex-col max-h-[92vh] sm:max-h-[90vh] overflow-hidden rounded-3xl bg-white shadow-2xl border border-[#E3DDD0] sa-rise">
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-4 sm:px-6 py-3.5 sm:py-4 bg-slate-50/50">
+        <div className="flex items-center justify-between border-b border-[#E3DDD0] px-4 sm:px-6 py-3.5 sm:py-4 bg-[#FAF8F4]">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
+            <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-[#F1EDE4] text-[#9C6B2E] flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
               <Award className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
             </div>
             <div className="min-w-0">
@@ -84,14 +88,14 @@ const StaffGradingModal = ({
               </h3>
               <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 truncate">
                 {gradingAssignment.title || 'Course Assignment'} • Max Marks:{' '}
-                <strong className="text-emerald-700">{gradingAssignment.max_marks || 100}</strong>
+                <strong className="text-[#9C6B2E]">{gradingAssignment.max_marks || 100}</strong>
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer shrink-0 ml-2"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-[#F1EDE4] transition cursor-pointer shrink-0 ml-2"
           >
             <X className="h-5 w-5" />
           </button>
@@ -103,7 +107,7 @@ const StaffGradingModal = ({
               className={`rounded-xl border p-3 text-xs font-semibold ${
                 gradingMsg.type === 'error'
                   ? 'border-rose-200 bg-rose-50 text-rose-800'
-                  : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                  : 'border-[#E3DDD0] bg-[#F1EDE4] text-[#9C6B2E]'
               }`}
             >
               {gradingMsg.text}
@@ -111,7 +115,7 @@ const StaffGradingModal = ({
           )}
 
           {/* Assignment Overview Strip - Displays Submitted At and Marked At */}
-          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3 sm:p-4 space-y-2 text-xs">
+          <div className="rounded-2xl border border-[#E3DDD0] bg-[#FAF8F4] p-3 sm:p-4 space-y-2 text-xs">
             <div className="flex flex-wrap items-center gap-2.5 sm:gap-4 text-xs">
               <div className="inline-flex items-center gap-1.5 font-semibold text-slate-700">
                 <FileCheck2 className="h-3.5 w-3.5 text-blue-600" />
@@ -119,7 +123,7 @@ const StaffGradingModal = ({
                 <span className="font-bold text-slate-900">{formatDateTime(submittedAtRaw)}</span>
               </div>
               <div className="inline-flex items-center gap-1.5 font-semibold text-slate-700">
-                <Award className="h-3.5 w-3.5 text-emerald-600" />
+                <Award className="h-3.5 w-3.5 text-[#9C6B2E]" />
                 <span>Marked At:</span>
                 <span className="font-bold text-slate-900">{formatDateTime(markedAtRaw)}</span>
               </div>
@@ -132,9 +136,9 @@ const StaffGradingModal = ({
           {/* Student Submissions & Individual Grading List */}
           {studentsList.length > 0 ? (
             <div className="space-y-3 sm:space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b pb-2" style={{ borderColor: '#e3ddd0' }}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-[#E3DDD0] pb-2">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                  <FileCheck2 className="h-4 w-4 text-emerald-700 shrink-0" />
+                  <FileCheck2 className="h-4 w-4 text-[#9C6B2E] shrink-0" />
                   <span>Student Submissions & Verification ({studentsList.length})</span>
                 </h4>
                 <span className="text-[10px] sm:text-[11px] text-slate-500 font-semibold">
@@ -171,12 +175,12 @@ const StaffGradingModal = ({
                   return (
                     <div
                       key={sId}
-                      className="rounded-2xl sm:rounded-3xl border border-slate-100 bg-white p-3.5 sm:p-5 shadow-xs space-y-3 sm:space-y-4 transition"
+                      className="rounded-2xl sm:rounded-3xl border border-[#E3DDD0] bg-white p-3.5 sm:p-5 shadow-xs space-y-3 sm:space-y-4 transition"
                     >
                       {/* Student Header & Status */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E3DDD0] pb-3">
                         <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0">
+                          <div className="h-9 w-9 rounded-xl bg-[#F1EDE4] text-[#9C6B2E] flex items-center justify-center font-bold text-xs shrink-0">
                             {(st.name || st.student_name || 'S').charAt(0).toUpperCase()}
                           </div>
                           <div>
@@ -194,7 +198,7 @@ const StaffGradingModal = ({
 
                         <div className="flex items-center gap-2 self-start sm:self-auto">
                           {isMarked ? (
-                            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#F1EDE4] text-[#9C6B2E] border border-[#E3DDD0]">
                               <Check className="h-3 w-3" />
                               Graded: {st.marks_obtained} / {maxMarks}
                             </span>
@@ -214,7 +218,7 @@ const StaffGradingModal = ({
 
                       {/* Submitted PDF File Box */}
                       {hasSubmitted ? (
-                        <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                        <div className="rounded-2xl border border-[#E3DDD0] bg-[#FAF8F4] p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                           <div className="flex items-center gap-2.5 min-w-0">
                             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-50 text-rose-600 shrink-0">
                               <FileText className="h-5 w-5" />
@@ -231,7 +235,7 @@ const StaffGradingModal = ({
                                     : 'PDF coursework uploaded'}
                                 </span>
                                 {(st.marked_at || st.graded_at || st.updated_at) && isMarked && (
-                                  <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                  <span className="font-semibold text-[#9C6B2E] bg-[#F1EDE4] px-2 py-0.5 rounded border border-[#E3DDD0]">
                                     Marked on {new Date(st.marked_at || st.graded_at || st.updated_at).toLocaleString('en-IN', {
                                       dateStyle: 'medium',
                                       timeStyle: 'short',
@@ -247,24 +251,24 @@ const StaffGradingModal = ({
                               href={resolvedFileUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 sm:py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition cursor-pointer w-full sm:w-auto shrink-0"
+                              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#E3DDD0] bg-[#F1EDE4] px-3.5 py-2 sm:py-1.5 text-xs font-bold text-[#9C6B2E] hover:bg-[#E3DDD0] transition cursor-pointer w-full sm:w-auto shrink-0"
                             >
-                              <ExternalLink className="h-3.5 w-3.5 text-emerald-600" />
+                              <ExternalLink className="h-3.5 w-3.5 text-[#9C6B2E]" />
                               <span>View / Verify PDF</span>
                             </a>
                           )}
                         </div>
                       ) : (
-                        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/40 p-3 text-xs text-slate-500">
+                        <div className="rounded-2xl border border-dashed border-[#E3DDD0] bg-[#FAF8F4]/50 p-3 text-xs text-slate-500">
                           No PDF coursework uploaded yet by this student.
                         </div>
                       )}
 
                       {/* Evaluation / Marks Form for this Student */}
-                      <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-3.5 sm:p-4 space-y-3">
+                      <div className="rounded-2xl border border-[#E3DDD0] bg-[#FAF8F4] p-3.5 sm:p-4 space-y-3">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                            <Award className="h-3.5 w-3.5 text-emerald-600" />
+                            <Award className="h-3.5 w-3.5 text-[#9C6B2E]" />
                             {isMarked ? 'Update Marks & Remarks' : 'Enter Marks & Feedback'}
                           </span>
                           <span className="text-[11px] font-semibold text-slate-500">
@@ -290,7 +294,7 @@ const StaffGradingModal = ({
                                 }));
                               }}
                               placeholder="e.g. 25"
-                              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                              className="w-full rounded-xl border border-[#E3DDD0] bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#9C6B2E]/20 focus:border-[#9C6B2E]"
                             />
                           </div>
 
@@ -309,7 +313,7 @@ const StaffGradingModal = ({
                                 }));
                               }}
                               placeholder="e.g. Good work, detailed solution"
-                              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                              className="w-full rounded-xl border border-[#E3DDD0] bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#9C6B2E]/20 focus:border-[#9C6B2E]"
                             />
                           </div>
                         </div>
@@ -319,7 +323,7 @@ const StaffGradingModal = ({
                             type="button"
                             onClick={() => handleSaveStudentMarks(st)}
                             disabled={isSaving}
-                            className="inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 sm:py-2 text-xs font-bold text-white shadow-xs transition hover:opacity-95 disabled:opacity-50 cursor-pointer bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 w-full sm:w-auto"
+                            className="inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 sm:py-2 text-xs font-bold text-white shadow-xs transition hover:opacity-95 disabled:opacity-50 cursor-pointer bg-gradient-to-r from-[#9C6B2E] to-[#855923] hover:from-[#855923] hover:to-[#6E4717] w-full sm:w-auto"
                           >
                             {isSaving ? (
                               <>
@@ -342,9 +346,9 @@ const StaffGradingModal = ({
             </div>
           ) : (
             /* Fallback general assignment form if no students array */
-            <form onSubmit={handleSaveMarks} className="rounded-2xl border border-slate-100 bg-slate-50/50 p-5 space-y-4">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-800 border-b border-slate-200/60 pb-2">
-                <Award className="h-4 w-4 text-emerald-600" />
+            <form onSubmit={handleSaveMarks} className="rounded-2xl border border-[#E3DDD0] bg-[#FAF8F4] p-5 space-y-4">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-800 border-b border-[#E3DDD0] pb-2">
+                <Award className="h-4 w-4 text-[#9C6B2E]" />
                 <span>Enter Marks & Evaluation Feedback</span>
               </div>
 
@@ -361,7 +365,7 @@ const StaffGradingModal = ({
                     value={gradingForm.marks_obtained}
                     onChange={(e) => setGradingForm((p) => ({ ...p, marks_obtained: e.target.value }))}
                     placeholder="e.g. 25"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                    className="w-full rounded-xl border border-[#E3DDD0] bg-white px-3.5 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#9C6B2E]/20 focus:border-[#9C6B2E]"
                   />
                 </div>
 
@@ -374,23 +378,23 @@ const StaffGradingModal = ({
                     value={gradingForm.feedback}
                     onChange={(e) => setGradingForm((p) => ({ ...p, feedback: e.target.value }))}
                     placeholder="e.g. Good work, detailed solution"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                    className="w-full rounded-xl border border-[#E3DDD0] bg-white px-3.5 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#9C6B2E]/20 focus:border-[#9C6B2E]"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-200/60">
+              <div className="flex justify-end gap-2 pt-2 border-t border-[#E3DDD0]">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition cursor-pointer"
+                  className="rounded-xl border border-[#E3DDD0] px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-[#F1EDE4] transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={gradingSubmitting}
-                  className="inline-flex items-center gap-1.5 rounded-xl px-5 py-2 text-xs font-bold text-white shadow-sm transition hover:opacity-95 disabled:opacity-50 cursor-pointer bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700"
+                  className="inline-flex items-center gap-1.5 rounded-xl px-5 py-2 text-xs font-bold text-white shadow-sm transition hover:opacity-95 disabled:opacity-50 cursor-pointer bg-gradient-to-r from-[#9C6B2E] to-[#855923] hover:from-[#855923] hover:to-[#6E4717]"
                 >
                   {gradingSubmitting ? (
                     <>
@@ -409,7 +413,8 @@ const StaffGradingModal = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

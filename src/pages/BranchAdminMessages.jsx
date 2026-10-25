@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Check, CheckCheck, Loader2, MessageCircle, RefreshCw, Send, ShieldCheck } from "lucide-react";
+import { Check, CheckCheck, Loader2, Menu, MessageCircle, RefreshCw, Send, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import BranchAdminSidebar from "../components/layout/BranchAdminSidebar";
@@ -229,33 +229,33 @@ const BranchAdminMessages = () => {
 
       <main className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {/* ---- Header ---- */}
-        <header
-          className="ba-fade flex flex-col gap-4 px-6 pb-7 pt-10 sm:flex-row sm:items-end sm:justify-between sm:px-10"
-          style={{ borderBottom: "1px solid #e3ddd0" }}
-        >
-          <div>
-            <p className="mb-2 text-xs font-medium uppercase tracking-[0.18em]" style={{ color: "#9c6b2e" }}>
-              Support channel
-            </p>
-            <h1
-              className="text-[2.1rem] leading-none tracking-tight sm:text-[2.5rem]"
-              style={{ ...serif, fontWeight: 500, color: "#17140f" }}
+        <header className="sticky top-0 z-20 flex h-[92px] items-center justify-between border-b border-[#e3ddd0] bg-[#faf8f4]/95 px-6 backdrop-blur-md sm:px-10 shrink-0">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e3ddd0] bg-white text-slate-600 shadow-sm transition hover:bg-[#f0ebe1] md:hidden"
+              aria-label="Open sidebar"
             >
-              Messages
-            </h1>
-            <p className="mt-2 max-w-lg text-[0.95rem]" style={{ color: "#8a8175" }}>
-              Talk directly with the super admin about your branch.
-            </p>
+              <Menu className="h-5 w-5" />
+            </button>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#9c6b2e]">
+                Branch Portal
+              </span>
+              <h1 className="text-xl font-extrabold tracking-tight text-slate-900 leading-tight">
+                Messages
+              </h1>
+            </div>
           </div>
           <button
             type="button"
             onClick={() => loadMessages(false)}
             disabled={refreshing}
-            className={`ba-press flex items-center gap-2 self-start rounded-lg px-3.5 py-2.5 text-sm disabled:opacity-60 sm:self-auto ${FOCUS_RING}`}
+            className={`ba-press flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold disabled:opacity-60 ${FOCUS_RING}`}
             style={{ border: "1px solid #e3ddd0", background: "#ffffff", color: "#5b5346" }}
           >
-            <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} style={{ color: "#9c6b2e" }} />
-            Refresh
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} style={{ color: "#9c6b2e" }} />
+            <span>Refresh</span>
           </button>
         </header>
 

@@ -108,14 +108,13 @@ const WhyChooseUs = () => {
         <div className={`wcu-head ${inView ? 'wcu-in' : ''} max-w-2xl mb-16`}>
           <div className="flex items-center gap-3 mb-5">
             <span className="w-8 h-px bg-amber-500" />
-            <span className="wcu-sans text-sm font-semibold text-amber-700 tracking-wide">Why choose AurumFX</span>
+            <span className="wcu-sans text-sm font-semibold text-amber-700 tracking-wide uppercase">Core Advantages</span>
           </div>
           <h2 className="wcu-serif text-4xl sm:text-6xl leading-[1.05] text-[#1C1917]">
-            Six reasons students <span className="italic text-amber-700">stay</span> and grow with us
+            Why Choose <span className="italic text-amber-700">AurumFX?</span>
           </h2>
           <p className="wcu-sans mt-5 text-base text-stone-600 leading-relaxed">
-            A premier institution built around holistic skill development, practical mastery,
-            and genuine student success — not just certificates.
+            Discover what sets us apart — from holistic development and inclusive classrooms to world-class infrastructure and transparent, affordable fees.
           </p>
         </div>
 
@@ -149,6 +148,11 @@ const WhyChooseUs = () => {
 
                   {/* Body */}
                   <div className="px-6 pt-11 pb-7">
+                    <div className="mb-2">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200/60 px-2.5 py-1 rounded-full">
+                        Key Feature
+                      </span>
+                    </div>
                     <h3 className="wcu-serif text-xl text-[#1C1917] mb-2.5">
                       {card.title}
                     </h3>

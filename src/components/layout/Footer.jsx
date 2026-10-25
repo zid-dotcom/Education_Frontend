@@ -41,26 +41,26 @@ const Footer = ({ onOpenApplyModal }) => {
             </div>
           </div>
 
-          {/* COLUMN 2: NAVIGASI */}
+          {/* COLUMN 2: NAVIGATION & ACADEMIES */}
           <div>
             <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
-              Navigasi
+              Academies
             </h4>
             <ul className="space-y-2 text-xs text-slate-300 font-medium">
               <li>
-                <Link to="/" className="hover:text-[#FBBF24] transition-colors">Home page</Link>
+                <Link to="/courses" className="hover:text-[#FBBF24] transition-colors">Fashion Designing Institute</Link>
               </li>
               <li>
-                <Link to="/courses" className="hover:text-[#FBBF24] transition-colors">Courses</Link>
+                <Link to="/courses" className="hover:text-[#FBBF24] transition-colors">Computer Training Institute</Link>
               </li>
               <li>
-                <Link to="/about" className="hover:text-[#FBBF24] transition-colors">About us</Link>
+                <Link to="/courses" className="hover:text-[#FBBF24] transition-colors">Hospitality Management Institute</Link>
               </li>
               <li>
-                <Link to="/courses" className="hover:text-[#FBBF24] transition-colors">Fashion Designing</Link>
+                <Link to="/about" className="hover:text-[#FBBF24] transition-colors">About Us</Link>
               </li>
               <li>
-                <Link to="/courses" className="hover:text-[#FBBF24] transition-colors">Computer Diploma</Link>
+                <Link to="/admissions" className="hover:text-[#FBBF24] transition-colors">Admissions</Link>
               </li>
               <li>
                 <Link to="/contact" className="hover:text-[#FBBF24] transition-colors">Contact</Link>

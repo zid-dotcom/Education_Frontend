@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Bell,
   BookOpen,
@@ -15,11 +16,16 @@ import {
   LayoutDashboard,
   Users,
   UserPlus,
+  ShieldCheck,
   SlidersHorizontal,
   AlertCircle,
+  TrendingUp,
+  Activity,
+  Megaphone,
   X,
 } from 'lucide-react';
 import { getSuperAdminUnreadMessagesCountApi } from '../../services/superadmin';
+import { getSuperAdminStaffUnreadCountApi } from '../../services/staffSuperAdminMessages';
 
 const useDisplayFonts = () => {
   useEffect(() => {
@@ -56,6 +62,7 @@ const NAV_GROUPS = [
     label: 'Overview',
     items: [
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/super-admin/dashboard' },
+      { id: 'branch-overview', label: 'Branch Overview', icon: TrendingUp, path: '/super-admin/branch-overview' },
     ],
   },
   {
@@ -66,6 +73,8 @@ const NAV_GROUPS = [
       { id: 'navigation-settings', label: 'Branch Navigation', icon: SlidersHorizontal, path: '/super-admin/navigation-settings' },
       { id: 'courses', label: 'Courses', icon: BookOpen, path: '/super-admin/courses' },
       { id: 'staff', label: 'Staff', icon: UserPlus, path: '/super-admin/staff' },
+      { id: 'staff-verification', label: 'Staff Verification', icon: ShieldCheck, path: '/super-admin/staff-verification' },
+      { id: 'staff-monitoring', label: 'Staff Monitoring', icon: Activity, path: '/super-admin/staff-monitoring' },
       { id: 'students', label: 'All Students', icon: Users, path: '/super-admin/students' },
       { id: 'enrollments', label: 'Course Enrollments', icon: GraduationCap, path: '/super-admin/enrollments' },
       { id: 'purchases', label: 'Purchase Approval', icon: ShoppingCart, path: '/super-admin/purchases' },
@@ -83,8 +92,9 @@ const NAV_GROUPS = [
     label: 'Communication',
     items: [
       { id: 'global-announcements', label: 'Global Announcements', icon: Bell, path: '/admin/announcements' },
-      { id: 'branch-announcements', label: 'Branch Announcements', icon: Bell, path: '/super-admin/announcements' },
-      { id: 'messages', label: 'Messages', icon: MessageSquare, path: '/super-admin/messages' },
+      { id: 'branch-announcements', label: 'Branch Announcements', icon: Megaphone, path: '/super-admin/announcements' },
+      { id: 'messages', label: 'Branch Admin Messages', icon: MessageSquare, path: '/super-admin/messages' },
+      { id: 'staff-messages', label: 'Staff Messages', icon: Users, path: '/super-admin/staff-messages' },
       { id: 'enquiries', label: 'Enquiries', icon: MessageCircle, path: '/super-admin/enquiries' },
     ],
   },
@@ -106,6 +116,7 @@ const SuperAdminSidebar = ({
 }) => {
   useDisplayFonts();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [staffUnreadCount, setStaffUnreadCount] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -114,25 +125,48 @@ const SuperAdminSidebar = ({
     const loadUnread = async () => {
       if (!token) return;
       try {
-        const data = await getSuperAdminUnreadMessagesCountApi(token);
-        let total = 0;
-        if (Array.isArray(data?.conversations)) {
-          total = data.conversations.reduce(
-            (acc, c) => acc + (Number(c?.unread_count) || 0),
-            0
-          );
-        } else if (typeof data?.unread_count === 'number') {
-          total = data.unread_count;
-        } else if (typeof data?.total_unread_count === 'number') {
-          total = data.total_unread_count;
-        } else if (typeof data?.count === 'number') {
-          total = data.count;
-        } else if (typeof data === 'number') {
-          total = data;
+        const [baData, staffData] = await Promise.allSettled([
+          getSuperAdminUnreadMessagesCountApi(token),
+          getSuperAdminStaffUnreadCountApi(token),
+        ]);
+
+        if (isMounted && baData.status === 'fulfilled') {
+          const data = baData.value;
+          let total = 0;
+          if (Array.isArray(data?.conversations)) {
+            total = data.conversations.reduce(
+              (acc, c) => acc + (Number(c?.unread_count) || 0),
+              0
+            );
+          } else if (typeof data?.unread_count === 'number') {
+            total = data.unread_count;
+          } else if (typeof data?.total_unread_count === 'number') {
+            total = data.total_unread_count;
+          } else if (typeof data?.count === 'number') {
+            total = data.count;
+          } else if (typeof data === 'number') {
+            total = data;
+          }
+          setUnreadCount(Number(total) || 0);
         }
-        if (isMounted) setUnreadCount(Number(total) || 0);
+
+        if (isMounted && staffData.status === 'fulfilled') {
+          const s = staffData.value;
+          const sCount =
+            typeof s === 'number'
+              ? s
+              : typeof s?.unread_count === 'number'
+              ? s.unread_count
+              : typeof s?.count === 'number'
+              ? s.count
+              : 0;
+          setStaffUnreadCount(Number(sCount) || 0);
+        }
       } catch {
-        if (isMounted) setUnreadCount(0);
+        if (isMounted) {
+          setUnreadCount(0);
+          setStaffUnreadCount(0);
+        }
       }
     };
 
@@ -151,13 +185,20 @@ const SuperAdminSidebar = ({
     };
   }, []);
 
+  const routerNavigate = useNavigate();
+  const effectiveNavigate = typeof navigate === 'function' ? navigate : routerNavigate;
+
   const closeSidebar = () => setSidebarOpen(false);
   const goTo = (path) => {
     closeSidebar();
-    navigate(path);
+    if (typeof effectiveNavigate === 'function') {
+      effectiveNavigate(path);
+    }
   };
   const handleLogout = () => {
-    logout({ redirectTo: '/super-admin/login' });
+    if (typeof logout === 'function') {
+      logout({ redirectTo: '/super-admin/login' });
+    }
   };
 
   useEffect(() => {
@@ -277,6 +318,14 @@ const SuperAdminSidebar = ({
                           style={{ background: '#0284c7' }}
                         >
                           {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                      )}
+                      {id === 'staff-messages' && staffUnreadCount > 0 && (
+                        <span
+                          className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold text-white shadow-xs"
+                          style={{ background: '#9c6b2e' }}
+                        >
+                          {staffUnreadCount > 99 ? '99+' : staffUnreadCount}
                         </span>
                       )}
                     </button>

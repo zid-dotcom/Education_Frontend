@@ -47,3 +47,31 @@ export async function createEnrollmentApi(enrollmentData, token) {
   return resData;
 }
 
+/**
+ * Fetch the student's installment schedule, payment history, next unpaid installment, and balance.
+ * GET /enrollments/{enrollment_id}/installments
+ * @param {string|number} enrollmentId
+ * @param {string} token
+ */
+export async function getEnrollmentInstallmentsApi(enrollmentId, token) {
+  const response = await fetch(`${API_BASE_URL}/enrollments/${enrollmentId}/installments`, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      'ngrok-skip-browser-warning': '69420',
+    },
+  });
+
+  const resData = await response.json();
+
+  if (!response.ok) {
+    const detail = Array.isArray(resData.detail)
+      ? resData.detail.map((item) => item.msg).join(', ')
+      : resData.detail;
+    throw new Error(detail || resData.message || 'Failed to fetch installment details.');
+  }
+
+  return resData;
+}

@@ -11,10 +11,18 @@ const getHeaders = (token) => ({
  * @param {string} token
  */
 export async function getStudentAnnouncementsApi(token) {
-  let response = await fetch(`${API_BASE_URL}/student/announcements`, {
+  let response = await fetch(`${API_BASE_URL}/announcements/student/branch`, {
     method: 'GET',
     headers: getHeaders(token),
   });
+
+  // Fallback to student course announcements endpoint if not found
+  if (response.status === 404) {
+    response = await fetch(`${API_BASE_URL}/student/announcements`, {
+      method: 'GET',
+      headers: getHeaders(token),
+    });
+  }
 
   // Fallback to general announcements endpoint if not found
   if (response.status === 404) {
@@ -31,6 +39,64 @@ export async function getStudentAnnouncementsApi(token) {
       ? resData.detail.map((item) => item.msg || item).join(', ')
       : resData?.detail;
     throw new Error(detail || 'Failed to fetch student announcements.');
+  }
+
+  return Array.isArray(resData) ? resData : resData?.announcements || [];
+}
+
+/**
+ * Students view institution & branch announcements: GET /announcements/student/branch
+ * Returns global announcements & branch announcements targeted to students/all/both.
+ * @param {string} token
+ */
+export async function getStudentInstitutionAnnouncementsApi(token) {
+  let response = await fetch(`${API_BASE_URL}/announcements/student/branch`, {
+    method: 'GET',
+    headers: getHeaders(token),
+  });
+
+  if (response.status === 404) {
+    response = await fetch(`${API_BASE_URL}/announcements/`, {
+      method: 'GET',
+      headers: getHeaders(token),
+    });
+  }
+
+  const resData = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const detail = Array.isArray(resData?.detail)
+      ? resData.detail.map((item) => item.msg || item).join(', ')
+      : resData?.detail;
+    throw new Error(detail || 'Failed to fetch institution announcements.');
+  }
+
+  return Array.isArray(resData) ? resData : resData?.announcements || [];
+}
+
+/**
+ * Students view announcements for all their approved courses: GET /student/announcements
+ * @param {string} token
+ */
+export async function getStudentAllCourseAnnouncementsApi(token) {
+  let response = await fetch(`${API_BASE_URL}/student/announcements`, {
+    method: 'GET',
+    headers: getHeaders(token),
+  });
+
+  if (response.status === 404) {
+    // If /student/announcements endpoint is not available, fallback
+    response = await fetch(`${API_BASE_URL}/student/courses/announcements`, {
+      method: 'GET',
+      headers: getHeaders(token),
+    });
+  }
+
+  const resData = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const detail = Array.isArray(resData?.detail)
+      ? resData.detail.map((item) => item.msg || item).join(', ')
+      : resData?.detail;
+    throw new Error(detail || 'Failed to fetch course announcements.');
   }
 
   return Array.isArray(resData) ? resData : resData?.announcements || [];
@@ -61,6 +127,6 @@ export async function getStudentCourseAnnouncementsApi(courseId, token) {
   return Array.isArray(resData) ? resData : resData?.announcements || [];
 }
 
-// Backward compatibility alias for existing dashboard & layout counters
-export const getUserAnnouncementsApi = getStudentAnnouncementsApi;
+// Aliases for backward compatibility
+export const getUserAnnouncementsApi = getStudentInstitutionAnnouncementsApi;
 

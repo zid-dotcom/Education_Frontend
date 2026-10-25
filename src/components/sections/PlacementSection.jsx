@@ -25,19 +25,19 @@ const PlacementSection = () => {
 
   const pillars = [
     {
-      title: 'Placement assistance for every student',
+      title: '100% Placement Assistance',
       desc: 'Comprehensive guidance and job placement support provided to every eligible student upon course completion.',
       icon: Award,
       badge: 'Full placement support',
     },
     {
-      title: 'Industry internships & live projects',
+      title: 'Industry Internships & Live Projects',
       desc: 'Real-world exposure through mandatory internships, hands-on field projects, and industry exposure trips before graduation.',
       icon: Compass,
       badge: 'Real-world experience',
     },
     {
-      title: 'Soft skills & interview grooming',
+      title: 'Soft Skills & Interview Grooming',
       desc: 'Specialized training modules focused on resume building, communication skills, personality development, and professional etiquette to ensure confidence in job interviews.',
       icon: UserCheck,
       badge: 'Professional readiness',
@@ -73,18 +73,17 @@ const PlacementSection = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
 
         {/* Centered heading */}
-        <div className={`pl-fade ${inView ? 'pl-in' : ''} max-w-2xl mx-auto text-center mb-16`}>
+        <div className={`pl-fade ${inView ? 'pl-in' : ''} max-w-3xl mx-auto text-center mb-16`}>
           <div className="flex items-center justify-center gap-3 mb-5">
             <span className="w-8 h-px bg-amber-500" />
             <span className="pl-sans text-sm font-semibold text-amber-700 tracking-wide">Career readiness</span>
             <span className="w-8 h-px bg-amber-500" />
           </div>
           <h2 className="pl-serif text-3xl sm:text-5xl leading-[1.1] text-[#1C1917]">
-            Dedicated placement & <span className="italic text-amber-700">career</span> opportunities
+            Dedicated Placement & <span className="italic text-amber-700">Career</span> Opportunities
           </h2>
-          <p className="pl-sans mt-5 text-base text-stone-600 leading-relaxed">
-            At AurumFX, education is complete only when it leads to meaningful employment. Our active
-            Training & Placement Cell bridges the gap between our graduates and leading industry employers.
+          <p className="pl-sans mt-5 text-base sm:text-lg text-stone-600 leading-relaxed">
+            At AurumFx, education is complete only when it leads to meaningful employment. We take immense pride in our active Training & Placement Cell, which acts as a bridge between our graduates and leading industry employers.
           </p>
         </div>
 

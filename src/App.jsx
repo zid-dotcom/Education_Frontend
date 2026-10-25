@@ -45,6 +45,8 @@ import BranchAdminStudentRegistration from './pages/BranchAdminStudentRegistrati
 import BranchAdminCourseEnrollments from './pages/BranchAdminCourseEnrollments';
 import BranchAdminPurchases from './pages/BranchAdminPurchases';
 import BranchAdminStaff from './pages/BranchAdminStaff';
+import BranchAdminAllStaff from './pages/BranchAdminAllStaff';
+import BranchAdminStaffMonitoring from './pages/BranchAdminStaffMonitoring';
 import BranchAdminStaffVerification from './pages/BranchAdminStaffVerification';
 import BranchAdminAttendance from './pages/BranchAdminAttendance';
 import BranchAdminDashboard from './pages/BranchAdminDashboard';
@@ -58,6 +60,7 @@ import AdminPassword from './pages/AdminPassword';
 import AdminBranches from './pages/AdminBranches';
 import AdminBranchAdmins from './pages/AdminBranchAdmins';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import SuperAdminBranchOverview from './pages/SuperAdminBranchOverview';
 import SuperAdminBranchNavigation from './pages/SuperAdminBranchNavigation';
 import SuperAdminEnquiries from './pages/SuperAdminEnquiries';
 import SuperAdminCourses from './pages/SuperAdminCourses';
@@ -69,13 +72,19 @@ import SuperAdminProfit from './pages/SuperAdminProfit';
 import SuperAdminAttendance from './pages/SuperAdminAttendance';
 import SuperAdminAnnouncements from './pages/SuperAdminAnnouncements';
 import SuperAdminStaff from './pages/SuperAdminStaff';
+import SuperAdminStaffMonitoring from './pages/SuperAdminStaffMonitoring';
+import SuperAdminStaffVerification from './pages/SuperAdminStaffVerification';
 import SuperAdminMessages from './pages/SuperAdminMessages';
+import SuperAdminStaffMessages from './pages/SuperAdminStaffMessages';
 import StudentDashboard from './pages/StudentDashboard';
 import StudentCourses from './pages/StudentCourses';
 import StudentCourseDetails from './pages/StudentCourseDetails';
 import StudentAnnouncements from './pages/StudentAnnouncements';
+import StudentInstitutionAnnouncements from './pages/StudentInstitutionAnnouncements';
 import StudentEnquiries from './pages/StudentEnquiries';
 import StudentAssignments from './pages/StudentAssignments';
+import StudentStudyMaterials from './pages/StudentStudyMaterials';
+import StudentMessages from './pages/StudentMessages';
 import StudentLayout from './components/layout/StudentLayout';
 
 // Scroll to top helper component on route change
@@ -266,6 +275,32 @@ function App() {
           />
 
           <Route
+            path="/branch-admin/all-staff"
+            element={
+              <ProtectedRoute branchAdminOnly>
+                <BranchAdminAllStaff />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/branch-admin/staff/all"
+            element={
+              <ProtectedRoute branchAdminOnly>
+                <BranchAdminAllStaff />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/branch-admin/staff-monitoring"
+            element={
+              <ProtectedRoute branchAdminOnly>
+                <BranchAdminStaffMonitoring />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/branch-admin/staff-verification"
             element={
               <ProtectedRoute branchAdminOnly>
@@ -376,6 +411,15 @@ function App() {
           />
 
           <Route
+            path="/super-admin/branch-overview"
+            element={
+              <ProtectedRoute adminOnly>
+                <SuperAdminBranchOverview />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/super-admin/navigation-settings"
             element={
               <ProtectedRoute adminOnly>
@@ -398,6 +442,14 @@ function App() {
             element={
               <ProtectedRoute adminOnly>
                 <SuperAdminMessages />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/super-admin/staff-messages"
+            element={
+              <ProtectedRoute adminOnly>
+                <SuperAdminStaffMessages />
               </ProtectedRoute>
             }
           />
@@ -471,12 +523,36 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/super-admin/branch-announcements"
+            element={
+              <ProtectedRoute adminOnly>
+                <SuperAdminAnnouncements />
+              </ProtectedRoute>
+            }
+          />
 
           <Route
             path="/super-admin/staff"
             element={
               <ProtectedRoute adminOnly>
                 <SuperAdminStaff />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/super-admin/staff-monitoring"
+            element={
+              <ProtectedRoute adminOnly>
+                <SuperAdminStaffMonitoring />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/super-admin/staff-verification"
+            element={
+              <ProtectedRoute adminOnly>
+                <SuperAdminStaffVerification />
               </ProtectedRoute>
             }
           />
@@ -513,10 +589,26 @@ function App() {
             }
           />
           <Route
+            path="/staff/study-materials"
+            element={
+              <ProtectedRoute staffOnly>
+                <StaffDashboard defaultTab="study_materials" />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/staff/announcements"
             element={
               <ProtectedRoute staffOnly>
                 <StaffDashboard defaultTab="announcements" />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/staff/institution-announcements"
+            element={
+              <ProtectedRoute staffOnly>
+                <StaffDashboard defaultTab="institution_announcements" />
               </ProtectedRoute>
             }
           />
@@ -533,6 +625,22 @@ function App() {
             element={
               <ProtectedRoute staffOnly>
                 <StaffDashboard defaultTab="profile" />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/staff/messages"
+            element={
+              <ProtectedRoute staffOnly>
+                <StaffDashboard defaultTab="messages" />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/staff/super-admin-messages"
+            element={
+              <ProtectedRoute staffOnly>
+                <StaffDashboard defaultTab="super_admin_messages" />
               </ProtectedRoute>
             }
           />
@@ -578,6 +686,17 @@ function App() {
           </Route>
 
           <Route
+            path="/student-dashboard/institution-announcements"
+            element={
+              <ProtectedRoute studentOnly>
+                <StudentLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<StudentInstitutionAnnouncements />} />
+          </Route>
+
+          <Route
             path="/student-dashboard/enquiries"
             element={
               <ProtectedRoute studentOnly>
@@ -597,6 +716,28 @@ function App() {
             }
           >
             <Route index element={<StudentAssignments />} />
+          </Route>
+
+          <Route
+            path="/student-dashboard/study-materials"
+            element={
+              <ProtectedRoute studentOnly>
+                <StudentLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<StudentStudyMaterials />} />
+          </Route>
+
+          <Route
+            path="/student-dashboard/messages"
+            element={
+              <ProtectedRoute studentOnly>
+                <StudentLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<StudentMessages />} />
           </Route>
 
           {/* Public Frontend Routes with Main Navbar & Footer */}

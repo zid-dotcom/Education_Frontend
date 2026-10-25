@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   BookOpen, Building2, CalendarCheck, GraduationCap, IndianRupee,
   Loader2, MessageCircle, RefreshCw, ShoppingCart, TrendingUp, UserPlus, Users,
-  CheckCircle, Clock, KeyRound, Wallet, X
+  CheckCircle, Clock, KeyRound, Wallet, X, Layers, Crown, ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
@@ -19,20 +19,363 @@ const PAGE_CSS = `
 const fmt = (v) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(v) || 0);
 
-const StatCard = ({ icon: Icon, label, value, accent, delay = 0 }) => (
-  <div
-    className="sa-rise rounded-2xl p-5 flex flex-col gap-3"
-    style={{ animationDelay: `${delay}ms`, background: '#ffffff', border: '1px solid #e3ddd0', boxShadow: '0 2px 12px rgba(14,26,43,.06)' }}
-  >
-    <div className="flex items-center justify-between">
-      <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: '#a39a8c' }}>{label}</p>
-      <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: accent + '20' }}>
-        <Icon className="h-4 w-4" style={{ color: accent }} />
-      </div>
-    </div>
-    <p className="text-2xl font-bold" style={{ color: '#17140f' }}>{value}</p>
-  </div>
+/* Background watermark graphics matching exact design */
+const BarsGraphic = ({ color }) => (
+  <svg className="w-16 h-12" viewBox="0 0 64 48" fill="none">
+    <rect x="6" y="28" width="9" height="20" rx="3" fill={color} fillOpacity="0.14" />
+    <rect x="20" y="20" width="9" height="28" rx="3" fill={color} fillOpacity="0.19" />
+    <rect x="34" y="12" width="9" height="36" rx="3" fill={color} fillOpacity="0.25" />
+    <rect x="48" y="4" width="9" height="44" rx="3" fill={color} fillOpacity="0.32" />
+  </svg>
 );
+
+const WaveGraphic = ({ color }) => (
+  <svg
+    className="w-28 sm:w-36 h-11 sm:h-13 pointer-events-none select-none block"
+    viewBox="0 0 120 48"
+    preserveAspectRatio="none"
+    fill="none"
+  >
+    <path
+      d="M0 48 C 20 48, 36 36, 56 30 C 76 24, 94 26, 108 18 C 114 14, 118 10, 120 8 L 120 48 L 0 48 Z"
+      fill={color}
+      fillOpacity="0.14"
+    />
+    <path
+      d="M0 48 C 20 48, 36 36, 56 30 C 76 24, 94 26, 108 18 C 114 14, 118 10, 120 8"
+      stroke={color}
+      strokeWidth="2"
+      strokeOpacity="0.38"
+    />
+  </svg>
+);
+
+const BuildingGraphic = ({ color }) => (
+  <svg className="w-14 h-14" viewBox="0 0 56 56" fill="none">
+    <rect x="10" y="12" width="36" height="44" rx="4" stroke={color} strokeWidth="1.5" strokeOpacity="0.22" fill={color} fillOpacity="0.04" />
+    <rect x="16" y="18" width="6" height="6" rx="1.5" fill={color} fillOpacity="0.22" />
+    <rect x="25" y="18" width="6" height="6" rx="1.5" fill={color} fillOpacity="0.22" />
+    <rect x="34" y="18" width="6" height="6" rx="1.5" fill={color} fillOpacity="0.22" />
+    <rect x="16" y="28" width="6" height="6" rx="1.5" fill={color} fillOpacity="0.22" />
+    <rect x="25" y="28" width="6" height="6" rx="1.5" fill={color} fillOpacity="0.22" />
+    <rect x="34" y="28" width="6" height="6" rx="1.5" fill={color} fillOpacity="0.22" />
+    <rect x="23" y="40" width="10" height="16" rx="2" fill={color} fillOpacity="0.2" />
+  </svg>
+);
+
+const BookGraphic = ({ color }) => (
+  <svg className="w-14 h-14" viewBox="0 0 56 56" fill="none">
+    <path
+      d="M8 18 C 18 14, 28 16, 28 20 C 28 16, 38 14, 48 18 L 48 44 C 38 40, 28 42, 28 46 C 28 42, 18 40, 8 44 Z"
+      stroke={color}
+      strokeWidth="1.5"
+      strokeOpacity="0.24"
+      fill={color}
+      fillOpacity="0.06"
+    />
+    <line x1="28" y1="20" x2="28" y2="46" stroke={color} strokeWidth="1.5" strokeOpacity="0.25" />
+    <path d="M14 24 C 18 22, 22 23, 24 24" stroke={color} strokeWidth="1.2" strokeOpacity="0.2" strokeLinecap="round" />
+    <path d="M14 29 C 18 27, 22 28, 24 29" stroke={color} strokeWidth="1.2" strokeOpacity="0.2" strokeLinecap="round" />
+    <path d="M32 24 C 34 23, 38 22, 42 24" stroke={color} strokeWidth="1.2" strokeOpacity="0.2" strokeLinecap="round" />
+    <path d="M32 29 C 34 28, 38 27, 42 29" stroke={color} strokeWidth="1.2" strokeOpacity="0.2" strokeLinecap="round" />
+  </svg>
+);
+
+const LayersGraphic = ({ color }) => (
+  <svg className="w-14 h-14" viewBox="0 0 56 56" fill="none">
+    <path d="M10 24 L 28 15 L 46 24 L 28 33 Z" stroke={color} strokeWidth="1.5" strokeOpacity="0.28" fill={color} fillOpacity="0.08" />
+    <path d="M10 31 L 28 40 L 46 31" stroke={color} strokeWidth="1.5" strokeOpacity="0.24" fill="none" />
+    <path d="M10 38 L 28 47 L 46 38" stroke={color} strokeWidth="1.5" strokeOpacity="0.2" fill="none" />
+  </svg>
+);
+
+const StudentsGraphic = ({ color }) => (
+  <svg className="w-16 h-12" viewBox="0 0 64 48" fill="none">
+    <circle cx="18" cy="18" r="5.5" fill={color} fillOpacity="0.2" />
+    <path d="M8 38 C 8 30, 13 27, 18 27 C 23 27, 28 30, 28 38 Z" fill={color} fillOpacity="0.16" />
+    <circle cx="32" cy="14" r="6.5" fill={color} fillOpacity="0.25" />
+    <path d="M20 38 C 20 28, 26 24, 32 24 C 38 24, 44 28, 44 38 Z" fill={color} fillOpacity="0.22" />
+    <circle cx="46" cy="18" r="5.5" fill={color} fillOpacity="0.2" />
+    <path d="M36 38 C 36 30, 41 27, 46 27 C 51 27, 56 30, 56 38 Z" fill={color} fillOpacity="0.16" />
+  </svg>
+);
+
+const ClockGraphic = ({ color }) => (
+  <svg className="w-14 h-14" viewBox="0 0 56 56" fill="none">
+    <circle cx="32" cy="32" r="21" stroke={color} strokeWidth="1.5" strokeOpacity="0.25" fill={color} fillOpacity="0.04" />
+    <polyline points="32,18 32,32 40,36" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.3" />
+  </svg>
+);
+
+const ActiveBranchGraphic = ({ color }) => (
+  <svg className="w-14 h-14" viewBox="0 0 56 56" fill="none">
+    <rect x="8" y="16" width="30" height="36" rx="3" stroke={color} strokeWidth="1.5" strokeOpacity="0.22" fill={color} fillOpacity="0.04" />
+    <rect x="13" y="22" width="5" height="5" rx="1" fill={color} fillOpacity="0.2" />
+    <rect x="22" y="22" width="5" height="5" rx="1" fill={color} fillOpacity="0.2" />
+    <rect x="13" y="31" width="5" height="5" rx="1" fill={color} fillOpacity="0.2" />
+    <rect x="22" y="31" width="5" height="5" rx="1" fill={color} fillOpacity="0.2" />
+    <rect x="17" y="42" width="8" height="10" rx="1.5" fill={color} fillOpacity="0.22" />
+    <circle cx="40" cy="38" r="12" fill={color} fillOpacity="0.12" stroke={color} strokeWidth="1.5" strokeOpacity="0.32" />
+    <path d="M35 38 L 38 41 L 45 34" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.4" />
+  </svg>
+);
+
+const DiplomaGraphic = ({ color }) => (
+  <svg className="w-15 h-14" viewBox="0 0 60 56" fill="none">
+    <polygon points="30,8 52,18 30,27 8,18" fill={color} fillOpacity="0.15" stroke={color} strokeWidth="1.5" strokeOpacity="0.28" strokeLinejoin="round" />
+    <path d="M17 22 V 32 C 17 38, 43 38, 43 32 V 22" fill={color} fillOpacity="0.08" stroke={color} strokeWidth="1.5" strokeOpacity="0.25" />
+    <path d="M48 20 V 34 M45 34 H 51" stroke={color} strokeWidth="1.5" strokeOpacity="0.3" strokeLinecap="round" />
+    <rect x="14" y="40" width="32" height="9" rx="2.5" fill={color} fillOpacity="0.18" stroke={color} strokeWidth="1.4" strokeOpacity="0.3" />
+    <circle cx="30" cy="44.5" r="3" fill={color} fillOpacity="0.32" />
+    <path d="M28 47 L 26 53 M32 47 L 34 53" stroke={color} strokeWidth="1.5" strokeOpacity="0.3" strokeLinecap="round" />
+  </svg>
+);
+
+const PaidWalletGraphic = ({ color }) => (
+  <svg className="w-14 h-14" viewBox="0 0 56 56" fill="none">
+    <rect x="16" y="10" width="28" height="16" rx="2.5" fill={color} fillOpacity="0.1" stroke={color} strokeWidth="1.3" strokeOpacity="0.22" />
+    <line x1="20" y1="15" x2="28" y2="15" stroke={color} strokeWidth="1.2" strokeOpacity="0.25" strokeLinecap="round" />
+    <rect x="8" y="18" width="40" height="30" rx="5" fill={color} fillOpacity="0.08" stroke={color} strokeWidth="1.5" strokeOpacity="0.28" />
+    <path d="M30 27 H 48 V 39 H 30 C 27 39, 27 27, 30 27 Z" fill={color} fillOpacity="0.22" stroke={color} strokeWidth="1.4" strokeOpacity="0.32" />
+    <circle cx="37" cy="33" r="2.5" fill={color} fillOpacity="0.4" />
+    <path d="M15 33 L 19 37 L 25 30" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.32" />
+  </svg>
+);
+
+const TeacherStaffGraphic = ({ color }) => (
+  <svg className="w-16 h-13" viewBox="0 0 64 52" fill="none">
+    <circle cx="20" cy="18" r="6" fill={color} fillOpacity="0.24" />
+    <path d="M10 44 C 10 33, 15 28, 20 28 C 25 28, 30 33, 30 44 Z" fill={color} fillOpacity="0.18" />
+    <path d="M25 32 L 36 24" stroke={color} strokeWidth="2" strokeLinecap="round" strokeOpacity="0.35" />
+    <rect x="33" y="10" width="26" height="24" rx="3" fill={color} fillOpacity="0.08" stroke={color} strokeWidth="1.5" strokeOpacity="0.26" />
+    <line x1="37" y1="16" x2="52" y2="16" stroke={color} strokeWidth="1.4" strokeOpacity="0.28" strokeLinecap="round" />
+    <line x1="37" y1="21" x2="48" y2="21" stroke={color} strokeWidth="1.4" strokeOpacity="0.24" strokeLinecap="round" />
+    <line x1="37" y1="26" x2="44" y2="26" stroke={color} strokeWidth="1.4" strokeOpacity="0.2" strokeLinecap="round" />
+    <path d="M39 34 L 37 46 M 53 34 L 55 46" stroke={color} strokeWidth="1.5" strokeOpacity="0.25" strokeLinecap="round" />
+  </svg>
+);
+
+const AdminKeyGraphic = ({ color }) => (
+  <svg className="w-14 h-14" viewBox="0 0 56 56" fill="none">
+    <path
+      d="M28 8 L 44 14 V 28 C 44 38, 36 46, 28 49 C 20 46, 12 38, 12 28 V 14 Z"
+      fill={color}
+      fillOpacity="0.08"
+      stroke={color}
+      strokeWidth="1.5"
+      strokeOpacity="0.25"
+    />
+    <circle cx="28" cy="23" r="5.5" stroke={color} strokeWidth="2" strokeOpacity="0.35" fill="none" />
+    <circle cx="28" cy="23" r="2.5" fill={color} fillOpacity="0.25" />
+    <line x1="28" y1="28.5" x2="28" y2="41" stroke={color} strokeWidth="2" strokeOpacity="0.35" strokeLinecap="round" />
+    <line x1="28" y1="34" x2="33" y2="34" stroke={color} strokeWidth="1.8" strokeOpacity="0.35" strokeLinecap="round" />
+    <line x1="28" y1="38" x2="32" y2="38" stroke={color} strokeWidth="1.8" strokeOpacity="0.35" strokeLinecap="round" />
+  </svg>
+);
+
+const EnquiriesChatGraphic = ({ color }) => (
+  <svg className="w-15 h-13" viewBox="0 0 60 52" fill="none">
+    <path
+      d="M20 8 H 44 C 49 8, 53 12, 53 17 V 29 C 53 34, 49 38, 44 38 H 36 L 27 45 V 38 H 20 C 15 38, 11 34, 11 29 V 17 C 11 12, 15 8, 20 8 Z"
+      fill={color}
+      fillOpacity="0.08"
+      stroke={color}
+      strokeWidth="1.5"
+      strokeOpacity="0.22"
+    />
+    <path
+      d="M14 18 H 36 C 40 18, 43 21, 43 25 V 35 C 43 39, 40 42, 36 42 H 28 L 20 48 V 42 H 14 C 10 42, 7 39, 7 35 V 25 C 7 21, 10 18, 14 18 Z"
+      fill={color}
+      fillOpacity="0.16"
+      stroke={color}
+      strokeWidth="1.5"
+      strokeOpacity="0.32"
+    />
+    <circle cx="17" cy="30" r="2" fill={color} fillOpacity="0.35" />
+    <circle cx="25" cy="30" r="2" fill={color} fillOpacity="0.35" />
+    <circle cx="33" cy="30" r="2" fill={color} fillOpacity="0.35" />
+  </svg>
+);
+
+const TodayEnquiriesGraphic = ({ color }) => (
+  <svg className="w-15 h-14" viewBox="0 0 60 56" fill="none">
+    <path
+      d="M12 16 H 38 C 43 16, 47 20, 47 25 V 37 C 47 42, 43 46, 38 46 H 26 L 16 52 V 46 H 12 C 7 46, 3 42, 3 37 V 25 C 3 20, 7 16, 12 16 Z"
+      fill={color}
+      fillOpacity="0.1"
+      stroke={color}
+      strokeWidth="1.5"
+      strokeOpacity="0.26"
+    />
+    <line x1="12" y1="28" x2="32" y2="28" stroke={color} strokeWidth="1.8" strokeOpacity="0.28" strokeLinecap="round" />
+    <line x1="12" y1="34" x2="24" y2="34" stroke={color} strokeWidth="1.8" strokeOpacity="0.24" strokeLinecap="round" />
+    <circle cx="45" cy="14" r="8" fill={color} fillOpacity="0.22" stroke={color} strokeWidth="1.4" strokeOpacity="0.35" />
+    <path d="M45 8 V 10 M45 18 V 20 M39 14 H 41 M49 14 H 51" stroke={color} strokeWidth="1.5" strokeOpacity="0.4" strokeLinecap="round" />
+    <circle cx="45" cy="14" r="2.5" fill={color} fillOpacity="0.45" />
+  </svg>
+);
+
+const StaffAttendanceGraphic = ({ color }) => (
+  <svg className="w-14 h-14" viewBox="0 0 56 56" fill="none">
+    <rect x="10" y="12" width="36" height="38" rx="4" fill={color} fillOpacity="0.07" stroke={color} strokeWidth="1.5" strokeOpacity="0.25" />
+    <path d="M10 16 C 10 13.8, 11.8 12, 14 12 H 42 C 44.2 12, 46 13.8, 46 16 V 20 H 10 Z" fill={color} fillOpacity="0.22" />
+    <rect x="18" y="8" width="3" height="7" rx="1.5" fill={color} fillOpacity="0.35" />
+    <rect x="35" y="8" width="3" height="7" rx="1.5" fill={color} fillOpacity="0.35" />
+    <path d="M18 34 L 24 40 L 38 26" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.38" />
+  </svg>
+);
+
+const AdminAttendanceGraphic = ({ color }) => (
+  <svg className="w-14 h-14" viewBox="0 0 56 56" fill="none">
+    <rect x="11" y="12" width="34" height="40" rx="4" fill={color} fillOpacity="0.07" stroke={color} strokeWidth="1.5" strokeOpacity="0.25" />
+    <rect x="21" y="8" width="14" height="7" rx="2" fill={color} fillOpacity="0.25" stroke={color} strokeWidth="1.3" strokeOpacity="0.3" />
+    <circle cx="28" cy="11.5" r="1.5" fill={color} fillOpacity="0.4" />
+    <path d="M18 24 L 21 27 L 27 21" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.38" />
+    <line x1="31" y1="24" x2="40" y2="24" stroke={color} strokeWidth="1.5" strokeOpacity="0.26" strokeLinecap="round" />
+    <path d="M18 33 L 21 36 L 27 30" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.38" />
+    <line x1="31" y1="33" x2="40" y2="33" stroke={color} strokeWidth="1.5" strokeOpacity="0.26" strokeLinecap="round" />
+    <path d="M18 42 L 21 45 L 27 39" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.38" />
+    <line x1="31" y1="42" x2="37" y2="42" stroke={color} strokeWidth="1.5" strokeOpacity="0.22" strokeLinecap="round" />
+  </svg>
+);
+
+const CardWatermark = ({ type, color }) => {
+  switch (type) {
+    case 'building':
+      return <BuildingGraphic color={color} />;
+    case 'active-branch':
+      return <ActiveBranchGraphic color={color} />;
+    case 'book':
+      return <BookGraphic color={color} />;
+    case 'layers':
+      return <LayersGraphic color={color} />;
+    case 'students':
+      return <StudentsGraphic color={color} />;
+    case 'diploma':
+      return <DiplomaGraphic color={color} />;
+    case 'paid-wallet':
+      return <PaidWalletGraphic color={color} />;
+    case 'clock':
+      return <ClockGraphic color={color} />;
+    case 'staff':
+      return <TeacherStaffGraphic color={color} />;
+    case 'key':
+      return <AdminKeyGraphic color={color} />;
+    case 'enquiries':
+      return <EnquiriesChatGraphic color={color} />;
+    case 'today-enquiries':
+      return <TodayEnquiriesGraphic color={color} />;
+    case 'staff-attendance':
+      return <StaffAttendanceGraphic color={color} />;
+    case 'admin-attendance':
+      return <AdminAttendanceGraphic color={color} />;
+    case 'admin':
+      return <AdminGraphic color={color} />;
+    case 'wave':
+      return <WaveGraphic color={color} />;
+    case 'bars':
+    default:
+      return <BarsGraphic color={color} />;
+  }
+};
+
+const StatCard = ({
+  icon: Icon,
+  label,
+  value,
+  accent = '#9c6b2e',
+  watermark = 'bars',
+  delay = 0,
+  size = 'md', // 'lg' (Row 1 - biggest) | 'md' (Row 2) | 'sm' (Row 3) | 'xs' (Row 4)
+}) => {
+  const displayValue = value !== undefined && value !== null ? value : 0;
+
+  const sizeConfig = {
+    lg: {
+      cardClass: 'p-5 sm:p-6 min-h-[148px] sm:min-h-[158px] rounded-3xl',
+      iconBox: 'h-12 w-12 sm:h-13 sm:w-13 rounded-2xl',
+      iconSize: 'h-6 w-6 stroke-[2]',
+      labelClass: 'text-[11.5px] sm:text-[12px]',
+      valueClass: 'text-3xl sm:text-[2.25rem] mt-2 sm:mt-2.5',
+      watermarkScale: 'scale-115',
+    },
+    md: {
+      cardClass: 'p-4.5 sm:p-5 min-h-[132px] sm:min-h-[140px] rounded-2xl',
+      iconBox: 'h-11 w-11 sm:h-11.5 sm:w-11.5 rounded-2xl',
+      iconSize: 'h-5.5 w-5.5 stroke-[2]',
+      labelClass: 'text-[10.5px] sm:text-[11px]',
+      valueClass: 'text-2xl sm:text-[1.85rem] mt-1.5',
+      watermarkScale: 'scale-100',
+    },
+    sm: {
+      cardClass: 'p-4 sm:p-4.5 min-h-[118px] sm:min-h-[124px] rounded-2xl',
+      iconBox: 'h-9.5 w-9.5 sm:h-10 sm:w-10 rounded-xl',
+      iconSize: 'h-4.5 w-4.5 stroke-[2]',
+      labelClass: 'text-[10px] sm:text-[10.5px]',
+      valueClass: 'text-xl sm:text-[1.5rem] mt-1',
+      watermarkScale: 'scale-90',
+    },
+    xs: {
+      cardClass: 'p-3.5 sm:p-4 min-h-[104px] sm:min-h-[110px] rounded-2xl',
+      iconBox: 'h-8.5 w-8.5 sm:h-9 sm:w-9 rounded-xl',
+      iconSize: 'h-4 w-4 stroke-[2]',
+      labelClass: 'text-[9.5px] sm:text-[10px]',
+      valueClass: 'text-lg sm:text-[1.35rem] mt-1',
+      watermarkScale: 'scale-85',
+    },
+  };
+
+  const cfg = sizeConfig[size] || sizeConfig.md;
+
+  return (
+    <div
+      className={`sa-rise relative flex flex-col justify-between bg-white shadow-[0_2px_12px_rgba(23,20,15,0.03)] hover:shadow-[0_8px_24px_rgba(23,20,15,0.08)] hover:-translate-y-0.5 transition-all duration-200 overflow-hidden ${cfg.cardClass}`}
+      style={{
+        animationDelay: `${delay}ms`,
+        border: `1.5px solid ${accent}38`,
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${accent}85`; }}
+      onMouseLeave={(e) => { e.currentTarget.style.borderColor = `${accent}38`; }}
+    >
+      {/* Top Row: Icon Container + Label */}
+      <div className="flex items-center gap-2.5 sm:gap-3 z-10 w-full min-w-0">
+        <div
+          className={`flex shrink-0 items-center justify-center ${cfg.iconBox}`}
+          style={{ backgroundColor: `${accent}16` }}
+        >
+          <Icon className={cfg.iconSize} style={{ color: accent }} />
+        </div>
+        <span
+          className={`font-bold uppercase tracking-wider text-[#8A8175] truncate ${cfg.labelClass}`}
+          title={label}
+        >
+          {label}
+        </span>
+      </div>
+
+      {/* Bottom: Metric Value */}
+      <div className="mt-2.5 z-10">
+        <p
+          className={`font-black text-[#17140F] tracking-tight leading-none tabular-nums truncate ${cfg.valueClass}`}
+          title={String(displayValue)}
+        >
+          {displayValue}
+        </p>
+      </div>
+
+      {/* Bottom Watermark / Graphic */}
+      {watermark === 'wave' ? (
+        <div className="absolute bottom-0 right-0 pointer-events-none select-none z-0 overflow-hidden leading-none">
+          <CardWatermark type={watermark} color={accent} />
+        </div>
+      ) : (
+        <div className={`absolute bottom-2 right-2 sm:bottom-3 sm:right-3 pointer-events-none select-none z-10 ${cfg.watermarkScale} origin-bottom-right`}>
+          <CardWatermark type={watermark} color={accent} />
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Payment bar
 const PaymentDistribution = ({ methods }) => {
@@ -326,14 +669,58 @@ const SuperAdminDashboard = () => {
         </header>
 
         <div className="mx-auto max-w-7xl px-6 py-8 sm:px-10 space-y-8">
-          {/* Welcome Message */}
-          <div className="sa-rise pb-6 sm:pb-8">
-            <h2 className="text-2xl sm:text-3xl font-bold" style={{ color: '#17140f', fontFamily: "'Fraunces', serif" }}>
-              Welcome super admin 👋
-            </h2>
-            <p className="text-sm mt-2 font-medium" style={{ color: '#8a8175' }}>
-              Here's an overview of what's happening across all branches today.
-            </p>
+          {/* ── Welcome Header Banner (Warm Light Theme - Matching Staff & Student Portals) ── */}
+          <div className="sa-rise bg-white rounded-3xl p-5 sm:p-6 border border-[#E3DDD0] shadow-sm relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            {/* Soft warm background gradient glow */}
+            <div className="absolute top-0 right-0 w-96 h-full bg-gradient-to-l from-[#FAF8F4] via-[#F1EDE4]/50 to-transparent pointer-events-none" />
+
+            <div className="relative z-10 max-w-xl">
+              <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                <h1 className="text-xl sm:text-2xl font-bold text-[#17140F] tracking-tight">
+                  Welcome super admin 👋
+                </h1>
+                <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#F1EDE4] text-[#9C6B2E] border border-[#E3DDD0]">
+                  <Crown className="h-3 w-3 text-[#9C6B2E]" />
+                  Super Admin Portal
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-[#5B5346] font-medium">
+                Here's an overview of what's happening across all branches today.
+              </p>
+
+              {dashboardData && (
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-3 pt-3 border-t border-[#F1EDE4] text-[11px] text-[#8A8175]">
+                  <span className="flex items-center gap-1.5 font-semibold text-[#17140F]">
+                    <Building2 className="h-3.5 w-3.5 text-[#9C6B2E]" />
+                    <span>{overview?.total_branches ?? 0} Branches Active</span>
+                  </span>
+                  <span className="text-[#D9D0C1]">•</span>
+                  <span className="flex items-center gap-1 text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Full System Control
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* 3D-styled Super Admin Animated Emblem (Crown & Shield in Warm Gold Theme) */}
+            <div className="hidden sm:flex items-center justify-center shrink-0 pr-2 sm:pr-4 relative z-10">
+              <div className="relative flex items-center justify-center group cursor-default">
+                {/* Floating decorative elements in warm amber & gold theme */}
+                <div className="absolute -top-2.5 -left-2.5 h-6 w-6 rounded-full bg-gradient-to-tr from-[#9C6B2E] to-[#F4B942] shadow-md shadow-[#9C6B2E]/40 animate-bounce flex items-center justify-center text-white" title="Master Security & Authority">
+                  <ShieldCheck className="h-3.5 w-3.5 text-white stroke-[2.3]" />
+                </div>
+                <div className="absolute -bottom-1.5 -right-1.5 h-4 w-4 rounded-full bg-[#F4B942] shadow-md shadow-[#F4B942]/30 animate-pulse" />
+                <div className="absolute top-1/2 -right-4 h-5 w-5 rounded-full bg-[#9C6B2E] shadow-md shadow-[#9C6B2E]/30 flex items-center justify-center text-[10px] font-black text-white">
+                  ★
+                </div>
+
+                {/* Center Floating Super Admin Emblem */}
+                <div className="flex h-20 w-20 sm:h-22 sm:w-22 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FAF8F4] via-[#F1EDE4] to-[#FAF8F4] backdrop-blur-md border border-[#E3DDD0] shadow-lg shadow-[#9C6B2E]/10 transform hover:rotate-3 hover:scale-105 transition-all duration-300">
+                  <Crown className="h-10 w-10 sm:h-12 sm:w-12 text-[#9C6B2E] drop-shadow-sm transition-transform duration-300 group-hover:scale-110" />
+                </div>
+              </div>
+            </div>
           </div>
 
           {error && (
@@ -352,27 +739,39 @@ const SuperAdminDashboard = () => {
             </div>
           ) : dashboardData ? (
             <>
-              {/* Overview Cards */}
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <StatCard icon={Building2} label="Total Branches" value={overview.total_branches} accent="#9c6b2e" />
-                <StatCard icon={CheckCircle} label="Active Branches" value={overview.active_branches} accent="#10b981" delay={20} />
-                <StatCard icon={BookOpen} label="Total Courses" value={overview.total_courses} accent="#3b82f6" delay={40} />
-                <StatCard icon={CheckCircle} label="Active Courses" value={overview.active_courses} accent="#10b981" delay={60} />
-                
-                <StatCard icon={Users} label="Total Students" value={overview.total_students} accent="#8b5cf6" delay={80} />
-                <StatCard icon={GraduationCap} label="Total Enrollments" value={overview.total_enrollments} accent="#0ea5e9" delay={100} />
-                <StatCard icon={Wallet} label="Paid Enrollments" value={overview.paid_enrollments} accent="#10b981" delay={120} />
-                <StatCard icon={Clock} label="Pending Enrollments" value={overview.pending_enrollments} accent="#f59e0b" delay={140} />
-                
-                <StatCard icon={UserPlus} label="Total Staff" value={overview.total_staff} accent="#ec4899" delay={160} />
-                <StatCard icon={KeyRound} label="Branch Admins" value={overview.total_branch_admins} accent="#f43f5e" delay={180} />
-                <StatCard icon={MessageCircle} label="Total Enquiries" value={overview.total_enquiries} accent="#f97316" delay={200} />
-                <StatCard icon={MessageCircle} label="Today's Enquiries" value={overview.today_enquiries} accent="#eab308" delay={220} />
-                
-                <StatCard icon={IndianRupee} label="Total Received" value={fmt(overview.total_received)} accent="#10b981" delay={240} />
-                <StatCard icon={TrendingUp} label="Today Received" value={fmt(overview.today_received)} accent="#059669" delay={260} />
-                <StatCard icon={CalendarCheck} label="Staff Attendance Today" value={overview.staff_attendance_today} accent="#14b8a6" delay={280} />
-                <StatCard icon={CalendarCheck} label="Admin Attendance Today" value={overview.branch_admin_attendance_today} accent="#0d9488" delay={300} />
+              {/* Overview Cards (Hierarchical: Row 1 biggest, Row 2 smaller, Row 3 smaller, Row 4 compact) */}
+              <div className="space-y-4 sm:space-y-5">
+                {/* Row 1: Branches & Courses (Size: lg - biggest) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+                  <StatCard size="lg" icon={Building2} label="Total Branches" value={overview.total_branches} accent="#F97316" watermark="building" delay={0} />
+                  <StatCard size="lg" icon={Building2} label="Active Branches" value={overview.active_branches} accent="#10B981" watermark="active-branch" delay={20} />
+                  <StatCard size="lg" icon={BookOpen} label="Total Courses" value={overview.total_courses} accent="#3B82F6" watermark="book" delay={40} />
+                  <StatCard size="lg" icon={Layers} label="Active Courses" value={overview.active_courses} accent="#06B6D4" watermark="layers" delay={60} />
+                </div>
+
+                {/* Row 2: Students & Enrollments (Size: md - smaller than first) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+                  <StatCard size="md" icon={Users} label="Total Students" value={overview.total_students} accent="#8B5CF6" watermark="students" delay={80} />
+                  <StatCard size="md" icon={GraduationCap} label="Total Enrollments" value={overview.total_enrollments} accent="#0EA5E9" watermark="diploma" delay={100} />
+                  <StatCard size="md" icon={Wallet} label="Paid Enrollments" value={overview.paid_enrollments} accent="#10B981" watermark="paid-wallet" delay={120} />
+                  <StatCard size="md" icon={Clock} label="Pending Enrollments" value={overview.pending_enrollments} accent="#F59E0B" watermark="clock" delay={140} />
+                </div>
+
+                {/* Row 3: Staff & Enquiries (Size: sm - smaller than second) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+                  <StatCard size="sm" icon={UserPlus} label="Total Staff" value={overview.total_staff} accent="#EC4899" watermark="staff" delay={160} />
+                  <StatCard size="sm" icon={KeyRound} label="Branch Admins" value={overview.total_branch_admins} accent="#F43F5E" watermark="key" delay={180} />
+                  <StatCard size="sm" icon={MessageCircle} label="Total Enquiries" value={overview.total_enquiries} accent="#F97316" watermark="enquiries" delay={200} />
+                  <StatCard size="sm" icon={MessageCircle} label="Today's Enquiries" value={overview.today_enquiries} accent="#EAB308" watermark="today-enquiries" delay={220} />
+                </div>
+
+                {/* Row 4: Revenue & Attendance (Size: xs - smaller than third / compact) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+                  <StatCard size="xs" icon={IndianRupee} label="Total Received" value={fmt(overview.total_received)} accent="#10B981" watermark="wave" delay={240} />
+                  <StatCard size="xs" icon={TrendingUp} label="Today Received" value={fmt(overview.today_received)} accent="#059669" watermark="wave" delay={260} />
+                  <StatCard size="xs" icon={CalendarCheck} label="Staff Attendance Today" value={overview.staff_attendance_today} accent="#0284C7" watermark="staff-attendance" delay={280} />
+                  <StatCard size="xs" icon={CalendarCheck} label="Admin Attendance Today" value={overview.branch_admin_attendance_today} accent="#8B5CF6" watermark="admin-attendance" delay={300} />
+                </div>
               </div>
 
               {/* Payment Methods */}
@@ -391,6 +790,13 @@ const SuperAdminDashboard = () => {
                     <h2 className="text-lg font-bold" style={{ color: '#17140f' }}>Branch Overview</h2>
                     <p className="text-xs mt-1" style={{ color: '#8a8175' }}>Quick overview of all registered branches</p>
                   </div>
+                  <button
+                    onClick={() => navigate('/super-admin/branch-overview')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition hover:bg-[#f1ede4] border"
+                    style={{ color: '#9c6b2e', borderColor: '#e3ddd0', background: '#ffffff' }}
+                  >
+                    View Full Overview &rarr;
+                  </button>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">

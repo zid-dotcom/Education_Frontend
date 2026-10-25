@@ -235,7 +235,7 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
             to={coursePath}
             className={`mb-6 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition-colors ${
               studentView
-                ? 'text-purple-600 hover:text-purple-800'
+                ? 'text-[#9C6B2E] hover:text-[#855923]'
                 : 'text-slate-500 hover:text-amber-700'
             }`}
           >
@@ -249,7 +249,7 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
                 <span
                   className={`inline-flex px-3 py-1 text-xs font-bold uppercase tracking-wider ${
                     studentView
-                      ? 'rounded-full border border-purple-200/80 bg-purple-50 text-purple-700'
+                      ? 'rounded-full border border-[#E3DDD0] bg-[#FAF8F4] text-[#9C6B2E]'
                       : 'border border-amber-200 bg-amber-50 text-amber-800'
                   }`}
                 >
@@ -269,20 +269,20 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
                 <span
                   className={`flex items-center gap-1.5 px-3 py-2 ${
                     studentView
-                      ? 'rounded-xl border border-purple-200/80 bg-purple-50 text-purple-700 font-bold'
+                      ? 'rounded-xl border border-[#E3DDD0] bg-[#FAF8F4] text-[#9C6B2E] font-bold'
                       : 'rounded-lg border border-amber-200 bg-amber-50 text-amber-800'
                   }`}
                 >
-                  <Clock className={`h-4 w-4 ${studentView ? 'text-purple-600' : 'text-amber-700'}`} /> Duration: {duration}
+                  <Clock className={`h-4 w-4 ${studentView ? 'text-[#9C6B2E]' : 'text-amber-700'}`} /> Duration: {duration}
                 </span>
                 <span
                   className={`flex items-center gap-1.5 px-3 py-2 ${
                     studentView
-                      ? 'rounded-xl border border-purple-100 bg-[#FAF8FE] text-slate-700 font-bold'
+                      ? 'rounded-xl border border-[#E3DDD0] bg-[#FAF8F4] text-slate-700 font-bold'
                       : 'rounded-lg border border-slate-200 bg-slate-50 text-slate-700'
                   }`}
                 >
-                  <BarChart className={`w-4 h-4 ${studentView ? 'text-purple-500' : 'text-slate-500'}`} /> Level: {level}
+                  <BarChart className={`w-4 h-4 ${studentView ? 'text-[#9C6B2E]' : 'text-slate-500'}`} /> Level: {level}
                 </span>
               </div>
             </div>
@@ -291,7 +291,7 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
               <div
                 className={`overflow-hidden ${
                   studentView
-                    ? 'rounded-2xl border border-purple-100/90 bg-[#FAF8FE] shadow-[0_15px_35px_rgba(110,80,200,0.06)]'
+                    ? 'rounded-2xl border border-[#E3DDD0] bg-[#FAF8F4] shadow-xs'
                     : 'rounded-[1.75rem] border-[1.5px] border-[#f0d9a8] bg-[#fffdf8] shadow-[0_22px_45px_rgba(169,132,74,0.1)]'
                 }`}
               >
@@ -335,7 +335,7 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
                 <div>
                   <h3
                     className={`mb-4 border-b pb-3 text-2xl font-bold text-slate-950 ${
-                      studentView ? 'border-purple-100' : 'border-amber-200'
+                      studentView ? 'border-[#E3DDD0]' : 'border-amber-200'
                     }`}
                   >
                     Key Skills You Will Acquire
@@ -346,14 +346,14 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
                         key={idx}
                         className={`flex items-center gap-3 rounded-xl border p-3.5 text-sm font-semibold text-slate-900 ${
                           studentView
-                            ? 'border-purple-100 bg-[#FAF8FE]'
+                            ? 'border-[#E3DDD0] bg-[#FAF8F4]'
                             : 'border-slate-200 bg-white'
                         }`}
                       >
                         <div
                           className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full font-bold ${
                             studentView
-                              ? 'bg-purple-100 text-purple-700'
+                              ? 'bg-[#F1EDE4] text-[#9C6B2E]'
                               : 'bg-amber-100 text-amber-800'
                           }`}
                         >
@@ -384,7 +384,7 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
               <div
                 className={`sticky top-24 space-y-6 bg-white p-6 ${
                   studentView
-                    ? 'rounded-2xl border border-purple-100 shadow-[0_15px_40px_rgba(110,80,200,0.06)]'
+                    ? 'rounded-2xl border border-[#E3DDD0] shadow-xs'
                     : 'rounded-[1.75rem] border-[1.5px] border-[#f0d9a8] shadow-[0_22px_45px_rgba(169,132,74,0.1)]'
                 }`}
               >
@@ -414,7 +414,7 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
                     onChange={(e) => setPaymentType(e.target.value)}
                     className={`w-full px-4 py-2.5 rounded-xl border text-sm font-semibold mb-2 outline-none transition ${
                       studentView
-                        ? 'border-purple-200 bg-[#F5F2FC] text-slate-800 focus:border-purple-400 focus:bg-white focus:ring-2 focus:ring-purple-200'
+                        ? 'border-[#E3DDD0] bg-[#FAF8F4] text-slate-800 focus:border-[#9C6B2E] focus:bg-white'
                         : 'border-slate-300 text-slate-900 bg-white focus:ring-2 focus:ring-amber-400'
                     }`}
                   >
@@ -428,14 +428,14 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
                     <div
                       className={`mt-3 p-3 rounded-xl space-y-2 border ${
                         studentView
-                          ? 'bg-purple-50/70 border-purple-200'
+                          ? 'bg-[#FAF8F4] border-[#E3DDD0]'
                           : 'bg-amber-50 border-amber-200'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
                         <h4
                           className={`text-[10px] font-bold uppercase tracking-wider ${
-                            studentView ? 'text-purple-800' : 'text-amber-800'
+                            studentView ? 'text-[#9C6B2E]' : 'text-amber-800'
                           }`}
                         >
                           Installment Terms
@@ -444,7 +444,7 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
                           <span
                             className={`text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
                               studentView
-                                ? 'text-purple-700 bg-purple-200/60'
+                                ? 'text-[#9C6B2E] bg-[#F1EDE4]'
                                 : 'text-amber-700 bg-amber-200/50'
                             }`}
                           >
@@ -460,10 +460,10 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
                               className={`flex justify-between items-center text-xs p-2 rounded-lg cursor-pointer transition-colors border ${
                                 selectedInstallment === term.term_number
                                   ? studentView
-                                    ? 'bg-purple-100/70 border-purple-300'
+                                    ? 'bg-[#F1EDE4] border-[#9C6B2E]'
                                     : 'bg-amber-100 border-amber-300'
                                   : studentView
-                                  ? 'bg-transparent border-transparent hover:bg-purple-100/40'
+                                  ? 'bg-transparent border-transparent hover:bg-[#F1EDE4]/50'
                                   : 'bg-transparent border-transparent hover:bg-amber-100/50'
                               }`}
                             >
@@ -476,13 +476,13 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
                                   onChange={() => setSelectedInstallment(term.term_number)}
                                   className={
                                     studentView
-                                      ? 'text-[#7C3AED] focus:ring-purple-400'
+                                      ? 'text-[#9C6B2E] focus:ring-[#9C6B2E]'
                                       : 'text-amber-600 focus:ring-amber-500'
                                   }
                                 />
                                 <span
                                   className={`font-semibold ${
-                                    studentView ? 'text-purple-950' : 'text-amber-900'
+                                    studentView ? 'text-[#17140F]' : 'text-amber-900'
                                   }`}
                                 >
                                   Installment {term.term_number}
@@ -492,7 +492,7 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
                                 <div className="font-bold text-slate-900">₹{term.amount}</div>
                                 <div
                                   className={`text-[10px] ${
-                                    studentView ? 'text-purple-600' : 'text-amber-700'
+                                    studentView ? 'text-[#9C6B2E]' : 'text-amber-700'
                                   }`}
                                 >
                                   Due: {new Date(term.due_date).toLocaleDateString()}
@@ -504,7 +504,7 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
                       ) : (
                         <div
                           className={`text-xs font-medium ${
-                            studentView ? 'text-purple-900' : 'text-amber-900'
+                            studentView ? 'text-[#17140F]' : 'text-amber-900'
                           }`}
                         >
                           {course.installment_count} installments of approx. ₹{Math.round((course.price || course.fee || 0) / course.installment_count)}
@@ -520,14 +520,14 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
                   disabled={paymentLoading}
                   className={`flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-3.5 text-xs font-bold uppercase tracking-wider text-white shadow-md transition-all active:scale-95 disabled:cursor-wait disabled:opacity-70 ${
                     studentView
-                      ? 'bg-[#7C3AED] hover:bg-[#6D28D9] shadow-purple-600/20'
+                      ? 'bg-[#9C6B2E] hover:bg-[#855923] shadow-xs'
                       : 'bg-slate-950 hover:bg-slate-800 shadow-sm'
                   }`}
                 >
                   {paymentLoading ? (
-                    <Loader2 className={`h-4 w-4 animate-spin ${studentView ? 'text-purple-200' : 'text-amber-400'}`} />
+                    <Loader2 className={`h-4 w-4 animate-spin ${studentView ? 'text-white' : 'text-amber-400'}`} />
                   ) : (
-                    <Send className={`h-4 w-4 ${studentView ? 'text-purple-200' : 'text-amber-400'}`} />
+                    <Send className={`h-4 w-4 ${studentView ? 'text-white' : 'text-amber-400'}`} />
                   )}
                   <span>{paymentLoading ? 'Processing Payment...' : 'Pay & Enroll'}</span>
                 </button>

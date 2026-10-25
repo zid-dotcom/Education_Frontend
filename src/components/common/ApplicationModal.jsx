@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { X, CheckCircle, Send, GraduationCap, Loader2 } from 'lucide-react';
 import Button from './Button';
 import { getAllCoursesApi } from '../../services/courses';
 import { createPaymentOrderApi, loadRazorpayScript, verifyPaymentApi } from '../../services/payments';
 import { useAuth } from '../../context/AuthContext';
+import { useStudentModalBlur } from '../../utils/useStudentModalBlur';
 
 const STATIC_COURSES = [
   'Diploma in Fashion Designing',
@@ -92,6 +94,8 @@ const ApplicationModal = ({ isOpen, onClose, defaultCourse = '' }) => {
         .catch(err => console.warn('Could not fetch dynamic courses for modal:', err));
     }
   }, [isOpen, defaultCourse, isAuthenticated]);
+
+  useStudentModalBlur(Boolean(isOpen && isAuthenticated));
 
   if (!isOpen || !isAuthenticated) return null;
 
@@ -216,8 +220,12 @@ const ApplicationModal = ({ isOpen, onClose, defaultCourse = '' }) => {
     ? defaultCourse
     : availableCourseRecords.find((course) => course.title === formData.course);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 backdrop-blur-sm animate-in fade-in duration-200 sm:p-6">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 sa-fade">
+      <div 
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm -z-10"
+        onClick={handleResetAndClose}
+      />
       <div className="relative max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-2xl border border-[#e5d5ae] bg-[#fffdf8] p-5 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-3 duration-300 sm:max-h-[calc(100dvh-3rem)] sm:rounded-3xl sm:p-8">
         {/* Close Button */}
         <button
@@ -482,7 +490,8 @@ const ApplicationModal = ({ isOpen, onClose, defaultCourse = '' }) => {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

@@ -16,8 +16,8 @@ const CurriculumAccordion = ({ curriculum = [], studentView = false }) => {
             className={`rounded-2xl border transition-all duration-300 overflow-hidden ${
               studentView
                 ? isOpen
-                  ? 'bg-[#FAF8FE] border-purple-200 shadow-sm'
-                  : 'bg-white border-purple-100 hover:border-purple-200'
+                  ? 'bg-[#FAF8F4] border-[#9C6B2E]/40 shadow-xs'
+                  : 'bg-white border-[#E3DDD0] hover:border-[#9C6B2E]/30'
                 : isOpen
                 ? 'bg-amber-50/60 border-amber-300 shadow-md'
                 : 'bg-white border-slate-200 hover:border-amber-200'
@@ -32,7 +32,7 @@ const CurriculumAccordion = ({ curriculum = [], studentView = false }) => {
                 <span
                   className={`px-3 py-1 font-extrabold text-xs rounded-full uppercase tracking-wider ${
                     studentView
-                      ? 'bg-[#7C3AED] text-white shadow-sm'
+                      ? 'bg-[#9C6B2E] text-white shadow-xs'
                       : 'bg-amber-400 text-slate-950'
                   }`}
                 >
@@ -46,8 +46,8 @@ const CurriculumAccordion = ({ curriculum = [], studentView = false }) => {
                 className={`w-8 h-8 rounded-full flex items-center justify-center transition-transform ${
                   studentView
                     ? isOpen
-                      ? 'rotate-180 bg-purple-100 text-[#7C3AED]'
-                      : 'bg-purple-50 text-purple-400'
+                      ? 'rotate-180 bg-[#F1EDE4] text-[#9C6B2E]'
+                      : 'bg-[#FAF8F4] text-[#8A8175]'
                     : isOpen
                     ? 'rotate-180 bg-amber-200 text-amber-900'
                     : 'bg-slate-100 text-slate-500'
@@ -60,7 +60,7 @@ const CurriculumAccordion = ({ curriculum = [], studentView = false }) => {
             {isOpen && item.topics && (
               <div
                 className={`px-6 pb-6 pt-2 border-t ${
-                  studentView ? 'border-purple-100/70' : 'border-amber-200/50'
+                  studentView ? 'border-[#E3DDD0]' : 'border-amber-200/50'
                 }`}
               >
                 <p className="text-xs uppercase font-bold text-slate-400 tracking-wider mb-3">
@@ -72,13 +72,13 @@ const CurriculumAccordion = ({ curriculum = [], studentView = false }) => {
                       key={tIdx}
                       className={`flex items-start gap-2.5 text-xs font-semibold text-slate-700 p-2.5 rounded-xl border ${
                         studentView
-                          ? 'bg-white border-purple-100/80 shadow-[0_2px_8px_rgba(0,0,0,0.02)]'
+                          ? 'bg-white border-[#E3DDD0] shadow-2xs'
                           : 'bg-white/80 border-slate-100 text-sm'
                       }`}
                     >
                       <CheckCircle
                         className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
-                          studentView ? 'text-[#7C3AED]' : 'text-amber-500'
+                          studentView ? 'text-[#9C6B2E]' : 'text-amber-500'
                         }`}
                       />
                       <span>{topic}</span>

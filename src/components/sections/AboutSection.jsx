@@ -105,18 +105,34 @@ const AboutSection = () => {
           <div className={`ab-copy ${inView ? 'ab-in' : ''} lg:col-span-7 space-y-6`}>
 
             <p className="ab-sans text-sm sm:text-base text-stone-600 leading-relaxed">
-              AurumFX is a premier multi-disciplinary educational institution committed to
-              bridging the gap between talent and industry demands. Founded on academic
-              excellence, skill-based learning, and character building, AurumFX empowers
-              individuals to turn their passions into long-term careers.
+              Welcome to AurumFX, a premier multi-disciplinary educational institution committed to bridging the gap between talent and industry demands. Founded on the principles of academic excellence, skill-based learning, and character building, AurumFX empowers individuals to transform their passions into successful, long-term careers.
             </p>
 
-            <p className="ab-sans text-sm sm:text-base text-stone-600 leading-relaxed">
-              We offer specialized, career-focused programs through three dedicated academies:{' '}
-              <span className="font-semibold text-[#1C1917]">Fashion Designing Institute</span>,{' '}
-              <span className="font-semibold text-[#1C1917]">Computer Training Institute</span>, and{' '}
-              <span className="font-semibold text-[#1C1917]">Hospitality Management Institute</span>.
-            </p>
+            <div>
+              <p className="ab-sans text-xs font-bold uppercase tracking-wider text-amber-800 mb-3">
+                We offer specialized, career-focused programs through three dedicated academies:
+              </p>
+              <div className="space-y-3">
+                <div className="p-3.5 rounded-xl border border-stone-200 bg-white hover:border-amber-300 transition-colors">
+                  <h4 className="ab-serif text-sm font-bold text-[#1C1917]">Fashion Designing Institute</h4>
+                  <p className="ab-sans text-xs text-stone-600 mt-1 leading-relaxed">
+                    A creative hub designed to foster innovation, garment construction techniques, textile design, and contemporary trend analysis, preparing students for the dynamic global fashion industry.
+                  </p>
+                </div>
+                <div className="p-3.5 rounded-xl border border-stone-200 bg-white hover:border-amber-300 transition-colors">
+                  <h4 className="ab-serif text-sm font-bold text-[#1C1917]">Computer Training Institute</h4>
+                  <p className="ab-sans text-xs text-stone-600 mt-1 leading-relaxed">
+                    A technology-driven wing delivering practical training in software applications, coding, digital literacy, web development, and IT tools needed for today’s digital workforce.
+                  </p>
+                </div>
+                <div className="p-3.5 rounded-xl border border-stone-200 bg-white hover:border-amber-300 transition-colors">
+                  <h4 className="ab-serif text-sm font-bold text-[#1C1917]">Hospitality Management Institute</h4>
+                  <p className="ab-sans text-xs text-stone-600 mt-1 leading-relaxed">
+                    A professional training ground focused on hotel administration, front-office operations, food and beverage management, customer service excellence, and global hospitality standards.
+                  </p>
+                </div>
+              </div>
+            </div>
 
             {/* Stats */}
             <div className="grid grid-cols-2 gap-4 pt-2">
@@ -131,7 +147,7 @@ const AboutSection = () => {
               ))}
             </div>
 
-            <div className="pt-4">
+            <div className="pt-2">
               <Link
                 to="/about"
                 className="ab-sans group inline-flex items-center gap-3 px-8 py-4 bg-[#1C1917] hover:bg-amber-700 text-white font-semibold text-sm sm:text-base rounded-full shadow-md hover:shadow-lg transition-all duration-300"

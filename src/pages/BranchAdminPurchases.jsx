@@ -21,7 +21,8 @@ import {
   Wallet,
   Calendar,
   AlertCircle,
-  ShieldCheck
+  ShieldCheck,
+  Menu,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -421,55 +422,65 @@ export default function BranchAdminPurchases() {
       <main className="min-w-0 flex-1">
         {/* ---- Header ---- */}
         <header
-          className="ba-fade flex flex-col gap-5 px-6 pb-8 pt-10 sm:flex-row sm:items-end sm:justify-between sm:px-10"
-          style={{ borderBottom: "1px solid #e3ddd0" }}
+          className="sticky top-0 z-20 flex h-[92px] items-center justify-between border-b border-[#e3ddd0] bg-[#faf8f4]/95 px-6 backdrop-blur-md sm:px-10 shrink-0"
         >
-          <div>
-            <h1
-              className="text-[2.1rem] leading-none tracking-tight sm:text-[2.5rem]"
-              style={{ ...serif, fontWeight: 500, color: "#17140f" }}
-            >
-              Course approvals
-            </h1>
-            <p className="mt-2 max-w-md text-[0.95rem]" style={{ color: "#8a8175" }}>
-              Review paid course purchases and approve student access.
-            </p>
-            <p className="mt-2 max-w-2xl text-[0.8rem] rounded-lg px-3 py-2" style={{ background: "#fff5f5", border: "1px solid #fed7d7", color: "#c53030" }}>
-              <strong style={{ color: "#9b2c2c" }}>Note:</strong> Branch Admin Approved means the purchase has been approved by the Branch Admin. For the main access, Super Admin approvals are also needed.
-            </p>
-          </div>
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen((open) => !open)}
+              className="rounded-xl bg-[#faf8f4] border border-[#e3ddd0] p-2 text-[#17140f] hover:bg-[#f1ede4] transition md:hidden"
+              aria-label="Open sidebar"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#9c6b2e]">
+                Branch Portal
+              </span>
+              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
+                Course Approvals
+              </h2>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
             <button
               type="button"
               onClick={loadPurchases}
               disabled={loading}
-              className={`ba-press flex items-center gap-2 rounded-lg px-3.5 py-2.5 text-sm font-medium disabled:opacity-60 ${FOCUS_RING}`}
+              className={`ba-press flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-semibold disabled:opacity-60 ${FOCUS_RING}`}
               style={{ border: "1px solid #e3ddd0", color: "#5b5346", background: "#ffffff" }}
             >
               <RefreshCw
-                className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
                 style={{ color: "#9c6b2e" }}
               />
-              Refresh
+              <span className="hidden sm:inline">Refresh</span>
             </button>
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-medium" style={{ color: "#17140f" }}>
-                {user?.name || "Branch admin"}
-              </p>
-              <p className="text-xs" style={{ color: "#a39a8c" }}>
-                Branch administrator
-              </p>
-            </div>
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium"
-              style={{ background: "#17140f", color: "#f4b942" }}
-            >
-              {user?.name?.charAt(0).toUpperCase() || "B"}
+
+            <div className="flex items-center gap-2.5">
+              <div
+                className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-extrabold shadow-sm ring-2 ring-[#e3ddd0]"
+                style={{ background: "#17140f", color: "#f4b942" }}
+              >
+                {user?.name?.charAt(0).toUpperCase() || "B"}
+              </div>
+              <div className="hidden md:block text-left">
+                <p className="text-xs font-extrabold text-slate-900 leading-tight">
+                  {user?.name || "Branch Admin"}
+                </p>
+                <p className="text-[10px] font-semibold text-slate-400">
+                  Branch Administrator
+                </p>
+              </div>
             </div>
           </div>
         </header>
 
-        <div className="mx-auto w-full max-w-6xl px-6 py-8 sm:px-10">
+        <div className="mx-auto w-full max-w-6xl px-6 py-6 sm:px-10">
+          <p className="mb-6 max-w-2xl text-[0.8rem] rounded-xl px-3.5 py-2.5" style={{ background: "#fff5f5", border: "1px solid #fed7d7", color: "#c53030" }}>
+            <strong style={{ color: "#9b2c2c" }}>Note:</strong> Branch Admin Approved means the purchase has been approved by the Branch Admin. For the main access, Super Admin approvals are also needed.
+          </p>
           {error && (
             <div
               role="alert"

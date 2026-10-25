@@ -12,15 +12,25 @@ const parseResponse = async (response, fallbackMessage) => {
 
 /**
  * Fetch announcements for the admin announcements page.
+ * GET /announcements/admin/global
  * @param {string} token
  */
 export async function getAnnouncementsApi(token) {
-  const response = await fetch(`${API_BASE_URL}/announcements/`, {
+  let response = await fetch(`${API_BASE_URL}/announcements/admin/global`, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${token}`,
     },
   });
+
+  if (response.status === 404) {
+    response = await fetch(`${API_BASE_URL}/announcements/`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  }
 
   return parseResponse(response, 'Failed to fetch announcements.');
 }

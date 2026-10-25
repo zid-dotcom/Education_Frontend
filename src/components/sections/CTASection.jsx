@@ -61,13 +61,15 @@ const CTASection = ({ onOpenApplyModal }) => {
           {/* LEFT: headline, copy, actions */}
           <div className={`cta-fade ${inView ? 'cta-in' : ''} lg:col-span-7`} style={{ transitionDelay: '80ms' }}>
             <h2 className="cta-serif text-4xl sm:text-6xl leading-[1.05] text-[#1C1917] mb-6">
-              Start your journey, <span className="italic text-amber-700">right on time</span>
+              Start Your Journey <span className="italic text-amber-700">Today</span>
             </h2>
 
-            <p className="cta-sans text-base sm:text-lg text-stone-600 leading-relaxed max-w-xl mb-8">
-              Whether you're aspiring to design the next fashion trend, build modern digital
-              solutions, or deliver world-class hospitality experiences, AurumFX provides the
-              environment, tools, and career support to help you get there.
+            <p className="cta-sans text-base sm:text-lg text-stone-600 leading-relaxed max-w-xl mb-4">
+              Whether you are aspiring to design the next fashion trend, build modern digital solutions, or deliver world-class hospitality experiences, AurumFX provides the environment, tools, and career support to help you achieve your goals.
+            </p>
+
+            <p className="cta-sans text-sm sm:text-base font-semibold text-amber-800 mb-8">
+              Unlock your potential. Gain industry skills. Launch your career with confidence.
             </p>
 
             <div className="flex flex-wrap items-center gap-4">

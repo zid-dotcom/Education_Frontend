@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   AlertCircle,
   Award,
@@ -26,6 +27,7 @@ import {
   getStudentAssignmentsApi,
   submitStudentAssignmentApi,
 } from '../services/studentassignments';
+import { useStudentModalBlur } from '../utils/useStudentModalBlur';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -201,6 +203,8 @@ const StudentAssignments = () => {
   const [statusFilter, setStatusFilter] = useState('ALL'); // ALL, UPCOMING, OVERDUE, SUBMITTED
   const [activeModalAssignment, setActiveModalAssignment] = useState(null);
 
+  useStudentModalBlur(Boolean(activeModalAssignment));
+
   // Submission in-flight & feedback state
   const [submittingId, setSubmittingId] = useState(null);
   const [submissionAlert, setSubmissionAlert] = useState(null);
@@ -371,19 +375,19 @@ const StudentAssignments = () => {
         }
       `}</style>
 
-      {/* Hero Banner (Matching Purple Gradient Dashboard Style) */}
-      <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-r from-[#8651E8] via-[#7B3FE4] to-[#9962F7] p-6 sm:p-8 text-white shadow-lg shadow-purple-500/15 mb-6">
-        <div className="pointer-events-none absolute -right-12 -top-12 h-64 w-64 rounded-full bg-white/10 blur-2xl" />
+      {/* Hero Banner (Warm Light Theme) */}
+      <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-r from-[#FAF8F4] via-[#F5EFE6] to-[#FAF8F4] p-6 sm:p-8 text-[#17140F] border border-[#E3DDD0] shadow-xs mb-6">
+        <div className="pointer-events-none absolute -right-12 -top-12 h-64 w-64 rounded-full bg-[#9C6B2E]/10 blur-2xl" />
         <div className="relative z-10 flex flex-col justify-between gap-5 md:flex-row md:items-center">
           <div className="max-w-2xl space-y-1.5">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-md px-3 py-1 text-[11px] font-bold text-white border border-white/25">
-              <ClipboardList className="h-3 w-3 text-purple-200" />
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/80 backdrop-blur-md px-3 py-1 text-[11px] font-bold text-[#9C6B2E] border border-[#E3DDD0]">
+              <ClipboardList className="h-3 w-3 text-[#9C6B2E]" />
               <span>Student Coursework & Submissions</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white leading-tight">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[#17140F] leading-tight">
               My Assignments
             </h1>
-            <p className="text-xs sm:text-sm text-purple-100/90 font-normal">
+            <p className="text-xs sm:text-sm text-[#5B5346] font-normal">
               Access tasks, submit coursework directly in PDF format, and review evaluation marks and feedback from your instructors.
             </p>
           </div>
@@ -392,7 +396,7 @@ const StudentAssignments = () => {
             type="button"
             onClick={fetchAssignments}
             disabled={loading}
-            className="inline-flex items-center gap-2 self-start md:self-auto rounded-xl bg-white/20 backdrop-blur-md px-4 py-2.5 text-xs font-bold text-white border border-white/30 shadow-sm transition hover:bg-white/30 disabled:opacity-50"
+            className="inline-flex items-center gap-2 self-start md:self-auto rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-[#17140F] border border-[#E3DDD0] shadow-xs transition hover:bg-[#F1EDE4] disabled:opacity-50"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
@@ -428,7 +432,7 @@ const StudentAssignments = () => {
         </div>
       )}
 
-      {/* Stat Cards (Matching Dashboard 4-card purple/lavender layout) */}
+      {/* Stat Cards (Warm Light Theme) */}
       <section className="mb-6 grid grid-cols-2 gap-3.5 sm:gap-4 lg:grid-cols-4">
         {/* Total Tasks */}
         <button
@@ -436,20 +440,20 @@ const StudentAssignments = () => {
           onClick={() => handleCardClick('ALL')}
           className={`group rounded-2xl p-5 text-left transition-all duration-200 hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between ${
             statusFilter === 'ALL'
-              ? 'border-2 border-[#7C3AED] bg-white shadow-[0_12px_30px_rgba(124,58,237,0.12)]'
-              : 'border border-slate-100 bg-white shadow-[0_8px_25px_rgba(0,0,0,0.03)] hover:shadow-md hover:border-purple-200'
+              ? 'border-2 border-[#9C6B2E] bg-white shadow-[0_12px_30px_rgba(156,107,46,0.12)]'
+              : 'border border-[#E3DDD0] bg-white shadow-2xs hover:shadow-md hover:border-[#9C6B2E]/40'
           }`}
         >
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-purple-700">Total Tasks</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[#9C6B2E]">Total Tasks</p>
             <span className={`flex h-9 w-9 items-center justify-center rounded-xl transition ${
-              statusFilter === 'ALL' ? 'bg-purple-100 text-[#7C3AED]' : 'bg-purple-50 text-purple-600'
+              statusFilter === 'ALL' ? 'bg-[#9C6B2E]/10 text-[#9C6B2E]' : 'bg-[#F1EDE4] text-[#5B5346]'
             }`}>
               <FileText className="h-4 w-4" />
             </span>
           </div>
           <div className="mt-3">
-            <p className={`text-2xl sm:text-3xl font-black ${statusFilter === 'ALL' ? 'text-[#7C3AED]' : 'text-slate-900'}`}>
+            <p className={`text-2xl sm:text-3xl font-black ${statusFilter === 'ALL' ? 'text-[#9C6B2E]' : 'text-slate-900'}`}>
               {stats.total}
             </p>
             <p className="mt-1 text-xs text-slate-400 font-medium">Assigned to your profile</p>
@@ -462,20 +466,20 @@ const StudentAssignments = () => {
           onClick={() => handleCardClick('PENDING_SUBMIT')}
           className={`group rounded-2xl p-5 text-left transition-all duration-200 hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between ${
             statusFilter === 'PENDING_SUBMIT'
-              ? 'border-2 border-[#7C3AED] bg-white shadow-[0_12px_30px_rgba(124,58,237,0.12)]'
-              : 'border border-slate-100 bg-white shadow-[0_8px_25px_rgba(0,0,0,0.03)] hover:shadow-md hover:border-purple-200'
+              ? 'border-2 border-[#9C6B2E] bg-white shadow-[0_12px_30px_rgba(156,107,46,0.12)]'
+              : 'border border-[#E3DDD0] bg-white shadow-2xs hover:shadow-md hover:border-[#9C6B2E]/40'
           }`}
         >
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-purple-700">Pending</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[#9C6B2E]">Pending</p>
             <span className={`flex h-9 w-9 items-center justify-center rounded-xl transition ${
-              statusFilter === 'PENDING_SUBMIT' ? 'bg-purple-100 text-[#7C3AED]' : 'bg-purple-50 text-purple-600'
+              statusFilter === 'PENDING_SUBMIT' ? 'bg-[#9C6B2E]/10 text-[#9C6B2E]' : 'bg-[#F1EDE4] text-[#5B5346]'
             }`}>
               <Clock className="h-4 w-4" />
             </span>
           </div>
           <div className="mt-3">
-            <p className={`text-2xl sm:text-3xl font-black ${statusFilter === 'PENDING_SUBMIT' ? 'text-[#7C3AED]' : 'text-slate-900'}`}>
+            <p className={`text-2xl sm:text-3xl font-black ${statusFilter === 'PENDING_SUBMIT' ? 'text-[#9C6B2E]' : 'text-slate-900'}`}>
               {stats.pending}
             </p>
             <p className="mt-1 text-xs text-slate-400 font-medium">Awaiting submission</p>
@@ -488,20 +492,20 @@ const StudentAssignments = () => {
           onClick={() => handleCardClick('SUBMITTED')}
           className={`group rounded-2xl p-5 text-left transition-all duration-200 hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between ${
             statusFilter === 'SUBMITTED'
-              ? 'border-2 border-[#7C3AED] bg-white shadow-[0_12px_30px_rgba(124,58,237,0.12)]'
-              : 'border border-slate-100 bg-white shadow-[0_8px_25px_rgba(0,0,0,0.03)] hover:shadow-md hover:border-purple-200'
+              ? 'border-2 border-[#9C6B2E] bg-white shadow-[0_12px_30px_rgba(156,107,46,0.12)]'
+              : 'border border-[#E3DDD0] bg-white shadow-2xs hover:shadow-md hover:border-[#9C6B2E]/40'
           }`}
         >
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-purple-700">Submitted</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[#9C6B2E]">Submitted</p>
             <span className={`flex h-9 w-9 items-center justify-center rounded-xl transition ${
-              statusFilter === 'SUBMITTED' ? 'bg-purple-100 text-[#7C3AED]' : 'bg-purple-50 text-purple-600'
+              statusFilter === 'SUBMITTED' ? 'bg-[#9C6B2E]/10 text-[#9C6B2E]' : 'bg-[#F1EDE4] text-[#5B5346]'
             }`}>
               <FileCheck2 className="h-4 w-4" />
             </span>
           </div>
           <div className="mt-3">
-            <p className={`text-2xl sm:text-3xl font-black ${statusFilter === 'SUBMITTED' ? 'text-[#7C3AED]' : 'text-slate-900'}`}>
+            <p className={`text-2xl sm:text-3xl font-black ${statusFilter === 'SUBMITTED' ? 'text-[#9C6B2E]' : 'text-slate-900'}`}>
               {stats.submitted}
             </p>
             <p className="mt-1 text-xs text-slate-400 font-medium">Homework PDF uploaded</p>
@@ -514,20 +518,20 @@ const StudentAssignments = () => {
           onClick={() => handleCardClick('GRADED')}
           className={`group rounded-2xl p-5 text-left transition-all duration-200 hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between ${
             statusFilter === 'GRADED'
-              ? 'border-2 border-[#7C3AED] bg-white shadow-[0_12px_30px_rgba(124,58,237,0.12)]'
-              : 'border border-slate-100 bg-white shadow-[0_8px_25px_rgba(0,0,0,0.03)] hover:shadow-md hover:border-purple-200'
+              ? 'border-2 border-[#9C6B2E] bg-white shadow-[0_12px_30px_rgba(156,107,46,0.12)]'
+              : 'border border-[#E3DDD0] bg-white shadow-2xs hover:shadow-md hover:border-[#9C6B2E]/40'
           }`}
         >
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-purple-700">Graded</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[#9C6B2E]">Graded</p>
             <span className={`flex h-9 w-9 items-center justify-center rounded-xl transition ${
-              statusFilter === 'GRADED' ? 'bg-purple-100 text-[#7C3AED]' : 'bg-purple-50 text-purple-600'
+              statusFilter === 'GRADED' ? 'bg-[#9C6B2E]/10 text-[#9C6B2E]' : 'bg-[#F1EDE4] text-[#5B5346]'
             }`}>
               <Award className="h-4 w-4" />
             </span>
           </div>
           <div className="mt-3">
-            <p className={`text-2xl sm:text-3xl font-black ${statusFilter === 'GRADED' ? 'text-[#7C3AED]' : 'text-slate-900'}`}>
+            <p className={`text-2xl sm:text-3xl font-black ${statusFilter === 'GRADED' ? 'text-[#9C6B2E]' : 'text-slate-900'}`}>
               {stats.graded}
             </p>
             <p className="mt-1 text-xs text-slate-400 font-medium">Marks & remarks released</p>
@@ -536,7 +540,7 @@ const StudentAssignments = () => {
       </section>
 
       {/* Filter and Search Bar */}
-      <section className="mb-6 rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_8px_25px_rgba(0,0,0,0.03)] sm:p-5">
+      <section className="mb-6 rounded-2xl border border-[#E3DDD0] bg-white p-4 shadow-2xs sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           {/* Status Tabs */}
           <div className="flex flex-wrap items-center gap-2">
@@ -552,8 +556,8 @@ const StudentAssignments = () => {
                 onClick={() => setStatusFilter(tab.id)}
                 className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition cursor-pointer ${
                   statusFilter === tab.id
-                    ? 'bg-[#7C3AED] text-white shadow-sm'
-                    : 'bg-[#F5F2FC] text-slate-600 border border-purple-100/80 hover:bg-purple-100 hover:text-purple-900'
+                    ? 'bg-[#9C6B2E] text-white shadow-xs'
+                    : 'bg-[#F1EDE4] text-[#5B5346] border border-[#E3DDD0] hover:bg-[#E8E2D5] hover:text-[#17140F]'
                 }`}
               >
                 {tab.label}
@@ -568,7 +572,7 @@ const StudentAssignments = () => {
                 <select
                   value={selectedCourseFilter}
                   onChange={(e) => setSelectedCourseFilter(e.target.value)}
-                  className="w-full rounded-xl border border-purple-100 bg-[#F5F2FC] py-2 px-3 text-xs font-semibold text-slate-800 focus:border-purple-300 focus:bg-white focus:outline-none transition cursor-pointer"
+                  className="w-full rounded-xl border border-[#E3DDD0] bg-[#FAF8F4] py-2 px-3 text-xs font-semibold text-[#17140F] focus:border-[#9C6B2E] focus:bg-white focus:outline-none transition cursor-pointer"
                 >
                   <option value="ALL">All Enrolled Courses</option>
                   {uniqueCourses.map((c) => (
@@ -582,19 +586,19 @@ const StudentAssignments = () => {
 
             {/* Search Input */}
             <div className="relative min-w-[220px]">
-              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-purple-400" />
+              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#8A8175]" />
               <input
                 type="text"
                 placeholder="Search tasks, courses..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-xl border border-purple-100 bg-[#F5F2FC] py-2 pl-9 pr-8 text-xs text-slate-800 placeholder:text-purple-300 focus:border-purple-300 focus:bg-white focus:outline-none transition"
+                className="w-full rounded-xl border border-[#E3DDD0] bg-[#FAF8F4] py-2 pl-9 pr-8 text-xs text-[#17140F] placeholder:text-[#8A8175] focus:border-[#9C6B2E] focus:bg-white focus:outline-none transition"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8A8175] hover:text-[#17140F]"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -607,9 +611,9 @@ const StudentAssignments = () => {
       {/* Assignment Cards Section */}
       <section id="assignments-list-section">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl border border-purple-100 bg-purple-50/30">
-            <Loader2 className="h-8 w-8 animate-spin text-[#7C3AED]" />
-            <p className="mt-3 text-xs font-bold text-slate-600">Loading your assignments...</p>
+          <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl border border-[#E3DDD0] bg-[#FAF8F4]">
+            <Loader2 className="h-8 w-8 animate-spin text-[#9C6B2E]" />
+            <p className="mt-3 text-xs font-bold text-[#5B5346]">Loading your assignments...</p>
           </div>
         ) : error ? (
           <div className="rounded-2xl border border-rose-200 bg-rose-50/70 p-8 text-center text-rose-800">
@@ -624,14 +628,14 @@ const StudentAssignments = () => {
             </button>
           </div>
         ) : filteredAssignments.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-purple-200 bg-[#FAF8FE] p-16 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-50 text-purple-600">
+          <div className="rounded-2xl border border-dashed border-[#E3DDD0] bg-[#FAF8F4] p-16 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F1EDE4] text-[#9C6B2E]">
               <FileText className="h-7 w-7" />
             </div>
-            <h3 className="mt-4 text-base font-extrabold text-slate-800">
+            <h3 className="mt-4 text-base font-extrabold text-[#17140F]">
               {assignments.length === 0 ? 'No assignments assigned yet' : 'No matching assignments found'}
             </h3>
-            <p className="mt-1.5 max-w-md mx-auto text-xs leading-relaxed text-slate-500">
+            <p className="mt-1.5 max-w-md mx-auto text-xs leading-relaxed text-[#5B5346]">
               {assignments.length === 0
                 ? 'Your instructors have not posted any assignments for your enrolled courses yet. Check back soon or consult your course schedule.'
                 : 'Try adjusting your search terms or filters to find what you are looking for.'}
@@ -644,7 +648,7 @@ const StudentAssignments = () => {
                   setStatusFilter('ALL');
                   setSelectedCourseFilter('ALL');
                 }}
-                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#7C3AED] px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#6D28D9] transition"
+                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#9C6B2E] px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#855923] transition"
               >
                 Clear all filters
               </button>
@@ -662,13 +666,13 @@ const StudentAssignments = () => {
               return (
                 <article
                   key={aId}
-                  className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-purple-100/80 bg-white p-5 sm:p-6 shadow-[0_8px_25px_rgba(0,0,0,0.03)] transition-all duration-300 hover:border-purple-300 hover:shadow-md"
+                  className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#E3DDD0] bg-white p-5 sm:p-6 shadow-2xs transition-all duration-300 hover:border-[#9C6B2E]/50 hover:shadow-md"
                 >
                   {/* Top Bar: Course Badge & Due Status */}
                   <div>
                     <div className="flex items-start justify-between gap-2">
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-200/70 bg-[#F5F2FC] px-3 py-1 text-[11px] font-bold text-purple-700">
-                        <BookOpen className="h-3 w-3 text-purple-600" />
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-[#E3DDD0] bg-[#FAF8F4] px-3 py-1 text-[11px] font-bold text-[#5B5346]">
+                        <BookOpen className="h-3 w-3 text-[#9C6B2E]" />
                         <span className="max-w-[150px] truncate">{courseTitle}</span>
                       </span>
 
@@ -682,13 +686,13 @@ const StudentAssignments = () => {
                     </div>
 
                     {/* Assignment Title */}
-                    <h3 className="mt-3.5 text-base font-extrabold leading-snug text-slate-900 transition group-hover:text-[#7C3AED]">
+                    <h3 className="mt-3.5 text-base font-extrabold leading-snug text-[#17140F] transition group-hover:text-[#9C6B2E]">
                       {assignment.title || 'Untitled Assignment'}
                     </h3>
 
                     {/* Max Marks & Status Pill Row */}
                     <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-900 bg-purple-50 px-2.5 py-0.5 rounded-md border border-purple-200">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#17140F] bg-[#F1EDE4] px-2.5 py-0.5 rounded-md border border-[#E3DDD0]">
                         Max Marks: {subDetails.maxMarks}
                       </span>
 
@@ -698,29 +702,29 @@ const StudentAssignments = () => {
                           Score: {subDetails.marksObtained} / {subDetails.maxMarks}
                         </span>
                       ) : subDetails.isSubmitted ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-800 bg-purple-100 px-2.5 py-0.5 rounded-md border border-purple-200">
-                          <CheckCircle2 className="h-3.5 w-3.5 text-purple-700" />
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#9C6B2E] bg-[#9C6B2E]/10 px-2.5 py-0.5 rounded-md border border-[#9C6B2E]/30">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-[#9C6B2E]" />
                           Submitted
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#5B5346] bg-[#F1EDE4] px-2.5 py-0.5 rounded-md border border-[#E3DDD0]">
                           Not Submitted
                         </span>
                       )}
                     </div>
 
                     {/* Description preview */}
-                    <p className="mt-2.5 line-clamp-3 text-xs leading-relaxed text-slate-500">
+                    <p className="mt-2.5 line-clamp-3 text-xs leading-relaxed text-[#5B5346]">
                       {assignment.description || 'No additional instructions provided for this assignment.'}
                     </p>
 
                     {/* Feedback Callout if available */}
                     {subDetails.feedback && (
-                      <div className="mt-3 rounded-xl border border-purple-200/80 bg-purple-50/50 p-2.5 text-[11px] text-purple-900">
-                        <span className="font-bold flex items-center gap-1 text-[10px] uppercase tracking-wider text-purple-800">
+                      <div className="mt-3 rounded-xl border border-[#E3DDD0] bg-[#FAF8F4] p-2.5 text-[11px] text-[#17140F]">
+                        <span className="font-bold flex items-center gap-1 text-[10px] uppercase tracking-wider text-[#9C6B2E]">
                           <MessageSquare className="h-3 w-3" /> Instructor Remarks:
                         </span>
-                        <p className="mt-1 italic text-slate-700 leading-relaxed">
+                        <p className="mt-1 italic text-[#5B5346] leading-relaxed">
                           "{subDetails.feedback}"
                         </p>
                       </div>
@@ -728,8 +732,8 @@ const StudentAssignments = () => {
 
                     {/* Submitted File View Link */}
                     {subDetails.fileUrl && (
-                      <div className="mt-3 flex items-center justify-between text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-                        <span className="flex items-center gap-1.5 text-[11px] font-medium text-slate-700 truncate">
+                      <div className="mt-3 flex items-center justify-between text-xs bg-[#FAF8F4] p-2.5 rounded-xl border border-[#E3DDD0]">
+                        <span className="flex items-center gap-1.5 text-[11px] font-medium text-[#17140F] truncate">
                           <FileText className="h-3.5 w-3.5 text-rose-600 shrink-0" />
                           <span>Submitted PDF Document</span>
                         </span>
@@ -737,7 +741,7 @@ const StudentAssignments = () => {
                           href={subDetails.fileUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 hover:text-purple-900 hover:underline shrink-0"
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#9C6B2E] hover:text-[#855923] hover:underline shrink-0"
                         >
                           <span>Open</span>
                           <ExternalLink className="h-3 w-3" />
@@ -747,23 +751,23 @@ const StudentAssignments = () => {
                   </div>
 
                   {/* Bottom details & Submission Action */}
-                  <div className="mt-5 border-t border-purple-100/80 pt-4 space-y-3">
-                    <div className="space-y-1.5 text-[11px] text-slate-500">
+                  <div className="mt-5 border-t border-[#E3DDD0] pt-4 space-y-3">
+                    <div className="space-y-1.5 text-[11px] text-[#5B5346]">
                       <div className="flex items-center justify-between">
                         <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3 text-purple-600" /> Assigned:
+                          <Calendar className="h-3 w-3 text-[#9C6B2E]" /> Assigned:
                         </span>
-                        <span className="font-semibold text-slate-700">
+                        <span className="font-semibold text-[#17140F]">
                           {formatDate(assignment.assigned_at)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3 text-purple-600" /> Due Date:
+                          <Clock className="h-3 w-3 text-[#9C6B2E]" /> Due Date:
                         </span>
                         <span
                           className={`font-semibold ${
-                            dueInfo.status === 'overdue' ? 'text-rose-700' : 'text-slate-800'
+                            dueInfo.status === 'overdue' ? 'text-rose-700' : 'text-[#17140F]'
                           }`}
                         >
                           {formatDate(assignment.due_date)}
@@ -772,13 +776,13 @@ const StudentAssignments = () => {
                     </div>
 
                     {/* PDF Submission Controls */}
-                    <div className="rounded-xl border border-purple-200/80 bg-purple-50/30 p-3">
+                    <div className="rounded-xl border border-[#E3DDD0] bg-[#FAF8F4] p-3">
                       {!subDetails.isSubmitted ? (
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-800 mb-1">
+                          <label className="block text-[11px] font-bold text-[#17140F] mb-1">
                             Upload Submission (PDF only)
                           </label>
-                          <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-purple-300 bg-white py-2 px-3 text-xs font-semibold text-purple-700 hover:bg-purple-50 hover:border-purple-400 transition">
+                          <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[#E3DDD0] bg-white py-2 px-3 text-xs font-semibold text-[#9C6B2E] hover:bg-[#F1EDE4] hover:border-[#9C6B2E]/50 transition">
                             {isCurrentSubmitting ? (
                               <>
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -786,7 +790,7 @@ const StudentAssignments = () => {
                               </>
                             ) : (
                               <>
-                                <Upload className="h-3.5 w-3.5 text-purple-600" />
+                                <Upload className="h-3.5 w-3.5 text-[#9C6B2E]" />
                                 <span>Select & Submit PDF</span>
                               </>
                             )}
@@ -808,7 +812,7 @@ const StudentAssignments = () => {
                             <CheckCircle2 className="h-3.5 w-3.5" />
                             Submitted {subDetails.submittedAt ? formatDate(subDetails.submittedAt) : 'Successfully'}
                           </span>
-                          <label className="cursor-pointer text-[11px] font-bold text-purple-700 hover:underline">
+                          <label className="cursor-pointer text-[11px] font-bold text-[#9C6B2E] hover:underline">
                             Re-submit PDF
                             <input
                               type="file"
@@ -828,7 +832,7 @@ const StudentAssignments = () => {
                     <button
                       type="button"
                       onClick={() => setActiveModalAssignment(assignment)}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200/70 py-2 text-xs font-bold transition shadow-2xs"
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#F1EDE4] hover:bg-[#E8E2D5] text-[#17140F] border border-[#E3DDD0] py-2 text-xs font-bold transition shadow-2xs"
                     >
                       <span>View Full Instructions</span>
                       <ExternalLink className="h-3.5 w-3.5" />
@@ -848,38 +852,35 @@ const StudentAssignments = () => {
         const dueInfo = getDueStatus(activeModalAssignment.due_date);
         const isCurrentSubmitting = submittingId === modalId;
 
-        return (
+        return createPortal(
           <div
             role="dialog"
             aria-modal="true"
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-[modalFadeIn_0.2s_ease-out_both]"
-            onClick={() => setActiveModalAssignment(null)}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 sa-fade"
           >
-            <style>{`
-              @keyframes modalFadeIn {
-                0% { opacity: 0; }
-                100% { opacity: 1; }
-              }
-            `}</style>
             <div
-              className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-purple-200 bg-white p-6 shadow-2xl sm:p-8"
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              onClick={() => setActiveModalAssignment(null)}
+            />
+            <div
+              className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl border border-[#E3DDD0] bg-white p-6 shadow-2xl sm:p-8 sa-rise"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}
-              <div className="flex items-start justify-between gap-4 border-b border-purple-100 pb-5">
+              <div className="flex items-start justify-between gap-4 border-b border-[#E3DDD0] pb-5">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1 rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-[11px] font-bold text-purple-800">
-                      <BookOpen className="h-3 w-3 text-purple-600" />
+                    <span className="inline-flex items-center gap-1 rounded-full border border-[#E3DDD0] bg-[#FAF8F4] px-3 py-1 text-[11px] font-bold text-[#5B5346]">
+                      <BookOpen className="h-3 w-3 text-[#9C6B2E]" />
                       {activeModalAssignment.course?.course_title || 'Enrolled Course'}
                     </span>
                     {modalId && (
-                      <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-600">
+                      <span className="rounded-full bg-[#F1EDE4] px-2.5 py-0.5 text-[10px] font-bold text-[#5B5346]">
                         Task #{modalId}
                       </span>
                     )}
                   </div>
-                  <h2 className="mt-3 text-xl sm:text-2xl font-extrabold text-slate-900">
+                  <h2 className="mt-3 text-xl sm:text-2xl font-extrabold text-[#17140F]">
                     {activeModalAssignment.title || 'Untitled Assignment'}
                   </h2>
                 </div>
@@ -887,7 +888,7 @@ const StudentAssignments = () => {
                 <button
                   type="button"
                   onClick={() => setActiveModalAssignment(null)}
-                  className="rounded-xl border border-slate-200 p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                  className="rounded-xl border border-[#E3DDD0] p-2 text-[#8A8175] transition hover:bg-[#F1EDE4] hover:text-[#17140F]"
                   aria-label="Close"
                 >
                   <X className="h-5 w-5" />
@@ -902,7 +903,7 @@ const StudentAssignments = () => {
                     dueInfo.status === 'overdue'
                       ? 'border-rose-200 bg-rose-50 text-rose-800'
                       : dueInfo.status === 'today'
-                      ? 'border-purple-300 bg-purple-50 text-purple-900'
+                      ? 'border-[#9C6B2E]/40 bg-[#FAF8F4] text-[#17140F]'
                       : 'border-emerald-200 bg-emerald-50/60 text-emerald-800'
                   }`}
                 >
@@ -911,7 +912,7 @@ const StudentAssignments = () => {
                       className={`flex h-9 w-9 items-center justify-center rounded-xl ${
                         dueInfo.status === 'overdue'
                           ? 'bg-rose-200 text-rose-900'
-                          : 'bg-purple-200 text-purple-900'
+                          : 'bg-[#9C6B2E]/10 text-[#9C6B2E]'
                       }`}
                     >
                       {dueInfo.status === 'overdue' ? (
@@ -929,22 +930,22 @@ const StudentAssignments = () => {
                   </div>
 
                   <div className="text-right text-xs">
-                    <p className="font-bold text-slate-500">Target Due Date</p>
-                    <p className="font-extrabold text-slate-900">
+                    <p className="font-bold text-[#8A8175]">Target Due Date</p>
+                    <p className="font-extrabold text-[#17140F]">
                       {formatDate(activeModalAssignment.due_date)}
                     </p>
                   </div>
                 </div>
 
                 {/* Score & Evaluation Strip */}
-                <div className="grid grid-cols-2 gap-3 rounded-2xl border border-purple-100 bg-[#FAF8FE] p-4 text-center">
+                <div className="grid grid-cols-2 gap-3 rounded-2xl border border-[#E3DDD0] bg-[#FAF8F4] p-4 text-center">
                   <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Maximum Marks</span>
-                    <span className="text-xl font-black text-slate-900">{subDetails.maxMarks}</span>
+                    <span className="text-[10px] uppercase font-bold text-[#8A8175] block">Maximum Marks</span>
+                    <span className="text-xl font-black text-[#17140F]">{subDetails.maxMarks}</span>
                   </div>
                   <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Marks Awarded</span>
-                    <span className={`text-xl font-black ${subDetails.isGraded ? 'text-emerald-700' : 'text-slate-400'}`}>
+                    <span className="text-[10px] uppercase font-bold text-[#8A8175] block">Marks Awarded</span>
+                    <span className={`text-xl font-black ${subDetails.isGraded ? 'text-emerald-700' : 'text-[#8A8175]'}`}>
                       {subDetails.isGraded ? `${subDetails.marksObtained} / ${subDetails.maxMarks}` : 'Pending Evaluation'}
                     </span>
                   </div>
@@ -952,10 +953,10 @@ const StudentAssignments = () => {
 
                 {/* Instructions / Description */}
                 <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-purple-700">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#9C6B2E]">
                     Assignment Description & Instructions
                   </h4>
-                  <div className="mt-2 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 text-sm leading-relaxed text-slate-700 whitespace-pre-wrap">
+                  <div className="mt-2 rounded-2xl border border-[#E3DDD0] bg-[#FAF8F4] p-4 text-sm leading-relaxed text-[#17140F] whitespace-pre-wrap">
                     {activeModalAssignment.description ||
                       'No detailed instructions provided for this assignment.'}
                   </div>
@@ -963,22 +964,22 @@ const StudentAssignments = () => {
 
                 {/* Feedback note if any */}
                 {subDetails.feedback && (
-                  <div className="rounded-2xl border border-purple-200 bg-purple-50/60 p-4 text-xs text-purple-950">
-                    <p className="font-bold flex items-center gap-1.5 uppercase tracking-wide text-purple-800">
+                  <div className="rounded-2xl border border-[#E3DDD0] bg-[#FAF8F4] p-4 text-xs text-[#17140F]">
+                    <p className="font-bold flex items-center gap-1.5 uppercase tracking-wide text-[#9C6B2E]">
                       <MessageSquare className="h-4 w-4" /> Instructor Evaluation Feedback
                     </p>
-                    <p className="mt-1 leading-relaxed text-slate-700 italic">
+                    <p className="mt-1 leading-relaxed text-[#5B5346] italic">
                       "{subDetails.feedback}"
                     </p>
                   </div>
                 )}
 
                 {/* PDF Submission Box */}
-                <div className="rounded-2xl border border-purple-200 bg-purple-50/40 p-4 space-y-3">
+                <div className="rounded-2xl border border-[#E3DDD0] bg-[#FAF8F4] p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="text-xs font-bold text-slate-900">Your Submission</h4>
-                      <p className="text-[11px] text-slate-500">Upload your completed assignment in PDF format.</p>
+                      <h4 className="text-xs font-bold text-[#17140F]">Your Submission</h4>
+                      <p className="text-[11px] text-[#5B5346]">Upload your completed assignment in PDF format.</p>
                     </div>
                     {subDetails.isSubmitted && (
                       <span className="rounded-full bg-emerald-100 px-3 py-0.5 text-[10px] font-bold text-emerald-800">
@@ -988,16 +989,16 @@ const StudentAssignments = () => {
                   </div>
 
                   {subDetails.fileUrl && (
-                    <div className="flex items-center justify-between rounded-xl bg-white p-3 border border-slate-200">
+                    <div className="flex items-center justify-between rounded-xl bg-white p-3 border border-[#E3DDD0]">
                       <div className="flex items-center gap-2 min-w-0">
                         <FileText className="h-4 w-4 text-rose-600 shrink-0" />
-                        <span className="truncate text-xs font-semibold text-slate-800">Uploaded PDF File</span>
+                        <span className="truncate text-xs font-semibold text-[#17140F]">Uploaded PDF File</span>
                       </div>
                       <a
                         href={subDetails.fileUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs font-bold text-purple-700 hover:underline"
+                        className="inline-flex items-center gap-1 text-xs font-bold text-[#9C6B2E] hover:text-[#855923] hover:underline"
                       >
                         <span>Open Document</span>
                         <ExternalLink className="h-3 w-3" />
@@ -1005,7 +1006,7 @@ const StudentAssignments = () => {
                     </div>
                   )}
 
-                  <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-purple-300 bg-white py-3 px-4 text-xs font-bold text-purple-700 hover:bg-purple-50 transition shadow-2xs">
+                  <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[#E3DDD0] bg-white py-3 px-4 text-xs font-bold text-[#9C6B2E] hover:bg-[#F1EDE4] transition shadow-2xs">
                     {isCurrentSubmitting ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -1013,7 +1014,7 @@ const StudentAssignments = () => {
                       </>
                     ) : (
                       <>
-                        <Upload className="h-4 w-4 text-purple-600" />
+                        <Upload className="h-4 w-4 text-[#9C6B2E]" />
                         <span>{subDetails.isSubmitted ? 'Re-upload / Update PDF File' : 'Upload Assignment PDF'}</span>
                       </>
                     )}
@@ -1032,17 +1033,18 @@ const StudentAssignments = () => {
               </div>
 
               {/* Modal Footer */}
-              <div className="mt-6 flex justify-end border-t border-purple-100 pt-4">
+              <div className="mt-6 flex justify-end border-t border-[#E3DDD0] pt-4">
                 <button
                   type="button"
                   onClick={() => setActiveModalAssignment(null)}
-                  className="rounded-xl bg-[#7C3AED] px-6 py-2.5 text-xs font-bold text-white transition hover:bg-[#6D28D9] shadow-sm"
+                  className="rounded-xl bg-[#9C6B2E] px-6 py-2.5 text-xs font-bold text-white transition hover:bg-[#855923] shadow-xs"
                 >
                   Close
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         );
       })()}
     </div>

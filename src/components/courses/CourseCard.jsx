@@ -64,7 +64,7 @@ const CourseCard = ({ course, onApply, linkPrefix = '/courses' }) => {
     <div
       className={`relative overflow-hidden transition-all duration-300 flex flex-col group h-full ${
         isStudentView
-          ? 'bg-white rounded-2xl border border-purple-100/90 shadow-[0_8px_25px_rgba(0,0,0,0.03)] hover:border-purple-300 hover:shadow-md'
+          ? 'bg-white rounded-2xl border border-[#E3DDD0] shadow-2xs hover:border-[#9C6B2E]/50 hover:shadow-md'
           : 'bg-[#fffdf8] rounded-[1.75rem] border-[2px] border-[#e7bf6c] shadow-[0_12px_28px_rgba(0,0,0,0.05)] hover:shadow-xl hover:border-amber-500'
       }`}
     >
@@ -78,7 +78,7 @@ const CourseCard = ({ course, onApply, linkPrefix = '/courses' }) => {
       {/* CARD IMAGE CONTAINER */}
       <div
         className={`relative h-48 sm:h-52 overflow-hidden border-b ${
-          isStudentView ? 'border-purple-100/70 bg-[#FAF8FE]' : `border-[#f2e9d6] ${theme.image}`
+          isStudentView ? 'border-[#E3DDD0] bg-[#FAF8F4]' : `border-[#f2e9d6] ${theme.image}`
         }`}
       >
         <img
@@ -102,27 +102,27 @@ const CourseCard = ({ course, onApply, linkPrefix = '/courses' }) => {
             <span
               className={`flex items-center gap-1 px-2.5 py-1 rounded-md border text-[11px] font-bold ${
                 isStudentView
-                  ? 'bg-[#F5F2FC] text-purple-700 border-purple-200/70'
+                  ? 'bg-[#FAF8F4] text-[#9C6B2E] border-[#E3DDD0]'
                   : `${theme.badge}`
               }`}
             >
-              <Clock className={`w-3.5 h-3.5 ${isStudentView ? 'text-purple-600' : 'text-amber-700'}`} /> {duration}
+              <Clock className={`w-3.5 h-3.5 ${isStudentView ? 'text-[#9C6B2E]' : 'text-amber-700'}`} /> {duration}
             </span>
             <span
               className={`flex items-center gap-1 px-2.5 py-1 rounded-md border text-[11px] font-bold ${
                 isStudentView
-                  ? 'bg-[#F5F2FC] text-purple-700 border-purple-200/70'
+                  ? 'bg-[#FAF8F4] text-[#9C6B2E] border-[#E3DDD0]'
                   : `border-transparent ${theme.badge}`
               }`}
             >
-              <BarChart className={`w-3.5 h-3.5 ${isStudentView ? 'text-purple-600' : 'text-amber-700'}`} /> {level}
+              <BarChart className={`w-3.5 h-3.5 ${isStudentView ? 'text-[#9C6B2E]' : 'text-amber-700'}`} /> {level}
             </span>
           </div>
 
           {/* Course Name */}
           <h3
             className={`text-base sm:text-lg font-extrabold text-slate-900 transition-colors line-clamp-1 ${
-              isStudentView ? 'group-hover:text-[#7C3AED]' : 'group-hover:text-amber-700'
+              isStudentView ? 'group-hover:text-[#9C6B2E]' : 'group-hover:text-amber-700'
             }`}
           >
             <Link to={`${linkPrefix}/${course.id}`}>
@@ -143,12 +143,12 @@ const CourseCard = ({ course, onApply, linkPrefix = '/courses' }) => {
                   key={idx}
                   className={`text-[11px] font-medium px-2 py-0.5 rounded-md flex items-center gap-1 ${
                     isStudentView
-                      ? 'bg-purple-50 text-purple-800 border border-purple-100'
+                      ? 'bg-[#FAF8F4] text-[#17140F] border border-[#E3DDD0]'
                       : 'bg-slate-100 text-slate-700'
                   }`}
                 >
                   <CheckCircle2
-                    className={`w-3 h-3 ${isStudentView ? 'text-purple-600' : 'text-amber-500'}`}
+                    className={`w-3 h-3 ${isStudentView ? 'text-[#9C6B2E]' : 'text-amber-500'}`}
                   />{' '}
                   {skill}
                 </span>
@@ -165,7 +165,7 @@ const CourseCard = ({ course, onApply, linkPrefix = '/courses' }) => {
         {/* FOOTER ACTIONS */}
         <div
           className={`pt-4 border-t flex items-center justify-between gap-2 ${
-            isStudentView ? 'border-purple-100/80' : 'border-[#f2e9d6]'
+            isStudentView ? 'border-[#E3DDD0]' : 'border-[#f2e9d6]'
           }`}
         >
           <div className="flex flex-col">
@@ -176,9 +176,9 @@ const CourseCard = ({ course, onApply, linkPrefix = '/courses' }) => {
           <div className="flex items-center gap-2">
             <Link
               to={`${linkPrefix}/${course.id}`}
-              className={`inline-flex items-center justify-center px-4 py-2 text-xs font-bold transition-all shadow-sm ${
+              className={`inline-flex items-center justify-center px-4 py-2 text-xs font-bold transition-all shadow-xs ${
                 isStudentView
-                  ? 'rounded-xl bg-[#7C3AED] hover:bg-[#6D28D9] text-white'
+                  ? 'rounded-xl bg-[#9C6B2E] hover:bg-[#855923] text-white'
                   : `rounded-full ${theme.action}`
               }`}
             >

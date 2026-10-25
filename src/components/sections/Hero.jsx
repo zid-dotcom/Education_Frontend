@@ -21,13 +21,13 @@ const Hero = () => {
       <div className="bg-white px-4 py-14 text-center sm:px-6 sm:py-20 lg:px-8">
         <ScrollReveal className="mx-auto max-w-4xl" threshold={0.2} popup>
           <div className="mb-5 inline-flex items-center rounded-full border border-[#FCD34D]/80 bg-[#FFEAA5] px-4 py-1.5 text-xs font-extrabold text-[#78350F] shadow-xs">
-            Learning Platform for you
+            AurumFX: Elevate Your Edge.
           </div>
           <h1 className="text-3xl font-bold leading-[1.18] text-[#1C1917] sm:text-5xl lg:text-6xl">
             Bridging the Gap Between Talent and Industry Demands.
           </h1>
           <p className="mx-auto mt-6 max-w-3xl text-base leading-relaxed text-slate-600 sm:text-lg">
-            Welcome to AurumFX, a premier multi-disciplinary educational institution. Founded on academic excellence, skill-based learning, and character building, we empower individuals to transform their passions into successful, long-term careers.
+            Welcome to AurumFX, a premier multi-disciplinary educational institution committed to bridging the gap between talent and industry demands. Founded on the principles of academic excellence, skill-based learning, and character building, AurumFX empowers individuals to transform their passions into successful, long-term careers.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Link

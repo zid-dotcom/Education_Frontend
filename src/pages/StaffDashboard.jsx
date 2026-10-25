@@ -8,8 +8,12 @@ import StaffHeader from '../components/staff/StaffHeader';
 import StaffOverviewTab from '../components/staff/tabs/StaffOverviewTab';
 import StaffCoursesTab from '../components/staff/tabs/StaffCoursesTab';
 import StaffAssignmentsTab from '../components/staff/tabs/StaffAssignmentsTab';
+import StaffStudyMaterialsTab from '../components/staff/tabs/StaffStudyMaterialsTab';
 import StaffAnnouncementsTab from '../components/staff/tabs/StaffAnnouncementsTab';
+import StaffInstitutionAnnouncementsTab from '../components/staff/tabs/StaffInstitutionAnnouncementsTab';
 import StaffDocumentsTab from '../components/staff/tabs/StaffDocumentsTab';
+import StaffMessagesTab from '../components/staff/tabs/StaffMessagesTab';
+import StaffSuperAdminMessagesTab from '../components/staff/tabs/StaffSuperAdminMessagesTab';
 import StaffProfileTab from '../components/staff/tabs/StaffProfileTab';
 
 // Modular Staff Modals
@@ -17,8 +21,13 @@ import StaffAssignmentModal from '../components/staff/modals/StaffAssignmentModa
 import StaffGradingModal from '../components/staff/modals/StaffGradingModal';
 import StaffAnnouncementModal from '../components/staff/modals/StaffAnnouncementModal';
 import StaffStudentModal from '../components/staff/modals/StaffStudentModal';
+import StaffStudyMaterialModal from '../components/staff/modals/StaffStudyMaterialModal';
 
 // API Services
+import {
+  uploadStaffStudyMaterialApi,
+  getStaffCourseStudyMaterialsApi,
+} from '../services/studymaterials';
 import {
   getMyStaffDashboardApi,
   getMyStaffProfileApi,
@@ -36,6 +45,7 @@ import {
   deleteStaffAnnouncementApi,
 } from '../services/staff';
 import { getAllCoursesApi } from '../services/courses';
+import { normalizeAnnouncement, sortAnnouncementsNewestFirst } from '../utils/announcements';
 
 const PAGE_CSS = `
 @keyframes sa-rise { from { opacity:0; transform:translateY(18px) scale(.96); } to { opacity:1; transform:translateY(0) scale(1); } }
@@ -52,13 +62,13 @@ const PAGE_CSS = `
 }
 .stat-card-hover:hover {
   transform: translateY(-4px);
-  box-shadow: 0 16px 36px rgba(16, 185, 129, 0.08), 0 2px 8px rgba(0,0,0,0.03) !important;
-  border-color: #10B981 !important;
+  box-shadow: 0 16px 36px rgba(156, 107, 46, 0.08), 0 2px 8px rgba(0,0,0,0.03) !important;
+  border-color: #9C6B2E !important;
 }
 .stat-card-icon {
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.course-item:hover .course-select-btn { background: #10B981 !important; color: #ffffff !important; }
+.course-item:hover .course-select-btn { background: #9C6B2E !important; color: #ffffff !important; }
 .staff-portal-scope ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
@@ -67,16 +77,27 @@ const PAGE_CSS = `
   background: transparent !important;
 }
 .staff-portal-scope ::-webkit-scrollbar-thumb {
-  background: #cbd5e1 !important;
+  background: rgba(156, 107, 46, 0.2) !important;
   border-radius: 9999px !important;
   border: none !important;
 }
 .staff-portal-scope ::-webkit-scrollbar-thumb:hover {
-  background: #10b981 !important;
+  background: rgba(156, 107, 46, 0.4) !important;
+}
+body.staff-modal-open .staff-portal-sidebar,
+body.staff-modal-open .staff-portal-sidebar-aside {
+  filter: blur(5px) !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  transition: filter 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.staff-portal-sidebar,
+.staff-portal-sidebar-aside {
+  transition: filter 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 `;
 
-const VALID_TABS = ['dashboard', 'courses', 'assignments', 'announcements', 'documents', 'profile'];
+const VALID_TABS = ['dashboard', 'courses', 'assignments', 'study_materials', 'messages', 'super_admin_messages', 'announcements', 'institution_announcements', 'documents', 'profile'];
 
 const StaffDashboard = ({ defaultTab }) => {
   const { user, token, logout } = useAuth();
@@ -92,6 +113,10 @@ const StaffDashboard = ({ defaultTab }) => {
     const path = location.pathname;
     if (path.includes('/staff/courses')) return 'courses';
     if (path.includes('/staff/assignments')) return 'assignments';
+    if (path.includes('/staff/study-materials')) return 'study_materials';
+    if (path.includes('/staff/super-admin-messages')) return 'super_admin_messages';
+    if (path.includes('/staff/messages')) return 'messages';
+    if (path.includes('/staff/institution-announcements')) return 'institution_announcements';
     if (path.includes('/staff/announcements')) return 'announcements';
     if (path.includes('/staff/documents')) return 'documents';
     if (path.includes('/staff/profile')) return 'profile';
@@ -119,7 +144,16 @@ const StaffDashboard = ({ defaultTab }) => {
     if (!VALID_TABS.includes(newTab)) return;
     setActiveTabState(newTab);
     localStorage.setItem('staff_active_tab', newTab);
-    const targetPath = newTab === 'dashboard' ? '/staff/dashboard' : `/staff/${newTab}`;
+    const targetPath =
+      newTab === 'dashboard'
+        ? '/staff/dashboard'
+        : newTab === 'study_materials'
+        ? '/staff/study-materials'
+        : newTab === 'institution_announcements'
+        ? '/staff/institution-announcements'
+        : newTab === 'super_admin_messages'
+        ? '/staff/super-admin-messages'
+        : `/staff/${newTab}`;
     if (location.pathname !== targetPath) {
       navigate(targetPath, { replace: true });
     }
@@ -175,6 +209,18 @@ const StaffDashboard = ({ defaultTab }) => {
   const [assignmentSubmitting, setAssignmentSubmitting] = useState(false);
   const [assignmentMsg, setAssignmentMsg] = useState({ type: '', text: '' });
 
+  // Study Materials State
+  const [studyMaterials, setStudyMaterials] = useState([]);
+  const [studyMaterialsLoading, setStudyMaterialsLoading] = useState(false);
+  const [isStudyMaterialModalOpen, setIsStudyMaterialModalOpen] = useState(false);
+  const [studyMaterialForm, setStudyMaterialForm] = useState({
+    title: '',
+    description: '',
+    file: null,
+  });
+  const [studyMaterialSubmitting, setStudyMaterialSubmitting] = useState(false);
+  const [studyMaterialMsg, setStudyMaterialMsg] = useState({ type: '', text: '' });
+
   // Grading Modal & Submissions State
   const [gradingAssignment, setGradingAssignment] = useState(null);
   const [gradingForm, setGradingForm] = useState({ marks_obtained: '', feedback: '' });
@@ -209,6 +255,10 @@ const StaffDashboard = ({ defaultTab }) => {
   const [announcementSubmitting, setAnnouncementSubmitting] = useState(false);
   const [announcementMsg, setAnnouncementMsg] = useState({ type: '', text: '' });
   const [deletingAnnouncementId, setDeletingAnnouncementId] = useState(null);
+
+  // All Dashboard Announcements (Course Announcements + Institution Announcements Combined)
+  const [dashboardAnnouncements, setDashboardAnnouncements] = useState([]);
+  const [dashboardAnnouncementsLoading, setDashboardAnnouncementsLoading] = useState(false);
 
   // Document Uploads State
   const [docForm, setDocForm] = useState({
@@ -381,6 +431,33 @@ const StaffDashboard = ({ defaultTab }) => {
     loadCourseAssignments(selectedCourseId, assignmentFilterTab);
   }, [token, selectedCourseId, activeTab, assignmentFilterTab]);
 
+  // Fetch Course Study Materials: GET /staff/courses/{course_id}/study-materials
+  const loadCourseStudyMaterials = async (courseId) => {
+    if (!token || !courseId) return;
+    try {
+      setStudyMaterialsLoading(true);
+      const data = await getStaffCourseStudyMaterialsApi(courseId, token);
+      const list = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.materials)
+        ? data.materials
+        : Array.isArray(data?.study_materials)
+        ? data.study_materials
+        : [];
+      setStudyMaterials(list);
+    } catch (err) {
+      console.warn('Course study materials fetch error:', err);
+      setStudyMaterials([]);
+    } finally {
+      setStudyMaterialsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!token || !selectedCourseId || (activeTab !== 'study_materials' && activeTab !== 'dashboard')) return;
+    loadCourseStudyMaterials(selectedCourseId);
+  }, [token, selectedCourseId, activeTab]);
+
   // 4. Fetch Attendance Records when attendance tab is active
   useEffect(() => {
     if (!token || activeTab !== 'attendance') return;
@@ -408,21 +485,18 @@ const StaffDashboard = ({ defaultTab }) => {
     };
   }, [token, activeTab, attendanceDate]);
 
-  // 5. Fetch Staff Announcements (Specific Course or fallback): GET /staff/courses/{course_id}/announcements or GET /staff/announcements
+  // 5. Fetch Staff Announcements (Course Specific): GET /staff/courses/{course_id}/announcements
   const loadStaffAnnouncements = async (filterId = selectedAnnouncementCourseId) => {
     if (!token) return;
     try {
       setAnnouncementsLoading(true);
-      const courseIdToFetch =
-        (filterId && filterId !== 'ALL')
-          ? filterId
-          : assignedCourses[0]?.id || assignedCourses[0]?.course_id || '';
-
-      let data;
-      if (courseIdToFetch) {
-        data = await getStaffCourseAnnouncementsApi(courseIdToFetch, token);
-      } else {
-        data = await getStaffAnnouncementsApi(token);
+      let targetId = filterId;
+      if (!targetId || targetId === 'BRANCH' || targetId === 'ALL') {
+        targetId = assignedCourses[0]?.id || assignedCourses[0]?.course_id || '';
+      }
+      let data = [];
+      if (targetId) {
+        data = await getStaffCourseAnnouncementsApi(targetId, token);
       }
       const list = Array.isArray(data)
         ? data
@@ -434,7 +508,7 @@ const StaffDashboard = ({ defaultTab }) => {
       );
       setStaffAnnouncements(sorted);
     } catch (err) {
-      console.warn('Staff announcements fetch error:', err);
+      console.warn('Staff Announcements fetch error:', err);
       setStaffAnnouncements([]);
     } finally {
       setAnnouncementsLoading(false);
@@ -445,6 +519,70 @@ const StaffDashboard = ({ defaultTab }) => {
     if (!token || (activeTab !== 'announcements' && activeTab !== 'dashboard')) return;
     loadStaffAnnouncements(selectedAnnouncementCourseId);
   }, [token, selectedAnnouncementCourseId, activeTab]);
+
+  // 6. Fetch All Combined Dashboard Announcements (Course + Institution)
+  const loadAllDashboardAnnouncements = async () => {
+    if (!token) return;
+    try {
+      setDashboardAnnouncementsLoading(true);
+
+      // Fetch Course Announcements across all courses assigned to this staff member
+      const coursePromises = (assignedCourses || []).map(async (course) => {
+        const cId = course.id || course.course_id;
+        if (!cId) return [];
+        try {
+          const res = await getStaffCourseAnnouncementsApi(cId, token);
+          const list = Array.isArray(res) ? res : res?.announcements || [];
+          return list.map((item) => normalizeAnnouncement(item, 'course', course));
+        } catch (e) {
+          console.warn(`Failed to fetch announcements for course #${cId}:`, e);
+          return [];
+        }
+      });
+
+      // Fetch Institution & Branch Announcements for staff
+      const institutionPromise = (async () => {
+        try {
+          const res = await getStaffAnnouncementsApi(token);
+          const list = Array.isArray(res)
+            ? res
+            : Array.isArray(res?.announcements)
+            ? res.announcements
+            : [];
+          return list.map((item) => normalizeAnnouncement(item, 'institution'));
+        } catch (e) {
+          console.warn('Failed to fetch institution announcements for staff:', e);
+          return [];
+        }
+      })();
+
+      const [courseResults, instResults] = await Promise.allSettled([
+        Promise.all(coursePromises),
+        institutionPromise,
+      ]);
+
+      const courseAnnouncements =
+        courseResults.status === 'fulfilled' ? courseResults.value.flat() : [];
+      const institutionAnnouncements =
+        instResults.status === 'fulfilled' ? instResults.value : [];
+
+      const combined = sortAnnouncementsNewestFirst([
+        ...courseAnnouncements,
+        ...institutionAnnouncements,
+      ]);
+
+      setDashboardAnnouncements(combined);
+    } catch (err) {
+      console.warn('Error fetching all dashboard announcements:', err);
+    } finally {
+      setDashboardAnnouncementsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!token) return;
+    loadAllDashboardAnnouncements();
+  }, [token, assignedCourses.length]);
 
   // Open Create Announcement Modal
   const handleOpenCreateAnnouncement = () => {
@@ -541,7 +679,10 @@ const StaffDashboard = ({ defaultTab }) => {
         setAnnouncementMsg({ type: 'success', text: 'Course announcement published successfully!' });
       }
 
-      await loadStaffAnnouncements(selectedAnnouncementCourseId);
+      await Promise.allSettled([
+        loadStaffAnnouncements(selectedAnnouncementCourseId),
+        loadAllDashboardAnnouncements(),
+      ]);
 
       setTimeout(() => {
         setIsAnnouncementModalOpen(false);
@@ -564,7 +705,10 @@ const StaffDashboard = ({ defaultTab }) => {
     try {
       setDeletingAnnouncementId(annId);
       await deleteStaffAnnouncementApi(annId, token);
-      await loadStaffAnnouncements(selectedAnnouncementCourseId);
+      await Promise.allSettled([
+        loadStaffAnnouncements(selectedAnnouncementCourseId),
+        loadAllDashboardAnnouncements(),
+      ]);
     } catch (err) {
       alert(err.message || 'Failed to delete announcement.');
     } finally {
@@ -619,6 +763,45 @@ const StaffDashboard = ({ defaultTab }) => {
       setAssignmentMsg({ type: 'error', text: err.message || 'Failed to create assignment.' });
     } finally {
       setAssignmentSubmitting(false);
+    }
+  };
+
+  // Study Materials Upload Handlers
+  const handleOpenUploadMaterial = () => {
+    setStudyMaterialForm({ title: '', description: '', file: null });
+    setStudyMaterialMsg({ type: '', text: '' });
+    setIsStudyMaterialModalOpen(true);
+  };
+
+  const handleUploadStudyMaterial = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!selectedCourseId) {
+      setStudyMaterialMsg({ type: 'error', text: 'Please select a course first.' });
+      return;
+    }
+    if (!studyMaterialForm.title?.trim()) {
+      setStudyMaterialMsg({ type: 'error', text: 'Material title is required.' });
+      return;
+    }
+    if (!studyMaterialForm.file) {
+      setStudyMaterialMsg({ type: 'error', text: 'Please choose a PDF file to upload.' });
+      return;
+    }
+
+    try {
+      setStudyMaterialSubmitting(true);
+      setStudyMaterialMsg({ type: '', text: '' });
+      await uploadStaffStudyMaterialApi(selectedCourseId, studyMaterialForm, token);
+      await loadCourseStudyMaterials(selectedCourseId);
+      setIsStudyMaterialModalOpen(false);
+      setStudyMaterialForm({ title: '', description: '', file: null });
+    } catch (err) {
+      setStudyMaterialMsg({
+        type: 'error',
+        text: err.message || 'Failed to upload study material. Please try again.',
+      });
+    } finally {
+      setStudyMaterialSubmitting(false);
     }
   };
 
@@ -834,6 +1017,7 @@ const StaffDashboard = ({ defaultTab }) => {
     switch (activeTab) {
       case 'courses': return 'My Courses & Students';
       case 'assignments': return 'Course Assignments';
+      case 'messages': return 'Student Messages & Queries';
       case 'announcements': return 'Course Announcements';
       case 'documents': return 'Staff KYC & Documents';
       case 'profile': return 'My Staff Profile';
@@ -842,37 +1026,33 @@ const StaffDashboard = ({ defaultTab }) => {
   };
 
   return (
-    <div
-      className="h-screen max-h-screen w-full overflow-hidden bg-[#DDEEE3] p-2 sm:p-2.5 lg:p-3 flex flex-col staff-portal-scope"
-      style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
-    >
+    <div className="h-screen max-h-screen w-full overflow-hidden bg-white flex flex-col md:flex-row font-['Plus_Jakarta_Sans',sans-serif] text-slate-800 antialiased selection:bg-amber-200 selection:text-amber-900 staff-portal-scope">
       <style>{PAGE_CSS}</style>
 
-      {/* Main Dashboard Window Surface (fills viewport with slim 8-12px mint border, matching Student Portal) */}
-      <div className="w-full flex-1 h-full max-h-full min-h-0 bg-white rounded-[1.75rem] sm:rounded-[2.25rem] lg:rounded-[2.5rem] shadow-[0_15px_45px_-10px_rgba(5,150,105,0.15)] border border-emerald-900/10 overflow-hidden flex flex-col md:flex-row">
-        {/* Part 1: Left Navigation (Narrow green gradient rail + white secondary panel) */}
-        <StaffSidebar
-          user={{
-            ...(user || {}),
-            ...(profileData || {}),
-            branch_name: branchName,
-            branch_location: branchLocation,
-          }}
-          logout={logout}
-          sidebarOpen={sidebarOpen}
-          setSidebarOpen={setSidebarOpen}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          onOpenNewAssignment={() => {
-            setActiveTab('assignments');
-            setIsAssignmentModalOpen(true);
-          }}
-        />
+      {/* Part 1: Left Navigation */}
+      <StaffSidebar
+        user={{
+          ...(user || {}),
+          ...(profileData || {}),
+          branch_name: branchName,
+          branch_location: branchLocation,
+        }}
+        logout={logout}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        token={token}
+        onOpenNewAssignment={() => {
+          setActiveTab('assignments');
+          setIsAssignmentModalOpen(true);
+        }}
+      />
 
-        {/* Part 2: Center Main Content Area (Independent Scroll Container) */}
-        <main className="min-w-0 flex-1 relative flex flex-col h-full bg-[#F8FAF9] overflow-hidden">
-          {/* Top Header Bar - Pinned at Top */}
-          <div className="shrink-0 px-3.5 sm:px-8 pt-3.5 sm:pt-5 pb-2.5 sm:pb-3 border-b border-slate-100 bg-[#F8FAF9]">
+      {/* Part 2: Center Main Content Area (Independent Scroll Container) */}
+      <main className="min-w-0 flex-1 relative flex flex-col h-full bg-[#FAF8F4] overflow-hidden">
+        {/* Top Header Bar - Pinned at Top */}
+        <div className="shrink-0 px-3.5 sm:px-8 pt-3.5 sm:pt-5 pb-2.5 sm:pb-3 border-b border-[#E3DDD0] bg-[#FAF8F4]">
             <StaffHeader
               title={getTabTitle()}
               loading={loading}
@@ -880,7 +1060,10 @@ const StaffDashboard = ({ defaultTab }) => {
               onRefresh={async () => {
                 setRefreshing(true);
                 try {
-                  await loadInitialData();
+                  await Promise.allSettled([
+                    loadInitialData(),
+                    loadAllDashboardAnnouncements(),
+                  ]);
                   if (activeTab === 'announcements') {
                     await loadStaffAnnouncements(selectedAnnouncementCourseId);
                   } else if (activeTab === 'assignments') {
@@ -942,6 +1125,9 @@ const StaffDashboard = ({ defaultTab }) => {
                   setSelectedStudent(s);
                   setIsStudentModalOpen(true);
                 }}
+                dashboardAnnouncements={dashboardAnnouncements}
+                announcementsLoading={dashboardAnnouncementsLoading}
+                onRefreshAnnouncements={loadAllDashboardAnnouncements}
               />
             )}
 
@@ -978,6 +1164,19 @@ const StaffDashboard = ({ defaultTab }) => {
               />
             )}
 
+            {/* TAB: STUDY MATERIALS */}
+            {activeTab === 'study_materials' && (
+              <StaffStudyMaterialsTab
+                assignedCourses={assignedCourses}
+                selectedCourseId={selectedCourseId}
+                setSelectedCourseId={setSelectedCourseId}
+                materials={studyMaterials}
+                materialsLoading={studyMaterialsLoading}
+                onOpenUploadModal={handleOpenUploadMaterial}
+                onRefresh={() => loadCourseStudyMaterials(selectedCourseId)}
+              />
+            )}
+
             {/* TAB 4: COURSE ANNOUNCEMENTS */}
             {activeTab === 'announcements' && (
               <StaffAnnouncementsTab
@@ -993,6 +1192,11 @@ const StaffDashboard = ({ defaultTab }) => {
                 activeCourseObj={activeCourseObj}
                 user={user}
               />
+            )}
+
+            {/* TAB: INSTITUTION ANNOUNCEMENTS */}
+            {activeTab === 'institution_announcements' && (
+              <StaffInstitutionAnnouncementsTab token={token} user={user} />
             )}
 
             {/* TAB 5: DOCUMENTS & KYC */}
@@ -1021,9 +1225,18 @@ const StaffDashboard = ({ defaultTab }) => {
                 setActiveTab={setActiveTab}
               />
             )}
+
+            {/* TAB 7: STUDENT MESSAGES */}
+            {activeTab === 'messages' && (
+              <StaffMessagesTab token={token} user={user} />
+            )}
+
+            {/* TAB 8: SUPER ADMIN MESSAGES */}
+            {activeTab === 'super_admin_messages' && (
+              <StaffSuperAdminMessagesTab token={token} user={user} />
+            )}
           </div>
         </main>
-      </div>
 
       {/* MODAL 1: CREATE ASSIGNMENT */}
       <StaffAssignmentModal
@@ -1082,6 +1295,22 @@ const StaffDashboard = ({ defaultTab }) => {
         announcementMsg={announcementMsg}
         announcementSubmitting={announcementSubmitting}
         handleSaveAnnouncement={handleSaveAnnouncement}
+      />
+
+      {/* MODAL 5: UPLOAD STUDY MATERIAL */}
+      <StaffStudyMaterialModal
+        isOpen={isStudyMaterialModalOpen}
+        onClose={() => {
+          setIsStudyMaterialModalOpen(false);
+          setStudyMaterialMsg({ type: '', text: '' });
+        }}
+        activeCourseObj={activeCourseObj}
+        materialForm={studyMaterialForm}
+        setMaterialForm={setStudyMaterialForm}
+        materialMsg={studyMaterialMsg}
+        setMaterialMsg={setStudyMaterialMsg}
+        materialSubmitting={studyMaterialSubmitting}
+        handleUploadMaterial={handleUploadStudyMaterial}
       />
     </div>
   );

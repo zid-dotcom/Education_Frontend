@@ -4,6 +4,7 @@ import {
   Bell,
   Calendar,
   CheckCircle2,
+  ChevronDown,
   Edit3,
   GraduationCap,
   Building2,
@@ -28,7 +29,7 @@ import {
 } from '../services/adminannouncements';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
 
-const EMPTY_FORM = { title: '', message: '' };
+const EMPTY_FORM = { title: '', message: '', audience: 'all' };
 
 const AdminAnnouncements = () => {
   const { user, token, logout } = useAuth();
@@ -91,6 +92,7 @@ const AdminAnnouncements = () => {
       const formData = new FormData();
       formData.append('title', form.title.trim());
       formData.append('message', form.message.trim());
+      formData.append('audience', form.audience || 'all');
       if (imageFile) formData.append('image', imageFile);
 
       if (editingAnnouncement) {
@@ -114,7 +116,11 @@ const AdminAnnouncements = () => {
     setError('');
     setSuccess('');
     setEditingAnnouncement(announcement);
-    setForm({ title: announcement.title || '', message: announcement.message || '' });
+    setForm({
+      title: announcement.title || '',
+      message: announcement.message || '',
+      audience: announcement.audience || 'all',
+    });
     setImageFile(null);
     setPreviewImage(announcement.image ? getCourseImageUrl(announcement.image) : '');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -186,7 +192,18 @@ const AdminAnnouncements = () => {
                             <span>{announcement.created_at ? new Date(announcement.created_at).toLocaleDateString('en-IN') : 'Date unavailable'}</span>
                           </div>
                         </div>
-                        <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-black uppercase text-amber-900">#{announcement.id}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="shrink-0 rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold uppercase text-amber-800 border border-amber-200">
+                            {announcement.audience === 'branch_admin'
+                              ? 'Branch admins'
+                              : announcement.audience === 'students'
+                              ? 'Students'
+                              : announcement.audience === 'staff'
+                              ? 'Staff'
+                              : 'Everyone'}
+                          </span>
+                          <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-black uppercase text-amber-900">#{announcement.id}</span>
+                        </div>
                       </div>
 
                       {/* Notice Message */}
@@ -256,6 +273,23 @@ const AdminAnnouncements = () => {
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-800">{editingAnnouncement ? <Edit3 className="h-5 w-5" /> : <Plus className="h-5 w-5" />}</div>
             </div>
             <div className="space-y-4">
+              <div>
+                <label htmlFor="announcement-audience" className="mb-2 block text-xs font-extrabold uppercase tracking-wider text-slate-700">Target Audience</label>
+                <div className="relative">
+                  <select
+                    id="announcement-audience"
+                    value={form.audience || 'all'}
+                    onChange={(event) => setForm({ ...form, audience: event.target.value })}
+                    className="w-full appearance-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
+                  >
+                    <option value="all">Everyone</option>
+                    <option value="students">Students</option>
+                    <option value="staff">Staff</option>
+                    <option value="branch_admin">Branch admins</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                </div>
+              </div>
               <div>
                 <label htmlFor="announcement-title" className="mb-2 block text-xs font-extrabold uppercase tracking-wider text-slate-700">Title</label>
                 <input id="announcement-title" type="text" required value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="e.g. New batch admissions open" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />

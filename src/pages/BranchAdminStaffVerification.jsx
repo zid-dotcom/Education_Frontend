@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
+  BookOpen,
   Building2,
   Calendar,
   Check,
   CheckCircle2,
   Clock,
+  Copy,
   CreditCard,
   ExternalLink,
   Eye,
@@ -13,14 +15,17 @@ import {
   FileText,
   Filter,
   GraduationCap,
+  IndianRupee,
   Loader2,
   Mail,
+  MapPin,
   Phone,
   RefreshCw,
   Search,
   ShieldAlert,
   ShieldCheck,
   User,
+  Menu,
   X,
   XCircle,
 } from "lucide-react";
@@ -104,6 +109,17 @@ const formatDateTime = (value) => {
   }
 };
 
+const formatRole = (role) => {
+  if (!role) return "Branch Admin";
+  const str = String(role).replace(/_/g, " ").trim();
+  return str
+    .toLowerCase()
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
+
 const getStaffId = (staff) => {
   if (!staff) return null;
   if (staff.staff_id !== undefined && staff.staff_id !== null && staff.staff_id !== "") {
@@ -157,7 +173,227 @@ const getStaffVerificationStatus = (staff) => {
   return "pending";
 };
 
-const normalizeStaffRecord = (item, defaultStatus = "pending") => {
+const getStoredAdminName = (fallbackRole = "Branch Admin") => {
+  try {
+    const branchItem = localStorage.getItem("branchAdminUser");
+    if (branchItem) {
+      const p = JSON.parse(branchItem);
+      if (p?.name || p?.full_name) return p.name || p.full_name;
+    }
+    const superItem = localStorage.getItem("superAdminUser");
+    if (superItem) {
+      const p = JSON.parse(superItem);
+      if (p?.name || p?.full_name) return p.name || p.full_name;
+    }
+  } catch {}
+  return fallbackRole;
+};
+
+const extractReviewerInfo = (item, staffObj = {}, docObj = {}, currentUser = null, targetStatus = "") => {
+  if (!item) {
+    return {
+      reviewer_name: "",
+      reviewer_role: "",
+      reviewer_email: "",
+      reviewer_id: "",
+      reviewed_at: null,
+      approved_at: null,
+      rejected_at: null,
+    };
+  }
+
+  // 1. Timestamps from API
+  const approvedAt =
+    item.verification_approved_at ||
+    staffObj.verification_approved_at ||
+    docObj.verification_approved_at ||
+    item.approved_at ||
+    item.approval_date ||
+    item.approved_on ||
+    staffObj.approved_at ||
+    docObj.approved_at ||
+    null;
+
+  const rejectedAt =
+    item.verification_rejected_at ||
+    staffObj.verification_rejected_at ||
+    docObj.verification_rejected_at ||
+    item.rejected_at ||
+    item.rejection_date ||
+    item.rejected_on ||
+    staffObj.rejected_at ||
+    docObj.rejected_at ||
+    null;
+
+  const reviewedAt =
+    approvedAt ||
+    rejectedAt ||
+    item.reviewed_at ||
+    item.decision_at ||
+    item.verified_at ||
+    item.action_at ||
+    item.verification_submitted_at ||
+    staffObj.reviewed_at ||
+    staffObj.verified_at ||
+    docObj.reviewed_at ||
+    item.updated_at ||
+    item.created_at ||
+    null;
+
+  // Determine status to prioritize the proper reviewer object
+  const statusStr = String(
+    targetStatus ||
+    item.verification_status ||
+    item.status ||
+    staffObj.verification_status ||
+    staffObj.status ||
+    ""
+  ).toLowerCase().trim();
+
+  const isApproved = statusStr.includes("approve") || statusStr === "verified";
+  const isRejected = statusStr.includes("reject");
+
+  // Backend reviewer objects
+  const approvedByObj =
+    item.verification_approved_by ||
+    staffObj.verification_approved_by ||
+    docObj.verification_approved_by ||
+    item.approved_by ||
+    staffObj.approved_by ||
+    docObj.approved_by;
+
+  const rejectedByObj =
+    item.verification_rejected_by ||
+    staffObj.verification_rejected_by ||
+    docObj.verification_rejected_by ||
+    item.rejected_by ||
+    staffObj.rejected_by ||
+    docObj.rejected_by;
+
+  const primaryReviewer = isApproved
+    ? approvedByObj
+    : isRejected
+    ? rejectedByObj
+    : (approvedByObj || rejectedByObj);
+
+  const sources = [
+    primaryReviewer,
+    isApproved ? null : approvedByObj,
+    isRejected ? null : rejectedByObj,
+    item.reviewed_by,
+    item.reviewer,
+    item.decision_by,
+    item.decision_maker,
+    item.decided_by,
+    item.verified_by,
+    item.action_by,
+    item.reviewed_user,
+    item.super_admin,
+    item.branch_admin,
+    item.admin,
+    item.decision,
+    staffObj.reviewed_by,
+    staffObj.reviewer,
+    staffObj.decision_by,
+    staffObj.decision_maker,
+    staffObj.verified_by,
+    docObj.reviewed_by,
+    docObj.reviewer,
+  ].filter(Boolean);
+
+  let reviewerName =
+    (isApproved ? (item.approved_by_name || staffObj.approved_by_name) : "") ||
+    (isRejected ? (item.rejected_by_name || staffObj.rejected_by_name) : "") ||
+    item.reviewer_name ||
+    item.reviewed_by_name ||
+    item.decision_maker_name ||
+    item.decision_by_name ||
+    item.verified_by_name ||
+    item.super_admin_name ||
+    item.branch_admin_name ||
+    item.admin_name ||
+    staffObj.reviewer_name ||
+    staffObj.reviewed_by_name ||
+    "";
+
+  let reviewerRole =
+    (isApproved ? (item.approved_by_role || staffObj.approved_by_role) : "") ||
+    (isRejected ? (item.rejected_by_role || staffObj.rejected_by_role) : "") ||
+    item.reviewer_role ||
+    item.reviewed_by_role ||
+    item.decision_maker_role ||
+    item.approver_role ||
+    item.verifier_role ||
+    staffObj.reviewer_role ||
+    staffObj.reviewed_by_role ||
+    "";
+
+  let reviewerEmail =
+    item.reviewer_email ||
+    item.reviewed_by_email ||
+    staffObj.reviewer_email ||
+    staffObj.reviewed_by_email ||
+    "";
+
+  let reviewerId =
+    (isApproved ? (item.approved_by_id || staffObj.approved_by_id) : "") ||
+    (isRejected ? (item.rejected_by_id || staffObj.rejected_by_id) : "") ||
+    item.reviewer_id ||
+    item.reviewed_by_id ||
+    staffObj.reviewer_id ||
+    "";
+
+  for (const src of sources) {
+    if (!src) continue;
+    if (typeof src === "string") {
+      const trimmed = src.trim();
+      if (trimmed && isNaN(Number(trimmed)) && !reviewerName) {
+        reviewerName = trimmed;
+      }
+    } else if (typeof src === "object") {
+      if (!reviewerName) {
+        reviewerName =
+          src.name ||
+          src.full_name ||
+          (src.first_name ? `${src.first_name} ${src.last_name || ""}`.trim() : "") ||
+          src.username ||
+          src.admin_name ||
+          src.user?.name ||
+          src.user?.full_name ||
+          "";
+      }
+      if (!reviewerRole) {
+        reviewerRole = src.role || src.designation || src.user_type || "";
+      }
+      if (!reviewerEmail) {
+        reviewerEmail = src.email || src.user?.email || "";
+      }
+      if (!reviewerId) {
+        reviewerId = src.id || src.user_id || "";
+      }
+    }
+  }
+
+  // Fallback defaults for approved/rejected records if backend has null reviewer
+  if (!reviewerName && (isApproved || isRejected)) {
+    reviewerName = "Admin";
+  }
+  if (!reviewerRole && (isApproved || isRejected)) {
+    reviewerRole = "super_admin";
+  }
+
+  return {
+    reviewer_name: reviewerName,
+    reviewer_role: reviewerRole,
+    reviewer_email: reviewerEmail,
+    reviewer_id: reviewerId,
+    reviewed_at: reviewedAt,
+    approved_at: approvedAt || reviewedAt,
+    rejected_at: rejectedAt || reviewedAt,
+  };
+};
+
+const normalizeStaffRecord = (item, defaultStatus = "pending", currentUser = null) => {
   if (!item) return null;
 
   const staffObj = item.staff || item.user || {};
@@ -202,6 +438,52 @@ const normalizeStaffRecord = (item, defaultStatus = "pending") => {
   const staffCode = item.staff_code || staffObj.staff_code || item.code || (id ? `STF-${String(id).padStart(3, "0")}` : "");
   const role = item.role || item.designation || staffObj.role || staffObj.designation || "Faculty";
 
+  // Salary
+  const salary =
+    item.salary ??
+    staffObj.salary ??
+    item.staff_salary ??
+    docObj.salary ??
+    "";
+
+  // Course Details
+  const courseList = Array.isArray(item.courses)
+    ? item.courses
+    : Array.isArray(staffObj.courses)
+    ? staffObj.courses
+    : [];
+  const firstCourse = courseList[0] || {};
+
+  const courseName =
+    firstCourse.course_title ||
+    firstCourse.name ||
+    firstCourse.title ||
+    item.course_name ||
+    item.course?.name ||
+    item.course?.title ||
+    staffObj.course_name ||
+    staffObj.course?.name ||
+    staffObj.course?.title ||
+    item.course_title ||
+    "";
+
+  const courseId =
+    firstCourse.course_id ||
+    firstCourse.id ||
+    item.course_id ||
+    item.course?.id ||
+    staffObj.course_id ||
+    staffObj.course?.id ||
+    "";
+
+  // Address
+  const address =
+    item.address ||
+    staffObj.address ||
+    item.location ||
+    staffObj.location ||
+    "";
+
   const aadhaarNumber =
     item.aadhaar_number ||
     docObj.aadhaar_number ||
@@ -230,6 +512,9 @@ const normalizeStaffRecord = (item, defaultStatus = "pending") => {
     "";
 
   const rejectionReason =
+    item.verification_rejection_reason ||
+    staffObj.verification_rejection_reason ||
+    docObj.verification_rejection_reason ||
     item.rejection_reason ||
     item.reason ||
     item.remarks ||
@@ -280,6 +565,8 @@ const normalizeStaffRecord = (item, defaultStatus = "pending") => {
       "Qualification Document",
   };
 
+  const reviewerInfo = extractReviewerInfo(item, staffObj, docObj, currentUser, status);
+
   return {
     ...item,
     id,
@@ -287,8 +574,12 @@ const normalizeStaffRecord = (item, defaultStatus = "pending") => {
     name,
     email,
     phone,
+    address,
     staff_code: staffCode,
     role,
+    salary,
+    course_name: courseName,
+    course_id: courseId,
     verification_status: status,
     status,
     is_verified: status === "approved",
@@ -297,9 +588,13 @@ const normalizeStaffRecord = (item, defaultStatus = "pending") => {
     bank_account_number: bankAccount,
     bank_ifsc: bankIfsc,
     rejection_reason: rejectionReason,
+    ...reviewerInfo,
     documents,
     created_at: item.created_at || staffObj.created_at,
-    verified_at: item.verified_at || staffObj.verified_at,
+    verified_at: reviewerInfo.reviewed_at || item.verified_at || staffObj.verified_at,
+    reviewed_at: reviewerInfo.reviewed_at || item.verified_at || staffObj.verified_at,
+    approved_at: reviewerInfo.approved_at,
+    rejected_at: reviewerInfo.rejected_at,
   };
 };
 
@@ -308,6 +603,7 @@ const BranchAdminStaffVerification = () => {
   const { user, token: authContextToken, logout } = useAuth();
   const token = authContextToken || localStorage.getItem("token") || localStorage.getItem("branchAdminToken") || "";
   const navigate = useNavigate();
+  const defaultReviewerName = user?.name || user?.full_name || getStoredAdminName("Branch Admin");
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pendingList, setPendingList] = useState([]);
@@ -327,6 +623,14 @@ const BranchAdminStaffVerification = () => {
   const [rejectingStaff, setRejectingStaff] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
   const [actionLoadingId, setActionLoadingId] = useState(null);
+  const [copiedField, setCopiedField] = useState("");
+
+  const handleCopy = (text, fieldName) => {
+    if (!text) return;
+    navigator.clipboard.writeText(String(text));
+    setCopiedField(fieldName);
+    setTimeout(() => setCopiedField(""), 2000);
+  };
 
   const loadVerificationList = async (isManualRefresh = false) => {
     const authToken = token || localStorage.getItem("token") || localStorage.getItem("branchAdminToken") || "";
@@ -359,13 +663,13 @@ const BranchAdminStaffVerification = () => {
       const rejectedRaw = extractArray(rejectedRes);
 
       const pendingNorm = pendingRaw
-        .map((item) => normalizeStaffRecord(item, "pending"))
+        .map((item) => normalizeStaffRecord(item, "pending", user))
         .filter(Boolean);
       const approvedNorm = approvedRaw
-        .map((item) => normalizeStaffRecord(item, "approved"))
+        .map((item) => normalizeStaffRecord(item, "approved", user))
         .filter(Boolean);
       const rejectedNorm = rejectedRaw
-        .map((item) => normalizeStaffRecord(item, "rejected"))
+        .map((item) => normalizeStaffRecord(item, "rejected", user))
         .filter(Boolean);
 
       if (
@@ -468,12 +772,20 @@ const BranchAdminStaffVerification = () => {
       const successMsg = res?.message || `Successfully approved documents for ${staffMember.name || "staff"}.`;
       setActionSuccess(successMsg);
 
+      const currentReviewerName = user?.name || user?.full_name || "Branch Admin";
+      const currentReviewerRole = user?.role || "Branch Admin";
+      const nowIso = new Date().toISOString();
+
       const updatedItem = {
         ...staffMember,
         verification_status: "approved",
         is_verified: true,
         status: "approved",
-        verified_at: new Date().toISOString(),
+        verified_at: nowIso,
+        reviewed_at: nowIso,
+        reviewer_name: currentReviewerName,
+        reviewer_role: currentReviewerRole,
+        reviewer_email: user?.email || "",
       };
 
       setPendingList((prev) => prev.filter((s) => (getStaffId(s) || s.id) !== staffId));
@@ -524,12 +836,20 @@ const BranchAdminStaffVerification = () => {
       const successMsg = res?.message || `Documents rejected for ${rejectingStaff.name || "staff"}.`;
       setActionSuccess(successMsg);
 
+      const currentReviewerName = user?.name || user?.full_name || "Branch Admin";
+      const currentReviewerRole = user?.role || "Branch Admin";
+      const nowIso = new Date().toISOString();
+
       const updatedItem = {
         ...rejectingStaff,
         verification_status: "rejected",
         is_verified: false,
         status: "rejected",
         rejection_reason: reason || "Rejected by branch administration.",
+        reviewed_at: nowIso,
+        reviewer_name: currentReviewerName,
+        reviewer_role: currentReviewerRole,
+        reviewer_email: user?.email || "",
       };
 
       setPendingList((prev) => prev.filter((s) => (getStaffId(s) || s.id) !== staffId));
@@ -590,35 +910,30 @@ const BranchAdminStaffVerification = () => {
 
       <main className="min-w-0 flex-1 h-screen overflow-y-auto">
         {/* Header */}
-        <header
-          className="ba-fade flex flex-col gap-5 px-6 pb-8 pt-10 sm:flex-row sm:items-end sm:justify-between sm:px-10"
-          style={{ borderBottom: "1px solid #e3ddd0", background: "#faf8f4", position: "sticky", top: 0, zIndex: 10 }}
-        >
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#f8edcf] text-[#9c6b2e]">
-                <ShieldCheck className="h-3.5 w-3.5" />
-              </span>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-[#9c6b2e]">
-                Branch Administration
-              </p>
-            </div>
-            <h1
-              className="text-[2.1rem] leading-none tracking-tight sm:text-[2.5rem]"
-              style={{ ...serif, fontWeight: 500, color: "#17140f" }}
+        <header className="sticky top-0 z-20 flex h-[92px] items-center justify-between border-b border-[#e3ddd0] bg-[#faf8f4]/95 px-6 backdrop-blur-md sm:px-10 shrink-0">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e3ddd0] bg-white text-slate-600 shadow-sm transition hover:bg-[#f0ebe1] md:hidden"
+              aria-label="Open sidebar"
             >
-              Staff KYC Verification
-            </h1>
-            <p className="mt-2 max-w-md text-[0.95rem]" style={{ color: "#8a8175" }}>
-              Verify identification documents, PAN, and banking details submitted by branch faculty.
-            </p>
+              <Menu className="h-5 w-5" />
+            </button>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#9c6b2e]">
+                Branch Portal
+              </span>
+              <h1 className="text-xl font-extrabold tracking-tight text-slate-900 leading-tight">
+                Staff KYC Verification
+              </h1>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
             <button
               onClick={() => loadVerificationList(true)}
               disabled={loading || refreshing}
-              className="flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold shadow-xs transition hover:bg-[#f8f5ee] disabled:opacity-50"
+              className="flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-semibold shadow-xs transition hover:bg-[#f8f5ee] disabled:opacity-50"
               style={{ borderColor: "#e3ddd0", color: "#5b5346", background: "#ffffff" }}
               title="Refresh staff records"
             >
@@ -627,17 +942,14 @@ const BranchAdminStaffVerification = () => {
             </button>
 
             <div className="hidden text-right sm:block">
-              <p className="text-sm font-medium" style={{ color: "#17140f" }}>
-                {user?.name || "Branch admin"}
+              <p className="text-xs font-extrabold text-slate-900 leading-tight">
+                {user?.name || "Branch Admin"}
               </p>
-              <p className="text-xs" style={{ color: "#a39a8c" }}>
-                Branch administrator
+              <p className="text-[10px] font-semibold text-slate-400">
+                {user?.branch_name || "Branch Administrator"}
               </p>
             </div>
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium"
-              style={{ background: "#17140f", color: "#f4b942" }}
-            >
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#17140f] text-sm font-extrabold text-[#f4b942] shadow-sm ring-2 ring-[#e3ddd0]">
               {user?.name?.charAt(0).toUpperCase() || "B"}
             </div>
           </div>
@@ -856,7 +1168,7 @@ const BranchAdminStaffVerification = () => {
               )}
             </div>
           ) : (
-            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-5 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
               {filteredStaff.map((staff, idx) => {
                 const status = getStaffVerificationStatus(staff);
                 const docs = getDocumentList(staff);
@@ -871,7 +1183,7 @@ const BranchAdminStaffVerification = () => {
                 return (
                   <article
                     key={staffId ?? idx}
-                    className="ba-card ba-rise flex flex-col justify-between rounded-2xl border bg-white p-5 sm:p-6 shadow-xs"
+                    className="ba-card ba-rise flex flex-col justify-between rounded-2xl border bg-white p-5 sm:p-6 shadow-xs min-w-0"
                     style={{
                       borderColor: "#e3ddd0",
                       animationDelay: `${Math.min(idx, 8) * 35}ms`,
@@ -892,6 +1204,18 @@ const BranchAdminStaffVerification = () => {
                             )}
                             {(staff.role || staff.designation) && (
                               <span>• {staff.role || staff.designation}</span>
+                            )}
+                            {staff.course_name && (
+                              <span className="flex items-center gap-1 text-amber-800 font-bold bg-amber-50/80 px-2 py-0.5 rounded-md border border-amber-200/60">
+                                <BookOpen className="w-3 h-3 text-amber-600" />
+                                <span>{staff.course_name}</span>
+                              </span>
+                            )}
+                            {staff.salary !== undefined && staff.salary !== null && staff.salary !== "" && (
+                              <span className="flex items-center gap-1 text-emerald-800 font-bold bg-emerald-50/80 px-2 py-0.5 rounded-md border border-emerald-200/60">
+                                <IndianRupee className="w-3 h-3 text-emerald-600" />
+                                <span>₹{Number(staff.salary).toLocaleString("en-IN")}/mo</span>
+                              </span>
                             )}
                           </div>
                         </div>
@@ -945,74 +1269,79 @@ const BranchAdminStaffVerification = () => {
                         )}
                       </div>
 
-                      {/* KYC Identification Records Box */}
-                      <div
-                        className="rounded-xl border p-3.5 text-xs space-y-2 mb-4"
-                        style={{ background: "#faf8f4", borderColor: "#e3ddd0" }}
-                      >
-                        <div className="flex items-center justify-between text-[11px] font-semibold text-[#8a7b68] border-b pb-1.5" style={{ borderColor: "#ede7db" }}>
-                          <span>KYC & Banking Information</span>
-                          <span className="text-[#9c6b2e] font-medium">
-                            {docsCount} {docsCount === 1 ? "file" : "files"} uploaded
-                          </span>
-                        </div>
+                      {/* REVIEWER ATTRIBUTION FOR APPROVED */}
+                      {status === "approved" && (
+                        <div className="mb-3 rounded-xl bg-emerald-50/90 border border-emerald-200/90 text-xs overflow-hidden shadow-2xs">
+                          {/* Row 1: Decision Header with Reviewer Name */}
+                          <div className="flex items-center gap-2 px-3 py-2 bg-emerald-100/70 border-b border-emerald-200/80">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+                            <span className="font-semibold text-emerald-950">Approved by:</span>
+                            <span className="font-bold text-emerald-900 truncate">
+                              {staff.reviewer_name || "Admin"}
+                            </span>
+                          </div>
 
-                        <div className="grid grid-cols-2 gap-2 pt-1 text-[11px]">
-                          <div>
-                            <span className="text-slate-400 block text-[10px] uppercase font-medium">Aadhaar</span>
-                            <span className="font-mono font-medium text-slate-800">
-                              {aadhaarNumber || "Not entered"}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-slate-400 block text-[10px] uppercase font-medium">PAN</span>
-                            <span className="font-mono font-medium text-slate-800 uppercase">
-                              {panNumber || "Not entered"}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-slate-400 block text-[10px] uppercase font-medium">Bank A/C</span>
-                            <span className="font-mono font-medium text-slate-800">
-                              {bankAccount ? `•••• ${String(bankAccount).slice(-4)}` : "Not entered"}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-slate-400 block text-[10px] uppercase font-medium">IFSC</span>
-                            <span className="font-mono font-medium text-slate-800 uppercase">
-                              {bankIfsc || "Not entered"}
-                            </span>
+                          {/* Row 2 & 3: Clean, tidy stacked rows */}
+                          <div className="px-3 py-2 bg-white/80 space-y-1.5 text-[11px]">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-slate-500 font-medium">Role:</span>
+                              <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 font-bold text-[10px] tracking-wide whitespace-nowrap">
+                                {formatRole(staff.reviewer_role || (staff.reviewer_name?.toLowerCase() === "admin" ? "super_admin" : "Admin"))}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between gap-2 pt-1 border-t border-emerald-100/60">
+                              <span className="inline-flex items-center gap-1 text-slate-500 font-medium whitespace-nowrap">
+                                <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                <span>Approved at:</span>
+                              </span>
+                              <span className="font-semibold text-slate-800 text-[11px] whitespace-nowrap text-right">
+                                {formatDateTime(staff.approved_at || staff.reviewed_at || staff.verified_at || staff.updated_at || staff.created_at)}
+                              </span>
+                            </div>
                           </div>
                         </div>
+                      )}
 
-                        {staff.rejection_reason && status === "rejected" && (
-                          <div className="mt-2 pt-2 border-t border-rose-200 text-rose-700 text-[11px]">
-                            <strong>Rejection Note:</strong> {staff.rejection_reason}
+                      {/* REVIEWER ATTRIBUTION & REASON FOR REJECTED */}
+                      {status === "rejected" && (
+                        <div className="mb-3 rounded-xl bg-rose-50/90 border border-rose-200/90 text-xs overflow-hidden shadow-2xs">
+                          {/* Row 1: Decision Header with Reviewer Name */}
+                          <div className="flex items-center gap-2 px-3 py-2 bg-rose-100/70 border-b border-rose-200/80">
+                            <XCircle className="w-4 h-4 text-rose-700 shrink-0" />
+                            <span className="font-semibold text-rose-950">Rejected by:</span>
+                            <span className="font-bold text-rose-900 truncate">
+                              {staff.reviewer_name || "Admin"}
+                            </span>
                           </div>
-                        )}
-                      </div>
 
-                      {/* Documents Uploaded Badges */}
-                      <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                        {docsCount === 0 ? (
-                          <span className="text-[11px] italic text-[#a39a8c]">
-                            No document files uploaded yet
-                          </span>
-                        ) : (
-                          docs.map((d) => (
-                            <a
-                              key={d.key}
-                              href={d.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-medium bg-[#f5f1ea] text-[#5b5346] hover:bg-[#ede5d8] transition"
-                            >
-                              <FileCheck2 className="w-3 h-3 text-[#9c6b2e]" />
-                              <span className="truncate max-w-[130px]">{d.label}</span>
-                              <ExternalLink className="w-2.5 h-2.5 text-[#a39a8c]" />
-                            </a>
-                          ))
-                        )}
-                      </div>
+                          {/* Row 2 & 3: Clean, tidy stacked rows */}
+                          <div className="px-3 py-2 bg-white/80 space-y-1.5 text-[11px]">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-slate-500 font-medium">Role:</span>
+                              <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-900 font-bold text-[10px] tracking-wide whitespace-nowrap">
+                                {formatRole(staff.reviewer_role || (staff.reviewer_name?.toLowerCase() === "admin" ? "super_admin" : "Admin"))}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between gap-2 pt-1 border-t border-rose-100/60">
+                              <span className="inline-flex items-center gap-1 text-slate-500 font-medium whitespace-nowrap">
+                                <Clock className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                                <span>Rejected at:</span>
+                              </span>
+                              <span className="font-semibold text-slate-800 text-[11px] whitespace-nowrap text-right">
+                                {formatDateTime(staff.rejected_at || staff.reviewed_at || staff.verified_at || staff.updated_at || staff.created_at)}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Row 4: Rejection Reason (if any) */}
+                          {staff.rejection_reason && (
+                            <div className="px-3 py-2 border-t border-rose-200/70 bg-rose-50/70 text-xs flex items-start gap-1.5">
+                              <span className="font-bold text-rose-950 shrink-0">Reason:</span>
+                              <span className="text-rose-900 font-medium break-words">{staff.rejection_reason}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Bottom Action Bar */}
@@ -1029,7 +1358,7 @@ const BranchAdminStaffVerification = () => {
                       </button>
 
                       <div className="flex items-center gap-1.5">
-                        {status !== "approved" && (
+                        {status === "pending" && (
                           <button
                             type="button"
                             onClick={() => handleApprove(staff)}
@@ -1081,7 +1410,7 @@ const BranchAdminStaffVerification = () => {
           onClick={() => setSelectedStaffModal(null)}
         >
           <div
-            className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-[#e3ddd0] bg-white p-6 sm:p-7 shadow-2xl max-h-[90vh] flex flex-col"
+            className="relative w-full max-w-5xl xl:max-w-6xl overflow-hidden rounded-3xl border border-[#e3ddd0] bg-white p-6 sm:p-8 shadow-2xl max-h-[92vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
@@ -1138,58 +1467,371 @@ const BranchAdminStaffVerification = () => {
 
             {/* Modal Body */}
             <div className="mt-5 space-y-5 overflow-y-auto pr-1 text-xs flex-1">
-              {/* KYC Numbers & Banking Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div className="rounded-xl border border-[#e3ddd0] bg-[#faf8f4] p-3.5 space-y-1.5">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#9c6b2e] flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5" /> Government Identification
-                  </p>
-                  <div className="pt-1 space-y-1">
-                    <p className="flex justify-between">
-                      <span className="text-[#8a7b68]">Aadhaar Number:</span>
-                      <strong className="font-mono text-slate-800">
-                        {selectedStaffModal.aadhaar_number ||
-                          selectedStaffModal.documents?.aadhaar_number ||
-                          "Not provided"}
-                      </strong>
-                    </p>
-                    <p className="flex justify-between">
-                      <span className="text-[#8a7b68]">PAN Number:</span>
-                      <strong className="font-mono text-slate-800 uppercase">
-                        {selectedStaffModal.pan_number ||
-                          selectedStaffModal.documents?.pan_number ||
-                          "Not provided"}
-                      </strong>
-                    </p>
+              {/* 1. REVIEW & DECISION AUDIT BOX (FOR APPROVED & REJECTED) */}
+              {(getStaffVerificationStatus(selectedStaffModal) === "approved" ||
+                getStaffVerificationStatus(selectedStaffModal) === "rejected") && (
+                <div
+                  className={`p-4 rounded-2xl border ${
+                    getStaffVerificationStatus(selectedStaffModal) === "approved"
+                      ? "bg-emerald-50/70 border-emerald-200 text-emerald-950"
+                      : "bg-rose-50/70 border-rose-200 text-rose-950"
+                  }`}
+                >
+                  <div
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b pb-2.5 mb-3"
+                    style={{
+                      borderColor:
+                        getStaffVerificationStatus(selectedStaffModal) === "approved"
+                          ? "#a7f3d0"
+                          : "#fecdd3",
+                    }}
+                  >
+                    <span className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                      {getStaffVerificationStatus(selectedStaffModal) === "approved" ? (
+                        <>
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span className="text-emerald-900">Verification Decision: Approved</span>
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                          <span className="text-rose-900">Verification Decision: Rejected</span>
+                        </>
+                      )}
+                    </span>
+                    <span className="text-[11px] font-medium flex items-center gap-1 opacity-90 sm:ml-auto">
+                      <Clock className="w-3.5 h-3.5 shrink-0 text-slate-500" />
+                      <span className="font-semibold">
+                        {getStaffVerificationStatus(selectedStaffModal) === "approved" ? "Approved at:" : "Rejected at:"}
+                      </span>
+                      <span className="font-bold">
+                        {formatDateTime(
+                          selectedStaffModal.approved_at ||
+                          selectedStaffModal.rejected_at ||
+                          selectedStaffModal.reviewed_at ||
+                          selectedStaffModal.verified_at ||
+                          selectedStaffModal.updated_at ||
+                          selectedStaffModal.created_at
+                        )}
+                      </span>
+                    </span>
                   </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+                    {/* Decision Maker Name */}
+                    <div className="p-3 rounded-xl bg-white/90 border border-slate-200/70 shadow-2xs min-w-0">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
+                        Decision Made By
+                      </span>
+                      <span className="font-bold text-slate-900 flex items-center gap-1.5 text-sm truncate">
+                        <User className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                        <span className="truncate">
+                          {selectedStaffModal.reviewer_name || "Admin"}
+                        </span>
+                      </span>
+                    </div>
+
+                    {/* Reviewer Role */}
+                    <div className="p-3 rounded-xl bg-white/90 border border-slate-200/70 shadow-2xs min-w-0">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
+                        Reviewer Role
+                      </span>
+                      <span className="font-semibold text-slate-800 flex items-center gap-1.5 text-xs truncate">
+                        <ShieldCheck className="w-3.5 h-3.5 text-[#9c6b2e] shrink-0" />
+                        <span className="truncate">
+                          {formatRole(
+                            selectedStaffModal.reviewer_role ||
+                              (selectedStaffModal.reviewer_name?.toLowerCase() === "admin"
+                                ? "super_admin"
+                                : "Admin")
+                          )}
+                        </span>
+                      </span>
+                    </div>
+
+                    {/* Reviewer Email (if available) */}
+                    {selectedStaffModal.reviewer_email && (
+                      <div className="p-3 rounded-xl bg-white/90 border border-slate-200/70 shadow-2xs min-w-0">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
+                          Reviewer Email
+                        </span>
+                        <span
+                          className="font-semibold text-slate-800 flex items-center gap-1.5 text-xs truncate"
+                          title={selectedStaffModal.reviewer_email}
+                        >
+                          <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="truncate">{selectedStaffModal.reviewer_email}</span>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Rejection Notice if rejected */}
+                  {selectedStaffModal.rejection_reason &&
+                    getStaffVerificationStatus(selectedStaffModal) === "rejected" && (
+                      <div className="mt-3 p-3 rounded-xl bg-white/90 border border-rose-200 text-xs">
+                        <span className="font-bold text-rose-900 block mb-1">Reason for Rejection:</span>
+                        <p className="text-rose-800 font-medium break-words">{selectedStaffModal.rejection_reason}</p>
+                      </div>
+                    )}
+                </div>
+              )}
+
+              {/* 2. COMPLETE PERSONAL & ACADEMIC DETAILS */}
+              <div className="rounded-2xl border p-4 sm:p-6 bg-white space-y-4" style={{ borderColor: "#e3ddd0" }}>
+                <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: "#e3ddd0" }}>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                    <User className="w-4 h-4 text-[#9c6b2e]" />
+                    <span>Personal & Course Information</span>
+                  </span>
                 </div>
 
-                <div className="rounded-xl border border-[#e3ddd0] bg-[#faf8f4] p-3.5 space-y-1.5">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#9c6b2e] flex items-center gap-1">
-                    <CreditCard className="w-3.5 h-3.5" /> Banking & Payroll Details
-                  </p>
-                  <div className="pt-1 space-y-1">
-                    <p className="flex justify-between">
-                      <span className="text-[#8a7b68]">Account Number:</span>
-                      <strong className="font-mono text-slate-800">
-                        {selectedStaffModal.bank_account_number ||
-                          selectedStaffModal.documents?.bank_account_number ||
-                          "Not provided"}
-                      </strong>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5">
+                  {/* Full Name */}
+                  <div className="p-3.5 rounded-xl bg-[#faf8f4] border border-[#e3ddd0] min-w-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                      Full Name
+                    </span>
+                    <span className="font-bold text-slate-900 block text-sm">
+                      {selectedStaffModal.name || "Faculty Member"}
+                    </span>
+                  </div>
+
+                  {/* Staff Code */}
+                  <div className="p-3.5 rounded-xl bg-[#faf8f4] border border-[#e3ddd0] min-w-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                      Staff ID
+                    </span>
+                    <span className="font-mono font-bold text-slate-800 block text-xs">
+                      {selectedStaffModal.staff_code || (selectedStaffModal.id ? `STF-${selectedStaffModal.id}` : "—")}
+                    </span>
+                  </div>
+
+                  {/* Role / Designation */}
+                  <div className="p-3.5 rounded-xl bg-[#faf8f4] border border-[#e3ddd0] min-w-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                      Designation
+                    </span>
+                    <span className="font-semibold text-slate-800 flex items-center gap-1.5 text-xs">
+                      <GraduationCap className="w-3.5 h-3.5 text-[#9c6b2e] shrink-0" />
+                      <span>{selectedStaffModal.role || selectedStaffModal.designation || "Faculty"}</span>
+                    </span>
+                  </div>
+
+                  {/* Course Details */}
+                  <div className="p-3.5 rounded-xl bg-[#faf8f4] border border-[#e3ddd0] min-w-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                      Course
+                    </span>
+                    <span className="font-bold text-amber-800 flex items-center gap-1.5 text-xs">
+                      <BookOpen className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span>{selectedStaffModal.course_name || "General Faculty"}</span>
+                    </span>
+                  </div>
+
+                  {/* Monthly Salary */}
+                  <div className="p-3.5 rounded-xl bg-[#faf8f4] border border-[#e3ddd0] min-w-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                      Monthly Salary
+                    </span>
+                    <span className="font-black text-emerald-700 text-sm flex items-center gap-1">
+                      <IndianRupee className="w-3.5 h-3.5 shrink-0" />
+                      <span>
+                        {selectedStaffModal.salary !== undefined &&
+                        selectedStaffModal.salary !== null &&
+                        selectedStaffModal.salary !== ""
+                          ? `${Number(selectedStaffModal.salary).toLocaleString("en-IN")}`
+                          : "Not specified"}
+                      </span>
+                      {selectedStaffModal.salary ? (
+                        <span className="text-[10px] font-normal text-slate-500">/mo</span>
+                      ) : null}
+                    </span>
+                  </div>
+
+                  {/* Phone Number */}
+                  <div className="p-3.5 rounded-xl bg-[#faf8f4] border border-[#e3ddd0] min-w-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                      Phone Number
+                    </span>
+                    <span className="font-semibold text-slate-800 flex items-center gap-1.5 text-xs">
+                      <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>{selectedStaffModal.phone || "Not provided"}</span>
+                    </span>
+                  </div>
+
+                  {/* Email Address */}
+                  <div className="p-3.5 rounded-xl bg-[#faf8f4] border border-[#e3ddd0] min-w-0 sm:col-span-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                      Email Address
+                    </span>
+                    <span
+                      className="font-semibold text-slate-800 flex items-center gap-1.5 text-xs break-all"
+                      title={selectedStaffModal.email}
+                    >
+                      <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>{selectedStaffModal.email || "Not provided"}</span>
+                    </span>
+                  </div>
+
+                  {/* Address */}
+                  {selectedStaffModal.address && (
+                    <div className="col-span-full p-3.5 rounded-xl bg-[#faf8f4] border border-[#e3ddd0] min-w-0">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                        Address
+                      </span>
+                      <span className="font-medium text-slate-700 flex items-center gap-1.5 text-xs break-words">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span>{selectedStaffModal.address}</span>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 3. OFFICIAL BANKING & GOVERNMENT KYC DETAILS (SPACIOUS 2-COLUMN CARDS, NO NUMBER WRAPPING) */}
+              <div className="rounded-2xl border p-4 sm:p-6 bg-white space-y-4" style={{ borderColor: "#e3ddd0" }}>
+                <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: "#e3ddd0" }}>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-[#9c6b2e]" />
+                    <span>Official Banking & KYC Verification Details</span>
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Bank Account Number (SEPARATE CARD) */}
+                  <div className="p-4 sm:p-5 rounded-2xl border border-amber-200/90 bg-amber-50/50 min-w-0">
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-amber-900">
+                        Bank Account Number
+                      </span>
+                      {selectedStaffModal.bank_account_number && (
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(selectedStaffModal.bank_account_number, "account")}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-amber-900 bg-amber-100 hover:bg-amber-200 transition cursor-pointer shrink-0"
+                          title="Copy Account Number"
+                        >
+                          {copiedField === "account" ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              <span className="text-[11px] text-emerald-700 font-bold">Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span className="text-[11px]">Copy</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                    <p className="font-mono font-bold text-base sm:text-lg text-slate-900 tracking-wider whitespace-nowrap overflow-x-auto select-all">
+                      {selectedStaffModal.bank_account_number || "Not provided"}
                     </p>
-                    <p className="flex justify-between">
-                      <span className="text-[#8a7b68]">Bank IFSC:</span>
-                      <strong className="font-mono text-slate-800 uppercase">
-                        {selectedStaffModal.bank_ifsc ||
-                          selectedStaffModal.documents?.bank_ifsc ||
-                          "Not provided"}
-                      </strong>
+                  </div>
+
+                  {/* Bank IFSC Code (SEPARATE CARD) */}
+                  <div className="p-4 sm:p-5 rounded-2xl border border-blue-200/90 bg-blue-50/50 min-w-0">
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-blue-900">
+                        Bank IFSC Code
+                      </span>
+                      {selectedStaffModal.bank_ifsc && (
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(selectedStaffModal.bank_ifsc, "ifsc")}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-blue-900 bg-blue-100 hover:bg-blue-200 transition cursor-pointer shrink-0"
+                          title="Copy IFSC Code"
+                        >
+                          {copiedField === "ifsc" ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              <span className="text-[11px] text-emerald-700 font-bold">Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span className="text-[11px]">Copy</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                    <p className="font-mono font-bold text-base sm:text-lg text-slate-900 uppercase tracking-wider whitespace-nowrap overflow-x-auto select-all">
+                      {selectedStaffModal.bank_ifsc || "Not provided"}
+                    </p>
+                  </div>
+
+                  {/* Aadhaar Number */}
+                  <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 bg-slate-50/80 min-w-0">
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                        Aadhaar Number
+                      </span>
+                      {selectedStaffModal.aadhaar_number && (
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(selectedStaffModal.aadhaar_number, "aadhaar")}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-700 bg-slate-200/80 hover:bg-slate-300 transition cursor-pointer shrink-0"
+                          title="Copy Aadhaar Number"
+                        >
+                          {copiedField === "aadhaar" ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              <span className="text-[11px] text-emerald-700 font-bold">Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span className="text-[11px]">Copy</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                    <p className="font-mono font-bold text-base sm:text-lg text-slate-900 tracking-wider whitespace-nowrap overflow-x-auto select-all">
+                      {selectedStaffModal.aadhaar_number
+                        ? String(selectedStaffModal.aadhaar_number).replace(/(\d{4})/g, '$1 ').trim()
+                        : "Not provided"}
+                    </p>
+                  </div>
+
+                  {/* PAN Card Number */}
+                  <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 bg-slate-50/80 min-w-0">
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                        PAN Card Number
+                      </span>
+                      {selectedStaffModal.pan_number && (
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(selectedStaffModal.pan_number, "pan")}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-700 bg-slate-200/80 hover:bg-slate-300 transition cursor-pointer shrink-0"
+                          title="Copy PAN Number"
+                        >
+                          {copiedField === "pan" ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              <span className="text-[11px] text-emerald-700 font-bold">Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span className="text-[11px]">Copy</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                    <p className="font-mono font-bold text-base sm:text-lg text-slate-900 uppercase tracking-wider whitespace-nowrap overflow-x-auto select-all">
+                      {selectedStaffModal.pan_number || "Not provided"}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Uploaded Documents List */}
+              {/* 4. UPLOADED VERIFICATION DOCUMENTS */}
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[#8a7b68] mb-2.5">
                   Uploaded Verification Documents ({getDocumentList(selectedStaffModal).length})
@@ -1229,16 +1871,6 @@ const BranchAdminStaffVerification = () => {
                   </div>
                 )}
               </div>
-
-              {/* Rejection Notice if applicable */}
-              {selectedStaffModal.rejection_reason && (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-800">
-                  <p className="font-bold flex items-center gap-1.5">
-                    <AlertCircle className="w-4 h-4 text-rose-600" /> Rejection Remarks:
-                  </p>
-                  <p className="mt-1 leading-relaxed">{selectedStaffModal.rejection_reason}</p>
-                </div>
-              )}
             </div>
 
             {/* Modal Footer with Actions */}
@@ -1252,7 +1884,7 @@ const BranchAdminStaffVerification = () => {
               </button>
 
               <div className="flex items-center gap-2">
-                {getStaffVerificationStatus(selectedStaffModal) !== "approved" && (
+                {getStaffVerificationStatus(selectedStaffModal) === "pending" && (
                   <button
                     type="button"
                     onClick={() => handleApprove(selectedStaffModal)}
