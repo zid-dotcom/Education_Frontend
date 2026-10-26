@@ -1032,8 +1032,18 @@ const BranchAdminDashboard = () => {
                               phone: student.phone,
                               course_title: enr.course_title,
                               amount: inst.amount,
-                              paid_amount: inst.paid_amount,
-                              remaining_amount: inst.remaining_amount,
+                              paid_amount:
+                                inst.paid_amount !== undefined && inst.paid_amount !== null
+                                  ? inst.paid_amount
+                                  : String(inst.status || "").toLowerCase() === "paid"
+                                  ? inst.amount
+                                  : 0,
+                              remaining_amount:
+                                inst.remaining_amount !== undefined && inst.remaining_amount !== null
+                                  ? inst.remaining_amount
+                                  : String(inst.status || "").toLowerCase() === "paid"
+                                  ? 0
+                                  : Math.max(0, Number(inst.amount || 0) - Number(inst.paid_amount || 0)),
                               due_date: inst.due_date,
                               status: inst.status
                             }));

@@ -94,6 +94,8 @@ const STATUS_META = {
   success: { dot: "#5c7a5a", text: "#39533a", bg: "#eef2ea" },
   captured: { dot: "#5c7a5a", text: "#39533a", bg: "#eef2ea" },
   pending: { dot: "#b0803a", text: "#7a531f", bg: "#f7efe0" },
+  partial: { dot: "#c27803", text: "#8f5403", bg: "#fef3c7" },
+  partially_paid: { dot: "#c27803", text: "#8f5403", bg: "#fef3c7" },
   failed: { dot: "#a24a3a", text: "#7c3324", bg: "#f8eae5" },
   rejected: { dot: "#a24a3a", text: "#7c3324", bg: "#f8eae5" },
 };
@@ -418,11 +420,27 @@ function DetailsModal({ enrollment, onClose }) {
                         />
                         <DetailItem
                           label="Paid Amount"
-                          value={formatCurrency(inst.paid_amount) || "₹0"}
+                          value={
+                            formatCurrency(
+                              inst.paid_amount !== undefined && inst.paid_amount !== null
+                                ? inst.paid_amount
+                                : String(inst.status || "").toLowerCase() === "paid"
+                                ? inst.amount
+                                : 0
+                            ) || "₹0"
+                          }
                         />
                         <DetailItem
                           label="Remaining"
-                          value={formatCurrency(inst.remaining_amount) || "₹0"}
+                          value={
+                            formatCurrency(
+                              inst.remaining_amount !== undefined && inst.remaining_amount !== null
+                                ? inst.remaining_amount
+                                : String(inst.status || "").toLowerCase() === "paid"
+                                ? 0
+                                : Math.max(0, Number(inst.amount || 0) - Number(inst.paid_amount || 0))
+                            ) || "₹0"
+                          }
                         />
                         <DetailItem
                           label="Due Date"

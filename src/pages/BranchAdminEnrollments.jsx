@@ -114,6 +114,8 @@ const STATUS_META = {
   completed: { dot: "#5c7a5a", text: "#39533a", bg: "#eef2ea" },
   pending: { dot: "#b0803a", text: "#7a531f", bg: "#f7efe0" },
   awaiting_review: { dot: "#b0803a", text: "#7a531f", bg: "#f7efe0" },
+  partial: { dot: "#c27803", text: "#8f5403", bg: "#fef3c7" },
+  partially_paid: { dot: "#c27803", text: "#8f5403", bg: "#fef3c7" },
   rejected: { dot: "#a24a3a", text: "#7c3324", bg: "#f8eae5" },
   failed: { dot: "#a24a3a", text: "#7c3324", bg: "#f8eae5" },
   cancelled: { dot: "#a24a3a", text: "#7c3324", bg: "#f8eae5" },
@@ -253,11 +255,15 @@ const RecordPaymentModal = ({
 
   // Find next unpaid installment to suggest
   const nextUnpaidInstallment = useMemo(() => {
-    return installments.find(
-      (inst) =>
-        String(inst.status || "").toLowerCase() !== "paid" &&
-        Number(inst.remaining_amount ?? inst.amount ?? 0) > 0
-    );
+    return installments.find((inst) => {
+      const isPaid = String(inst.status || "").toLowerCase() === "paid";
+      if (isPaid) return false;
+      const rem =
+        inst.remaining_amount !== undefined && inst.remaining_amount !== null
+          ? Number(inst.remaining_amount)
+          : Math.max(0, Number(inst.amount || 0) - Number(inst.paid_amount || 0));
+      return rem > 0;
+    });
   }, [installments]);
 
   useEffect(() => {
@@ -267,7 +273,9 @@ const RecordPaymentModal = ({
 
     // Prefill suggested amount from next unpaid installment or remaining balance
     const suggested = nextUnpaidInstallment
-      ? Number(nextUnpaidInstallment.remaining_amount ?? nextUnpaidInstallment.amount ?? 0)
+      ? nextUnpaidInstallment.remaining_amount !== undefined && nextUnpaidInstallment.remaining_amount !== null
+        ? Number(nextUnpaidInstallment.remaining_amount)
+        : Math.max(0, Number(nextUnpaidInstallment.amount || 0) - Number(nextUnpaidInstallment.paid_amount || 0))
       : balance;
 
     const initialAmountStr = suggested > 0 ? String(suggested) : "";
@@ -501,7 +509,9 @@ const RecordPaymentModal = ({
                   </span>
                   <span className="text-sm font-bold text-[#9c6b2e]">
                     {formatCurrency(
-                      nextUnpaidInstallment.remaining_amount ?? nextUnpaidInstallment.amount
+                      nextUnpaidInstallment.remaining_amount !== undefined && nextUnpaidInstallment.remaining_amount !== null
+                        ? nextUnpaidInstallment.remaining_amount
+                        : Math.max(0, Number(nextUnpaidInstallment.amount || 0) - Number(nextUnpaidInstallment.paid_amount || 0))
                     )}
                   </span>
                 </div>
@@ -847,6 +857,10 @@ const EnrollmentDetailsModal = ({
     return rawBase.map((inst, idx) => {
       const instNum = Number(inst.installment_number ?? (idx + 1));
       const instId = inst.installment_id ?? inst.id;
+      const totalInstAmount = Number(inst.amount ?? 0);
+      const backendStatus = String(inst.status || "").toLowerCase().trim();
+      const isInstBackendPaid = backendStatus === "paid";
+      const isInstBackendPartial = backendStatus === "partial";
 
       // Find matching payment attempts
       const matchingPayments = allPayments.filter((p) => {
@@ -871,12 +885,47 @@ const EnrollmentDetailsModal = ({
 
       if (!match) {
         const isInstRejected =
-          String(inst.status || "").toLowerCase() === "rejected" ||
+          backendStatus === "rejected" ||
           String(inst.approval_status || "").toLowerCase() === "rejected";
+        const isInstPaid =
+          backendStatus === "paid" ||
+          String(inst.approval_status || "").toLowerCase() === "approved";
+
+        const computedPaid = isInstRejected
+          ? 0
+          : inst.paid_amount !== undefined && inst.paid_amount !== null
+          ? Number(inst.paid_amount)
+          : isInstPaid
+          ? totalInstAmount
+          : 0;
+
+        const computedRemaining = isInstRejected
+          ? totalInstAmount
+          : isInstPaid
+          ? 0
+          : inst.remaining_amount !== undefined && inst.remaining_amount !== null
+          ? Number(inst.remaining_amount)
+          : Math.max(0, totalInstAmount - computedPaid);
+
+        const isActuallyPaid = isInstPaid || (computedRemaining <= 0 && computedPaid >= totalInstAmount && totalInstAmount > 0);
+        const isActuallyPartial = !isActuallyPaid && (isInstBackendPartial || (computedPaid > 0 && computedRemaining > 0));
+
         return {
           ...inst,
           installment_number: instNum,
+          amount: totalInstAmount,
+          paid_amount: computedPaid,
+          remaining_amount: computedRemaining,
+          status: isInstRejected
+            ? "rejected"
+            : isActuallyPaid
+            ? "paid"
+            : isActuallyPartial
+            ? "partial"
+            : inst.status || "pending",
           is_rejected: isInstRejected,
+          is_paid: isActuallyPaid,
+          is_partial: isActuallyPartial,
           rejection_reason: inst.rejection_reason || inst.reason || "",
         };
       }
@@ -893,47 +942,78 @@ const EnrollmentDetailsModal = ({
           matchApprovalStatus === "pending" ||
           (match.credited_to_balance === false && matchMethodStatus === "paid"));
 
-      const isPaid =
-        !isRejected &&
-        !isPendingReview &&
-        (matchApprovalStatus === "approved" ||
-          matchStatus === "paid" ||
-          match.credited_to_balance === true ||
-          String(inst.status || "").toLowerCase() === "paid");
-
       const rejectionReason =
         match.rejection_reason ||
         match.reason ||
         inst.rejection_reason ||
         (isRejected ? "Payment could not be verified in branch bank records" : "");
 
+      // Prioritize backend installment aggregated amounts; fallback to match amount if backend has none
+      const computedPaidAmount = isRejected
+        ? 0
+        : inst.paid_amount !== undefined && inst.paid_amount !== null
+        ? Number(inst.paid_amount)
+        : Number(match.paid_amount ?? match.amount ?? 0);
+
+      const computedRemainingAmount = isRejected
+        ? totalInstAmount
+        : isInstBackendPaid
+        ? 0
+        : inst.remaining_amount !== undefined && inst.remaining_amount !== null
+        ? Number(inst.remaining_amount)
+        : Math.max(0, totalInstAmount - computedPaidAmount);
+
+      const isPaid =
+        !isRejected &&
+        !isPendingReview &&
+        (isInstBackendPaid ||
+          (computedRemainingAmount <= 0 && computedPaidAmount >= totalInstAmount && totalInstAmount > 0));
+
+      const isPartial =
+        !isRejected &&
+        !isPendingReview &&
+        !isPaid &&
+        (isInstBackendPartial || (computedPaidAmount > 0 && computedRemainingAmount > 0));
+
+      const finalStatus = isRejected
+        ? "rejected"
+        : isPendingReview
+        ? "awaiting_review"
+        : isPaid
+        ? "paid"
+        : isPartial
+        ? "partial"
+        : inst.status || "pending";
+
       return {
         ...inst,
-        ...match,
         installment_number: instNum,
-        status: isRejected
-          ? "rejected"
-          : isPendingReview
-          ? "awaiting_review"
-          : isPaid
-          ? "paid"
-          : inst.status || "pending",
+        amount: totalInstAmount, // ALWAYS preserve installment amount (do not overwrite with payment amount)
+        paid_amount: computedPaidAmount,
+        remaining_amount: computedRemainingAmount,
+        status: finalStatus,
         approval_status: isRejected
           ? "rejected"
           : isPendingReview
           ? "pending"
           : isPaid
           ? "approved"
+          : isPartial
+          ? "partial"
           : inst.approval_status || "pending",
         is_rejected: isRejected,
         is_pending_review: isPendingReview,
         is_paid: isPaid,
+        is_partial: isPartial,
         rejection_reason: rejectionReason,
         reviewed_at: match.reviewed_at || inst.reviewed_at,
         payment_date: match.payment_date || match.paid_date || inst.payment_date || inst.paid_date,
+        paid_date: isPaid
+          ? (inst.paid_date || match.paid_date || match.payment_date)
+          : inst.paid_date,
         payment_method: match.payment_method || inst.payment_method,
-        paid_amount: isRejected ? 0 : match.paid_amount || match.amount || inst.paid_amount || (isPaid ? inst.amount : 0),
-        remaining_amount: isRejected ? inst.amount : isPaid ? 0 : inst.remaining_amount ?? inst.amount,
+        cash_amount: match.cash_amount ?? inst.cash_amount,
+        upi_amount: match.upi_amount ?? inst.upi_amount,
       };
     });
   }, [enrollment, apiInstallmentsData, paymentHistory, pendingPayments, todayPayments]);
@@ -1247,10 +1327,25 @@ const EnrollmentDetailsModal = ({
 
                       <dl className="grid gap-3 sm:grid-cols-3">
                         <DetailItem label="Total Amount" value={formatCurrency(inst.amount)} />
-                        <DetailItem label="Paid Amount" value={formatCurrency(inst.paid_amount || 0)} />
+                        <DetailItem
+                          label="Paid Amount"
+                          value={formatCurrency(
+                            inst.paid_amount !== undefined && inst.paid_amount !== null
+                              ? inst.paid_amount
+                              : inst.is_paid || String(inst.status || "").toLowerCase() === "paid"
+                              ? inst.amount
+                              : 0
+                          )}
+                        />
                         <DetailItem
                           label="Remaining"
-                          value={formatCurrency(inst.remaining_amount || inst.amount)}
+                          value={formatCurrency(
+                            inst.remaining_amount !== undefined && inst.remaining_amount !== null
+                              ? inst.remaining_amount
+                              : inst.is_paid || String(inst.status || "").toLowerCase() === "paid"
+                              ? 0
+                              : Math.max(0, Number(inst.amount || 0) - Number(inst.paid_amount || 0))
+                          )}
                         />
                         <DetailItem label="Due Date" value={formatDate(inst.due_date)} />
                         <DetailItem
