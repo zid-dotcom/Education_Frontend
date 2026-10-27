@@ -16,6 +16,7 @@ import {
   UserRoundSearch,
   Users,
   Activity,
+  Receipt,
   X,
 } from "lucide-react";
 import { getBranchUnreadMessageCountApi } from "../../services/branchadminmessages";
@@ -63,10 +64,31 @@ const SIDEBAR_CSS = `
 
 const NAV_GROUPS = [
   {
-    label: "Workspace",
+    label: "Overview",
     items: [
       { id: "dashboard", backendKey: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/branch-admin/dashboard" },
+    ],
+  },
+  {
+    label: "Courses",
+    items: [
       { id: "courses", backendKey: "courses", label: "Courses", icon: BookOpen, path: "/branch-admin/courses" },
+      { id: "course-enrollments", backendKey: "course_enrolments", label: "Course enrollments", icon: UserRoundSearch, path: "/branch-admin/course-enrollments" },
+      { id: "purchases", backendKey: "course_approvals", label: "Course approvals", icon: CheckCircle2, path: "/branch-admin/purchases" },
+    ],
+  },
+  {
+    label: "Students",
+    items: [
+      { id: "registration", backendKey: "register_student", label: "Register student", icon: UserPlus, path: "/branch-admin/student-registration" },
+      { id: "enrollments", backendKey: "view_students", label: "View students", icon: Users, path: "/branch-admin/enrollments" },
+      { id: "fees-due", backendKey: "fees_due_students", label: "Fees due students", icon: IndianRupee, path: "/branch-admin/fees-due" },
+      { id: "enquiries", backendKey: "enquiries", label: "Enquiries", icon: MessageCircle, path: "/branch-admin/enquiries" },
+    ],
+  },
+  {
+    label: "Staff",
+    items: [
       { id: "staff", backendKey: "staff", label: "Staff", icon: UserPlus, path: "/branch-admin/staff" },
       { id: "all-staff", backendKey: "all_staff", label: "All staffs", icon: Users, path: "/branch-admin/all-staff" },
       { id: "staff-verification", backendKey: "staff_verification", label: "Staff verification", icon: ShieldCheck, path: "/branch-admin/staff-verification" },
@@ -75,19 +97,15 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: "Students",
+    label: "Finance",
     items: [
-      { id: "registration", backendKey: "register_student", label: "Register student", icon: UserPlus, path: "/branch-admin/student-registration" },
-      { id: "enrollments", backendKey: "view_students", label: "View students", icon: Users, path: "/branch-admin/enrollments" },
-      { id: "course-enrollments", backendKey: "course_enrolments", label: "Course enrollments", icon: UserRoundSearch, path: "/branch-admin/course-enrollments" },
-      { id: "purchases", backendKey: "course_approvals", label: "Course approvals", icon: CheckCircle2, path: "/branch-admin/purchases" },
-      { id: "fees-due", backendKey: "fees_due_students", label: "Fees due students", icon: IndianRupee, path: "/branch-admin/fees-due" },
       { id: "fees", backendKey: "student_fees", label: "Student fees", icon: IndianRupee, path: "/branch-admin/profit" },
-      { id: "enquiries", backendKey: "enquiries", label: "Enquiries", icon: MessageCircle, path: "/branch-admin/enquiries" },
+      { id: "receipts", label: "Student Receipts", icon: Receipt, path: "/branch-admin/receipts" },
+      { id: "expenses", label: "Branch expenses", icon: IndianRupee, path: "/branch-admin/expenses" },
     ],
   },
   {
-    label: "Business",
+    label: "Communication",
     items: [
       { id: "announcements", backendKey: "announcements", label: "Announcements", icon: Bell, path: "/branch-admin/announcements" },
       { id: "messages", backendKey: "messages", label: "Messages", icon: MessageCircle, path: "/branch-admin/messages" },

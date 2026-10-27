@@ -75,19 +75,26 @@ export async function updateBranchSidebarNavigationApi(branchId, navLinks, token
  * GET /branch-admin/sidebar-navigation
  */
 export async function getMyBranchSidebarNavigationApi(token) {
-  const response = await fetch(`${API_BASE_URL}/branch-admin/sidebar-navigation`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Accept': 'application/json',
-    },
-  });
+  try {
+    const response = await fetch(`${API_BASE_URL}/branch-admin/sidebar-navigation`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+        'ngrok-skip-browser-warning': '69420',
+      },
+      credentials: 'include',
+    });
 
-  if (response.status === 404) {
+    if (response.status === 404) {
+      return { nav_links: {} };
+    }
+
+    return parseResponse(response, 'Failed to fetch branch navigation settings.');
+  } catch (err) {
+    console.warn('Could not load branch sidebar navigation settings:', err);
     return { nav_links: {} };
   }
-
-  return parseResponse(response, 'Failed to fetch branch navigation settings.');
 }
 
 /**

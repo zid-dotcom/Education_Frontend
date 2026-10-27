@@ -17,6 +17,7 @@ import {
   UserRoundCog,
   Users,
   Wallet,
+  Receipt,
   Menu,
   GraduationCap,
 } from "lucide-react";
@@ -559,6 +560,7 @@ const ACTIONS = [
   { label: "Course approvals", path: "/branch-admin/purchases", icon: CheckCircle2 },
   { label: "Course enrollments", path: "/branch-admin/course-enrollments", icon: Users },
   { label: "Branch profit", path: "/branch-admin/profit", icon: TrendingUp },
+  { label: "Branch expenses", path: "/branch-admin/expenses", icon: Receipt },
 ];
 
 const SkeletonView = () => (

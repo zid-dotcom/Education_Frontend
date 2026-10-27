@@ -7,6 +7,7 @@ import {
   Circle,
   Clock,
   CreditCard,
+  Download,
   Eye,
   IndianRupee,
   Loader2,
@@ -37,6 +38,8 @@ import {
   updateBranchAdminStudentStatusApi,
 } from "../services/branchadminenrollments";
 import { getEnrollmentInstallmentsApi } from "../services/enrollments";
+import { downloadBranchAdminReceiptApi } from "../services/branchadminreceipts";
+import PaymentSuccessReceiptModal from "../components/common/PaymentSuccessReceiptModal";
 
 /* Typography and fonts */
 const useDisplayFonts = () => {
@@ -244,6 +247,7 @@ const RecordPaymentModal = ({
   isSubmitting,
 }) => {
   const [paymentMode, setPaymentMode] = useState("cash"); // 'cash' | 'upi' | 'split'
+  const [paymentScope, setPaymentScope] = useState("installment"); // 'installment' | 'full_balance'
   const [cashAmount, setCashAmount] = useState("");
   const [upiAmount, setUpiAmount] = useState("");
   const [singleAmount, setSingleAmount] = useState("");
@@ -270,6 +274,7 @@ const RecordPaymentModal = ({
     if (!isOpen || !enrollment) return;
     setValidationError("");
     setPaymentMode("cash");
+    setPaymentScope("installment");
 
     // Prefill suggested amount from next unpaid installment or remaining balance
     const suggested = nextUnpaidInstallment
@@ -339,6 +344,8 @@ const RecordPaymentModal = ({
       }
     }
 
+    const isFullBalance = paymentScope === "full_balance" || (balance > 0 && computedTotal >= balance);
+
     const payload = {
       payment_method: paymentMode,
       amount: computedTotal,
@@ -354,7 +361,8 @@ const RecordPaymentModal = ({
           : paymentMode === "split"
           ? Number(upiAmount)
           : 0,
-      ...(selectedInstallmentNumber
+      ...(isFullBalance ? { pay_full_balance: true } : {}),
+      ...(selectedInstallmentNumber && !isFullBalance
         ? { installment_number: Number(selectedInstallmentNumber) }
         : {}),
     };
@@ -471,8 +479,110 @@ const RecordPaymentModal = ({
             </div>
           </div>
 
-          {/* Target Installment Banner (Replaces dropdown to prevent accidental changes) */}
-          {nextUnpaidInstallment ? (
+          {/* Payment Scope Selector (Next Installment vs Full Course Balance) */}
+          {balance > 0 && nextUnpaidInstallment && (
+            <div>
+              <label className="text-xs font-semibold text-slate-800 block mb-2">
+                Payment Scope
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentScope("installment");
+                    const amt =
+                      nextUnpaidInstallment.remaining_amount !== undefined && nextUnpaidInstallment.remaining_amount !== null
+                        ? Number(nextUnpaidInstallment.remaining_amount)
+                        : Math.max(0, Number(nextUnpaidInstallment.amount || 0) - Number(nextUnpaidInstallment.paid_amount || 0));
+                    const s = amt > 0 ? String(amt) : "";
+                    setSingleAmount(s);
+                    setCashAmount(s);
+                    setUpiAmount("");
+                    if (nextUnpaidInstallment.installment_number) {
+                      setSelectedInstallmentNumber(String(nextUnpaidInstallment.installment_number));
+                    }
+                  }}
+                  className={`flex items-center justify-between p-3.5 rounded-xl border text-left transition cursor-pointer ${
+                    paymentScope === "installment"
+                      ? "border-[#9c6b2e] bg-[#faf4ea] text-[#9c6b2e] shadow-xs"
+                      : "border-[#e3ddd0] bg-white text-stone-700 hover:bg-stone-50"
+                  }`}
+                >
+                  <div>
+                    <p className="text-xs font-bold text-slate-900">
+                      Next Installment (#{nextUnpaidInstallment.installment_number ?? 1})
+                    </p>
+                    <p className="text-[11px] text-stone-500 mt-0.5">Single scheduled installment</p>
+                  </div>
+                  <span className="text-xs font-bold text-[#9c6b2e]">
+                    {formatCurrency(
+                      nextUnpaidInstallment.remaining_amount !== undefined && nextUnpaidInstallment.remaining_amount !== null
+                        ? nextUnpaidInstallment.remaining_amount
+                        : Math.max(0, Number(nextUnpaidInstallment.amount || 0) - Number(nextUnpaidInstallment.paid_amount || 0))
+                    )}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentScope("full_balance");
+                    const s = balance > 0 ? String(balance) : "";
+                    setSingleAmount(s);
+                    setCashAmount(s);
+                    setUpiAmount("");
+                  }}
+                  className={`flex items-center justify-between p-3.5 rounded-xl border text-left transition cursor-pointer ${
+                    paymentScope === "full_balance"
+                      ? "border-[#9c6b2e] bg-[#faf4ea] text-[#9c6b2e] shadow-xs"
+                      : "border-[#e3ddd0] bg-white text-stone-700 hover:bg-stone-50"
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-xs font-bold text-slate-900">Full Course Balance</p>
+                      <span className="rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.2 text-[9px] font-bold">
+                        All Remaining
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-stone-500 mt-0.5">Settles all outstanding balance</p>
+                  </div>
+                  <span className="text-xs font-bold text-rose-600">
+                    {formatCurrency(balance)}
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Target Installment Banner */}
+          {paymentScope === "full_balance" ? (
+            <div className="rounded-xl border border-[#9c6b2e]/40 bg-[#faf4ea]/60 p-3.5 flex items-center justify-between gap-3 shadow-2xs">
+              <div className="flex items-center gap-3 min-w-0">
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#9c6b2e] text-white"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-bold text-slate-900 block">
+                    Full Balance Settlement
+                  </span>
+                  <p className="text-[11px] text-stone-600 mt-0.5">
+                    Allocates payment across all remaining installments and marks course as fully paid.
+                  </p>
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <span className="text-[10px] uppercase font-bold text-stone-500 block tracking-wider">
+                  Total Settlement
+                </span>
+                <span className="text-sm font-extrabold text-[#9c6b2e]">
+                  {formatCurrency(balance)}
+                </span>
+              </div>
+            </div>
+          ) : nextUnpaidInstallment ? (
             <div>
               <label className="text-xs font-semibold text-slate-800 block mb-1.5">
                 Applying Payment Towards
@@ -811,16 +921,8 @@ const EnrollmentDetailsModal = ({
     };
   }, [enrollment?.enrollment_id, token]);
 
-  const enrichedInstallments = useMemo(() => {
+  const allEnrollmentPayments = useMemo(() => {
     if (!enrollment) return [];
-
-    const rawBase = Array.isArray(apiInstallmentsData)
-      ? apiInstallmentsData
-      : Array.isArray(apiInstallmentsData?.installments)
-      ? apiInstallmentsData.installments
-      : Array.isArray(enrollment.installments)
-      ? enrollment.installments
-      : [];
 
     const apiPayments = Array.isArray(apiInstallmentsData?.payments)
       ? apiInstallmentsData.payments
@@ -846,13 +948,36 @@ const EnrollmentDetailsModal = ({
       ? enrollment.payments
       : [];
 
-    const allPayments = [
+    const seen = new Set();
+    const combined = [
       ...apiPayments,
       ...histPayments,
       ...pendingList,
       ...todayList,
       ...enrollmentPayments,
     ];
+
+    return combined.filter((p) => {
+      const idKey = p.payment_id ?? p.id ?? (p.receipt_number ? `rcpt-${p.receipt_number}` : null);
+      if (!idKey) return true;
+      if (seen.has(idKey)) return false;
+      seen.add(idKey);
+      return true;
+    });
+  }, [enrollment, apiInstallmentsData, paymentHistory, pendingPayments, todayPayments]);
+
+  const enrichedInstallments = useMemo(() => {
+    if (!enrollment) return [];
+
+    const rawBase = Array.isArray(apiInstallmentsData)
+      ? apiInstallmentsData
+      : Array.isArray(apiInstallmentsData?.installments)
+      ? apiInstallmentsData.installments
+      : Array.isArray(enrollment.installments)
+      ? enrollment.installments
+      : [];
+
+    const allPayments = allEnrollmentPayments;
 
     return rawBase.map((inst, idx) => {
       const instNum = Number(inst.installment_number ?? (idx + 1));
@@ -864,6 +989,9 @@ const EnrollmentDetailsModal = ({
 
       // Find matching payment attempts
       const matchingPayments = allPayments.filter((p) => {
+        if (Array.isArray(p.installment_numbers) && p.installment_numbers.map(Number).includes(instNum)) {
+          return true;
+        }
         if (p.installment_number !== undefined && p.installment_number !== null) {
           return Number(p.installment_number) === instNum;
         }
@@ -948,16 +1076,20 @@ const EnrollmentDetailsModal = ({
         inst.rejection_reason ||
         (isRejected ? "Payment could not be verified in branch bank records" : "");
 
+      const isGroupedFullBalance = Array.isArray(match.installment_numbers) && match.installment_numbers.length > 1;
+
       // Prioritize backend installment aggregated amounts; fallback to match amount if backend has none
       const computedPaidAmount = isRejected
         ? 0
         : inst.paid_amount !== undefined && inst.paid_amount !== null
         ? Number(inst.paid_amount)
+        : isGroupedFullBalance
+        ? totalInstAmount
         : Number(match.paid_amount ?? match.amount ?? 0);
 
       const computedRemainingAmount = isRejected
         ? totalInstAmount
-        : isInstBackendPaid
+        : isInstBackendPaid || (isGroupedFullBalance && !isRejected && !isPendingReview)
         ? 0
         : inst.remaining_amount !== undefined && inst.remaining_amount !== null
         ? Number(inst.remaining_amount)
@@ -1497,6 +1629,8 @@ const BranchAdminEnrollments = () => {
   const [selectedEnrollment, setSelectedEnrollment] = useState(null);
   const [recordingEnrollment, setRecordingEnrollment] = useState(null);
   const [rejectingPayment, setRejectingPayment] = useState(null);
+  const [installmentReceipt, setInstallmentReceipt] = useState(null);
+  const [isDownloadingReceipt, setIsDownloadingReceipt] = useState(false);
   const [nameFilter, setNameFilter] = useState("");
 
   // Helper to extract list cleanly from API response
@@ -1696,10 +1830,50 @@ const BranchAdminEnrollments = () => {
       setError("");
       setSuccess("");
 
-      await recordBranchAdminInstallmentPaymentApi(enrollmentId, payload, token);
+      const paymentRes = await recordBranchAdminInstallmentPaymentApi(enrollmentId, payload, token);
+
+      const hasReceipt =
+        paymentRes?.receipt ||
+        paymentRes?.receipt_url ||
+        paymentRes?.receipt_id ||
+        paymentRes?.receipt_number ||
+        Boolean(payload.amount);
+
+      if (hasReceipt) {
+        const receiptObj = paymentRes?.receipt || {
+          ...paymentRes,
+          receipt_url: paymentRes?.receipt_url,
+          download_url: paymentRes?.download_url,
+          receipt_id: paymentRes?.receipt_id || (paymentRes?.receipt_url ? String(paymentRes.receipt_url).split('/').pop() : null),
+          receipt_number: paymentRes?.receipt_number || paymentRes?.receipt_id || `REC-${Date.now().toString().slice(-4)}`,
+          student_name:
+            recordingEnrollment?.student_name ||
+            recordingEnrollment?.name ||
+            paymentRes?.student_name ||
+            "Student",
+          student_phone: recordingEnrollment?.phone || recordingEnrollment?.student_phone || "",
+          student_email: recordingEnrollment?.email || recordingEnrollment?.student_email || "",
+          course_title:
+            recordingEnrollment?.course_title ||
+            recordingEnrollment?.course_name ||
+            paymentRes?.course_title ||
+            "Course",
+          course_fee: recordingEnrollment?.course_fee || recordingEnrollment?.fee,
+          amount_paid: payload.amount || paymentRes?.amount || paymentRes?.paid_amount,
+          amount: payload.amount || paymentRes?.amount || paymentRes?.paid_amount,
+          payment_method: payload.payment_method || (payload.cash_amount && payload.upi_amount ? "split" : payload.cash_amount ? "cash" : "upi"),
+          payment_type: "installment",
+          installment_number: payload.installment_number || payload.term_number,
+          payment_date: payload.payment_date || new Date().toISOString(),
+        };
+
+        setInstallmentReceipt(receiptObj);
+      }
 
       setSuccess(
-        `Payment of ${formatCurrency(payload.amount)} recorded successfully! Balance updated.`
+        `Payment of ${formatCurrency(payload.amount)} recorded successfully! ${
+          receiptObj ? "Receipt generated." : "Balance updated."
+        }`
       );
       setTimeout(() => setSuccess(""), 5000);
       setRecordingEnrollment(null);
@@ -2808,6 +2982,23 @@ const BranchAdminEnrollments = () => {
         onOpenRecordPayment={(enrollment) => {
           setSelectedEnrollment(null);
           setRecordingEnrollment(enrollment);
+        }}
+      />
+
+      {/* Payment Success & Receipt Modal */}
+      <PaymentSuccessReceiptModal
+        isOpen={Boolean(installmentReceipt)}
+        onClose={() => setInstallmentReceipt(null)}
+        receipt={installmentReceipt}
+        receiptUrl={installmentReceipt?.receipt_url}
+        downloadUrl={installmentReceipt?.download_url}
+        token={token}
+        isBranchAdmin={true}
+        title="Congratulations! Installment payment recorded successfully"
+        subtitle="The fee payment has been recorded into the branch ledger. Below is the official receipt."
+        onViewReceipt={(rcpt, url) => {
+          if (url) window.open(url, "_blank");
+          else navigate("/branch-admin/receipts");
         }}
       />
     </div>

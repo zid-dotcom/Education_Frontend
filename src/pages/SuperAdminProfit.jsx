@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ChevronDown, IndianRupee, Loader2, RefreshCw, TrendingUp, Users, AlertCircle, X, CreditCard,
-  Calendar, GraduationCap, MapPin, Mail, Phone, BookOpen
+  Calendar, GraduationCap, MapPin, Mail, Phone, BookOpen, Receipt
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
@@ -143,19 +143,29 @@ const SuperAdminProfit = () => {
             <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#9c6b2e' }}>Super Admin</p>
             <h1 className="mt-1 text-2xl font-bold" style={{ fontFamily: "'Fraunces', serif" }}>Branch Profit</h1>
           </div>
-          <button
-            onClick={() => {
-              if (fromDate && toDate && fromDate > toDate) {
-                setDateError('From Date cannot be later than To Date.');
-                return;
-              }
-              loadProfit(selectedBranchId, fromDate, toDate);
-            }}
-            className="rounded-lg p-2 hover:bg-[#f1ede4]"
-            title="Refresh"
-          >
-            <RefreshCw className={`h-4 w-4 ${profitLoading ? 'animate-spin' : ''}`} style={{ color: '#9c6b2e' }} />
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate('/super-admin/expenses')}
+              className="flex items-center gap-1.5 rounded-xl border border-[#e3ddd0] bg-white px-3.5 py-2 text-xs font-bold text-slate-800 shadow-sm transition hover:bg-[#f1ede4]"
+            >
+              <Receipt className="h-4 w-4 text-[#9c6b2e]" />
+              <span>Branch Expenses</span>
+            </button>
+            <button
+              onClick={() => {
+                if (fromDate && toDate && fromDate > toDate) {
+                  setDateError('From Date cannot be later than To Date.');
+                  return;
+                }
+                loadProfit(selectedBranchId, fromDate, toDate);
+              }}
+              className="rounded-lg p-2 hover:bg-[#f1ede4]"
+              title="Refresh"
+            >
+              <RefreshCw className={`h-4 w-4 ${profitLoading ? 'animate-spin' : ''}`} style={{ color: '#9c6b2e' }} />
+            </button>
+          </div>
         </header>
 
         <div className="mx-auto max-w-7xl px-6 py-8 sm:px-10 space-y-6">

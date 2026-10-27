@@ -7,6 +7,7 @@ import { getAllCoursesApi } from '../../services/courses';
 import { createPaymentOrderApi, loadRazorpayScript, verifyPaymentApi } from '../../services/payments';
 import { useAuth } from '../../context/AuthContext';
 import { useStudentModalBlur } from '../../utils/useStudentModalBlur';
+import PaymentSuccessReceiptModal from './PaymentSuccessReceiptModal';
 
 const STATIC_COURSES = [
   'Diploma in Fashion Designing',
@@ -53,6 +54,8 @@ const ApplicationModal = ({ isOpen, onClose, defaultCourse = '' }) => {
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [successReceipt, setSuccessReceipt] = useState(null);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -165,12 +168,33 @@ const ApplicationModal = ({ isOpen, onClose, defaultCourse = '' }) => {
         handler: async (paymentResponse) => {
           try {
             setLoading(true);
-            await verifyPaymentApi({
+            const verifyRes = await verifyPaymentApi({
               enrollment_id: order.enrollment_id,
               razorpay_order_id: paymentResponse.razorpay_order_id,
               razorpay_payment_id: paymentResponse.razorpay_payment_id,
               razorpay_signature: paymentResponse.razorpay_signature,
             }, token);
+
+            const receiptData = verifyRes?.receipt || {
+              ...verifyRes,
+              receipt_id: verifyRes?.receipt_id || (verifyRes?.receipt_url ? verifyRes.receipt_url.split('/').pop() : null),
+              receipt_url: verifyRes?.receipt_url,
+              download_url: verifyRes?.download_url,
+              student_name: order.student?.name || formData.fullName || user?.name || 'Student',
+              student_email: order.student?.email || formData.email || user?.email || '',
+              student_phone: order.student?.phone || formData.phone || user?.phone || '',
+              course_title: order.course?.title || formData.course || 'Enrolled Course',
+              course_fee: order.course?.fee || selectedCourseData?.fee || selectedCourseData?.price,
+              amount_paid: (order.amount_paise ? order.amount_paise / 100 : null) || verifyRes?.amount || verifyRes?.amount_paid,
+              payment_method: 'online',
+              payment_type: formData.paymentPlan === 'installment' ? 'installment' : 'full',
+              razorpay_order_id: paymentResponse.razorpay_order_id,
+              razorpay_payment_id: paymentResponse.razorpay_payment_id,
+              payment_date: new Date().toISOString(),
+            };
+
+            setSuccessReceipt(receiptData);
+            setShowReceiptModal(true);
             setIsSubmitted(true);
           } catch (err) {
             setSubmitError(err.message || 'Payment verification failed. Please contact support.');
@@ -490,6 +514,27 @@ const ApplicationModal = ({ isOpen, onClose, defaultCourse = '' }) => {
           </div>
         )}
       </div>
+
+      {/* PAYMENT SUCCESS & RECEIPT POPUP MODAL */}
+      <PaymentSuccessReceiptModal
+        isOpen={showReceiptModal}
+        onClose={() => {
+          setShowReceiptModal(false);
+          handleResetAndClose();
+        }}
+        receipt={successReceipt}
+        receiptUrl={successReceipt?.receipt_url}
+        downloadUrl={successReceipt?.download_url}
+        token={token}
+        title="Congratulations! Your course has been purchased"
+        subtitle="Your application and payment are verified. Below is your official fee receipt."
+        onViewReceipt={(rcpt, url) => {
+          setShowReceiptModal(false);
+          handleResetAndClose();
+          if (url) window.open(url, '_blank');
+          else navigate('/student-dashboard/receipts');
+        }}
+      />
     </div>,
     document.body
   );

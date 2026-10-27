@@ -174,10 +174,32 @@ body.student-modal-open .student-portal-shell {
   transition: filter 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
+/* Universal Payment & Receipt Modal Blur System */
+body.payment-receipt-modal-open .student-portal-sidebar,
+body.payment-receipt-modal-open .student-portal-sidebar-aside,
+body.payment-receipt-modal-open .student-portal-content,
+body.payment-receipt-modal-open .student-portal-shell,
+body.payment-receipt-modal-open .branch-admin-sidebar,
+body.payment-receipt-modal-open .branch-admin-shell,
+body.payment-receipt-modal-open aside,
+body.payment-receipt-modal-open nav:not([role="dialog"] *),
+body.payment-receipt-modal-open main {
+  filter: blur(6px) !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  transition: filter 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+body.payment-receipt-modal-open {
+  overflow: hidden !important;
+}
+
 .student-portal-sidebar,
 .student-portal-sidebar-aside,
 .student-portal-content,
-.student-portal-shell {
+.student-portal-shell,
+.branch-admin-sidebar,
+.branch-admin-shell {
   transition: filter 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 

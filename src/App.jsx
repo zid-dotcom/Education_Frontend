@@ -51,6 +51,8 @@ import BranchAdminStaffVerification from './pages/BranchAdminStaffVerification';
 import BranchAdminAttendance from './pages/BranchAdminAttendance';
 import BranchAdminDashboard from './pages/BranchAdminDashboard';
 import BranchAdminProfit from './pages/BranchAdminProfit';
+import BranchAdminReceipts from './pages/BranchAdminReceipts';
+import BranchAdminExpenses from './pages/BranchAdminExpenses';
 import BranchAdminFeesDue from './pages/BranchAdminFeesDue';
 import BranchAdminMessages from './pages/BranchAdminMessages';
 import BranchAdminEnquiries from './pages/BranchAdminEnquiries';
@@ -69,6 +71,8 @@ import SuperAdminPurchases from './pages/SuperAdminPurchases';
 import SuperAdminDueStudents from './pages/SuperAdminDueStudents';
 import SuperAdminStudents from './pages/SuperAdminStudents';
 import SuperAdminProfit from './pages/SuperAdminProfit';
+import SuperAdminReceipts from './pages/SuperAdminReceipts';
+import SuperAdminExpenses from './pages/SuperAdminExpenses';
 import SuperAdminAttendance from './pages/SuperAdminAttendance';
 import SuperAdminAnnouncements from './pages/SuperAdminAnnouncements';
 import SuperAdminStaff from './pages/SuperAdminStaff';
@@ -85,6 +89,7 @@ import StudentEnquiries from './pages/StudentEnquiries';
 import StudentAssignments from './pages/StudentAssignments';
 import StudentStudyMaterials from './pages/StudentStudyMaterials';
 import StudentMessages from './pages/StudentMessages';
+import StudentReceipts from './pages/StudentReceipts';
 import StudentLayout from './components/layout/StudentLayout';
 
 // Scroll to top helper component on route change
@@ -328,6 +333,24 @@ function App() {
           />
 
           <Route
+            path="/branch-admin/receipts"
+            element={
+              <ProtectedRoute branchAdminOnly>
+                <BranchAdminReceipts />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/branch-admin/expenses"
+            element={
+              <ProtectedRoute branchAdminOnly>
+                <BranchAdminExpenses />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/branch-admin/fees-due"
             element={
               <ProtectedRoute branchAdminOnly>
@@ -502,6 +525,24 @@ function App() {
             element={
               <ProtectedRoute adminOnly>
                 <SuperAdminProfit />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/super-admin/receipts"
+            element={
+              <ProtectedRoute adminOnly>
+                <SuperAdminReceipts />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/super-admin/expenses"
+            element={
+              <ProtectedRoute adminOnly>
+                <SuperAdminExpenses />
               </ProtectedRoute>
             }
           />
@@ -738,6 +779,17 @@ function App() {
             }
           >
             <Route index element={<StudentMessages />} />
+          </Route>
+
+          <Route
+            path="/student-dashboard/receipts"
+            element={
+              <ProtectedRoute studentOnly>
+                <StudentLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<StudentReceipts />} />
           </Route>
 
           {/* Public Frontend Routes with Main Navbar & Footer */}

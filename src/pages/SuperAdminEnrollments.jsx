@@ -821,7 +821,15 @@ const SuperAdminEnrollments = () => {
                           return (
                             <tr key={pay.id || idx} className="hover:bg-slate-50 transition">
                               <td className="px-5 py-3 font-mono text-slate-500 text-xs">#{pay.id}</td>
-                              <td className="px-5 py-3 font-medium text-slate-800">Term {pay.installment_number}</td>
+                              <td className="px-5 py-3 font-medium text-slate-800">
+                                {Array.isArray(pay.installment_numbers) && pay.installment_numbers.length > 0
+                                  ? pay.installment_numbers.length === 1
+                                    ? `Term ${pay.installment_numbers[0]}`
+                                    : `Terms ${pay.installment_numbers.join(', ')}`
+                                  : pay.installment_number
+                                  ? `Term ${pay.installment_number}`
+                                  : 'Balance Settlement'}
+                              </td>
                               <td className="px-5 py-3 font-bold text-emerald-700">₹{Number(pay.amount || 0).toLocaleString('en-IN')}</td>
                               <td className="px-5 py-3 text-slate-600">₹{Number(pay.cash_amount || 0).toLocaleString('en-IN')}</td>
                               <td className="px-5 py-3 text-slate-600">₹{Number(pay.upi_amount || 0).toLocaleString('en-IN')}</td>

@@ -10,6 +10,7 @@ import {
   TrendingUp,
   UserRound,
   Users,
+  Receipt,
   X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -474,6 +475,22 @@ export default function BranchAdminProfit() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate('/branch-admin/receipts')}
+              className="hidden sm:flex items-center gap-1.5 rounded-xl border border-[#e3ddd0] bg-white px-3 py-2 text-xs font-bold text-slate-800 shadow-sm transition hover:bg-[#f0ebe1]"
+            >
+              <Receipt className="h-3.5 w-3.5 text-[#9c6b2e]" />
+              <span>Payment Receipts</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/branch-admin/expenses')}
+              className="hidden sm:flex items-center gap-1.5 rounded-xl border border-[#e3ddd0] bg-white px-3 py-2 text-xs font-bold text-slate-800 shadow-sm transition hover:bg-[#f0ebe1]"
+            >
+              <IndianRupee className="h-3.5 w-3.5 text-[#9c6b2e]" />
+              <span>Branch Expenses</span>
+            </button>
             <div className="hidden text-right sm:block">
               <p className="text-xs font-extrabold text-slate-900 leading-tight">
                 {user?.name || "Branch Admin"}

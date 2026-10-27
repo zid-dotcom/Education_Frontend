@@ -337,23 +337,86 @@ export default function BranchAdminPurchases() {
   const [success, setSuccess] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const normalizeArray = (res, keys = ["purchases", "enrollments", "pending", "approved", "rejected", "items", "data"]) => {
+    if (Array.isArray(res)) return res;
+    if (res && typeof res === "object") {
+      for (const k of keys) {
+        if (Array.isArray(res[k])) return res[k];
+      }
+    }
+    return [];
+  };
+
   const loadPurchases = useCallback(async () => {
     if (!token) return;
     setLoading(true);
     setError("");
     try {
-      const [pendingData, approvedData, rejectedData, historyData] = await Promise.all([
+      const [pendingRes, approvedRes, rejectedRes, historyRes] = await Promise.allSettled([
         getBranchAdminPendingPurchasesApi(token),
         getBranchAdminApprovedPurchasesApi(token),
         getBranchAdminRejectedPurchasesApi(token),
         getBranchAdminPurchasesApi(token),
       ]);
-      setPending(Array.isArray(pendingData) ? pendingData : []);
-      setApproved(Array.isArray(approvedData) ? approvedData : []);
-      setRejected(Array.isArray(rejectedData) ? rejectedData : []);
-      setHistory(Array.isArray(historyData) ? historyData : []);
+
+      const historyData = historyRes.status === "fulfilled" ? normalizeArray(historyRes.value) : [];
+      let pendingData = pendingRes.status === "fulfilled" ? normalizeArray(pendingRes.value) : [];
+      let approvedData = approvedRes.status === "fulfilled" ? normalizeArray(approvedRes.value) : [];
+      let rejectedData = rejectedRes.status === "fulfilled" ? normalizeArray(rejectedRes.value) : [];
+
+      // Fallback derivation from history if dedicated endpoints return empty or are unfulfilled
+      if (historyData.length > 0) {
+        if (pendingData.length === 0) {
+          pendingData = historyData.filter((p) => {
+            const cs = String(p.course_status || "").toLowerCase();
+            const sa = String(p.super_admin_approval_status || "").toLowerCase();
+            const ba = String(p.branch_approval_status || "").toLowerCase();
+            return cs === "pending" || cs === "applied" || ba === "pending" || (!cs && sa === "pending");
+          });
+        }
+        if (approvedData.length === 0) {
+          approvedData = historyData.filter((p) => {
+            const cs = String(p.course_status || "").toLowerCase();
+            const sa = String(p.super_admin_approval_status || "").toLowerCase();
+            const ba = String(p.branch_approval_status || "").toLowerCase();
+            return cs === "approved" || cs === "partially approved" || ba === "approved" || sa === "approved";
+          });
+        }
+        if (rejectedData.length === 0) {
+          rejectedData = historyData.filter((p) => {
+            const cs = String(p.course_status || "").toLowerCase();
+            const sa = String(p.super_admin_approval_status || "").toLowerCase();
+            const ba = String(p.branch_approval_status || "").toLowerCase();
+            return cs === "rejected" || ba === "rejected" || sa === "rejected";
+          });
+        }
+      }
+
+      setHistory(historyData);
+      setPending(pendingData);
+      setApproved(approvedData);
+      setRejected(rejectedData);
+
+      // Only flag error if all 4 failed
+      const allFailed = [pendingRes, approvedRes, rejectedRes, historyRes].every(
+        (r) => r.status === "rejected"
+      );
+      if (allFailed) {
+        const firstErr = historyRes.reason || pendingRes.reason;
+        const msg = firstErr?.message || "Failed to load purchases.";
+        setError(
+          msg.includes("Failed to fetch") || msg.includes("NetworkError")
+            ? "Server is currently waking up or reconnecting. Please click Retry."
+            : msg
+        );
+      }
     } catch (err) {
-      setError(err.message || "Failed to load purchases.");
+      console.error("Error loading purchases:", err);
+      setError(
+        err.message?.includes("Failed to fetch")
+          ? "Server is currently waking up or reconnecting. Please click Retry."
+          : err.message || "Failed to load purchases."
+      );
     } finally {
       setLoading(false);
     }
@@ -362,6 +425,18 @@ export default function BranchAdminPurchases() {
   useEffect(() => {
     loadPurchases();
   }, [loadPurchases]);
+
+  // Auto-retry once after 3 seconds if initial load failed due to cold start
+  const hasAutoRetriedRef = React.useRef(false);
+  useEffect(() => {
+    if (error && !hasAutoRetriedRef.current && (error.includes("waking up") || error.includes("Failed to fetch"))) {
+      hasAutoRetriedRef.current = true;
+      const timer = setTimeout(() => {
+        loadPurchases();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [error, loadPurchases]);
 
   // Auto-dismiss the success message
   useEffect(() => {
@@ -484,10 +559,21 @@ export default function BranchAdminPurchases() {
           {error && (
             <div
               role="alert"
-              className="ba-toast mb-6 rounded-lg px-4 py-3 text-sm font-medium"
+              className="ba-toast mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm font-medium"
               style={{ background: "#f8eae5", color: "#7c3324", border: "1px solid #eccec4" }}
             >
-              {error}
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0 text-[#a24a3a]" />
+                <span>{error}</span>
+              </div>
+              <button
+                type="button"
+                onClick={loadPurchases}
+                disabled={loading}
+                className="ba-press shrink-0 rounded-lg bg-[#7c3324] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[#5f251a] disabled:opacity-50"
+              >
+                {loading ? "Reconnecting..." : "Retry Connection"}
+              </button>
             </div>
           )}
           {!error && success && (

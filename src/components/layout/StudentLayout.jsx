@@ -15,6 +15,7 @@ import {
   MessageSquare,
   X,
   FolderDown,
+  Receipt,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getUserAnnouncementsApi } from '../../services/userannouncements';
@@ -57,10 +58,13 @@ const StudentLayout = () => {
   const isAssignmentsActive = location.pathname.startsWith('/student-dashboard/assignments');
   const isStudyMaterialsActive = location.pathname.startsWith('/student-dashboard/study-materials');
   const isMessagesActive = location.pathname.startsWith('/student-dashboard/messages');
+  const isReceiptsActive = location.pathname.startsWith('/student-dashboard/receipts');
   const isDashboardActive =
-    !isCatalogActive && !isInstitutionAnnouncementsActive && !isAnnouncementsActive && !isEnquiriesActive && !isAssignmentsActive && !isMessagesActive && !isStudyMaterialsActive;
+    !isCatalogActive && !isInstitutionAnnouncementsActive && !isAnnouncementsActive && !isEnquiriesActive && !isAssignmentsActive && !isMessagesActive && !isStudyMaterialsActive && !isReceiptsActive;
 
-  const pageTitle = isMessagesActive
+  const pageTitle = isReceiptsActive
+    ? 'Payment Receipts'
+    : isMessagesActive
     ? 'Faculty Messages'
     : isAssignmentsActive
     ? 'Assignments'
@@ -350,6 +354,20 @@ const StudentLayout = () => {
             >
               <MessageSquare className={`h-4 w-4 ${isEnquiriesActive ? 'text-[#9C6B2E]' : 'text-[#8A8175]'}`} />
               <span>Enquiries</span>
+            </Link>
+
+            {/* Payment Receipts */}
+            <Link
+              to="/student-dashboard/receipts"
+              onClick={closeSidebar}
+              className={`flex items-center gap-3.5 rounded-2xl px-4 py-3 text-xs transition ${
+                isReceiptsActive
+                  ? 'bg-[#F1EDE4] font-bold text-[#17140F] shadow-xs border border-[#E3DDD0]/80'
+                  : 'font-semibold text-[#5B5346] hover:bg-[#F1EDE4] hover:text-[#17140F]'
+              }`}
+            >
+              <Receipt className={`h-4 w-4 ${isReceiptsActive ? 'text-[#9C6B2E]' : 'text-[#8A8175]'}`} />
+              <span>Payment Receipts</span>
             </Link>
           </nav>
 

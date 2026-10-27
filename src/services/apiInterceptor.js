@@ -41,7 +41,28 @@ export function setupAuthInterceptor(onSessionExpired) {
       finalConfig.headers = headers;
     }
 
-    const response = await originalFetch(resource, finalConfig);
+    const isGet = !finalConfig.method || finalConfig.method.toUpperCase() === 'GET';
+    let response;
+
+    // Retry transient network errors (e.g. Render free-tier cold-start drops / Cloudflare timeouts)
+    const maxAttempts = isGet ? 2 : 1;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        response = await originalFetch(resource, finalConfig);
+        // If cold-booting backend returned a 502/503/504 gateway error, retry once after short backoff
+        if (isGet && attempt < maxAttempts && (response.status === 502 || response.status === 503 || response.status === 504)) {
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          continue;
+        }
+        break;
+      } catch (err) {
+        if (isGet && attempt < maxAttempts) {
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          continue;
+        }
+        throw err;
+      }
+    }
 
     if (response && response.status === 401) {
       // Exclude authentication endpoints so invalid login credentials don't trigger auto-logout

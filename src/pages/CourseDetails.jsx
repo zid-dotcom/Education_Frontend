@@ -8,10 +8,11 @@ import { getCourseByIdApi, getAllCoursesApi, getCourseImageUrl } from '../servic
 import { createPaymentOrderApi, loadRazorpayScript, verifyPaymentApi } from '../services/payments';
 import { getPublicBranchesWithCoursesApi } from '../services/branches';
 import { useAuth } from '../context/AuthContext';
+import PaymentSuccessReceiptModal from '../components/common/PaymentSuccessReceiptModal';
 
 const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
   const { courseId } = useParams();
-  const { isAuthenticated, token } = useAuth();
+  const { isAuthenticated, user, token } = useAuth();
   const navigate = useNavigate();
 
   const [course, setCourse] = useState(null);
@@ -22,6 +23,8 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
   const [paymentError, setPaymentError] = useState('');
   const [paymentType, setPaymentType] = useState('full');
   const [selectedInstallment, setSelectedInstallment] = useState(1);
+  const [successReceipt, setSuccessReceipt] = useState(null);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
 
   useEffect(() => {
     const fetchCourseDetails = async () => {
@@ -189,13 +192,36 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
         handler: async (paymentResponse) => {
           try {
             setPaymentLoading(true);
-            await verifyPaymentApi({
+            const verifyRes = await verifyPaymentApi({
               enrollment_id: order.enrollment_id,
               razorpay_order_id: paymentResponse.razorpay_order_id,
               razorpay_payment_id: paymentResponse.razorpay_payment_id,
               razorpay_signature: paymentResponse.razorpay_signature,
             }, token);
-            setPaymentMessage('Payment successful. Your enrollment is confirmed.');
+            setPaymentMessage('Payment successful! Your course enrollment is confirmed.');
+
+            // Build receipt payload
+            const receiptData = verifyRes?.receipt || {
+              ...verifyRes,
+              receipt_id: verifyRes?.receipt_id || (verifyRes?.receipt_url ? verifyRes.receipt_url.split('/').pop() : null),
+              receipt_url: verifyRes?.receipt_url,
+              download_url: verifyRes?.download_url,
+              student_name: order.student?.name || user?.name || user?.full_name || 'Student',
+              student_email: order.student?.email || user?.email || '',
+              student_phone: order.student?.phone || user?.phone || '',
+              course_title: order.course?.title || course?.title || title,
+              course_fee: course?.fee || course?.price,
+              amount_paid: (order.amount_paise ? order.amount_paise / 100 : null) || verifyRes?.amount || verifyRes?.amount_paid,
+              payment_method: 'online',
+              payment_type: paymentType,
+              installment_number: paymentType === 'installment' ? selectedInstallment : null,
+              razorpay_order_id: paymentResponse.razorpay_order_id,
+              razorpay_payment_id: paymentResponse.razorpay_payment_id,
+              payment_date: new Date().toISOString(),
+            };
+
+            setSuccessReceipt(receiptData);
+            setShowReceiptModal(true);
           } catch (err) {
             setPaymentError(err.message || 'Payment verification failed. Please contact support.');
           } finally {
@@ -559,6 +585,22 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
           </div>
         </section>
       )}
+
+      {/* PAYMENT SUCCESS & RECEIPT POPUP MODAL */}
+      <PaymentSuccessReceiptModal
+        isOpen={showReceiptModal}
+        onClose={() => setShowReceiptModal(false)}
+        receipt={successReceipt}
+        receiptUrl={successReceipt?.receipt_url}
+        downloadUrl={successReceipt?.download_url}
+        token={token}
+        title="Congratulations! Your course has been purchased"
+        subtitle="Your enrollment has been successfully confirmed. Below is your official fee payment receipt."
+        onViewReceipt={(rcpt, url) => {
+          if (url) window.open(url, '_blank');
+          else navigate('/student-dashboard/receipts');
+        }}
+      />
 
     </div>
   );

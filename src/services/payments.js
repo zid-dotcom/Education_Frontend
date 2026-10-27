@@ -99,6 +99,22 @@ export async function createInstallmentOrderApi(enrollmentId, token) {
   );
 }
 
+/**
+ * Convenience helper to create a Razorpay order to pay the student's entire remaining course balance.
+ * POST /payments/create-order with payment_type: "full"
+ * @param {number|string} enrollmentId
+ * @param {string} token
+ */
+export async function createFullBalanceOrderApi(enrollmentId, token) {
+  return createPaymentOrderApi(
+    {
+      enrollment_id: Number(enrollmentId),
+      payment_type: 'full',
+    },
+    token
+  );
+}
+
 export async function verifyPaymentApi(paymentData, token) {
   const response = await fetch(`${API_BASE_URL}/payments/verify`, {
     method: 'POST',
@@ -112,4 +128,128 @@ export async function verifyPaymentApi(paymentData, token) {
   });
 
   return parsePaymentResponse(response, 'Payment verification failed.');
-}
+}
+
+const triggerBlobDownload = (blob, suggestedFileName) => {
+  const blobUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.download = suggestedFileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => {
+    window.URL.revokeObjectURL(blobUrl);
+  }, 10000);
+};
+
+/**
+ * List the student's receipts, including branch-recorded payments.
+ * GET /payments/receipts
+ * @param {string} token
+ */
+export async function getStudentReceiptsApi(token) {
+  const response = await fetch(`${API_BASE_URL}/payments/receipts`, {
+    headers: {
+      Accept: 'application/json',
+      'ngrok-skip-browser-warning': '69420',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: 'include',
+  });
+  return parsePaymentResponse(response, 'Failed to load receipts.');
+}
+
+/**
+ * View one student receipt.
+ * GET /payments/receipts/{receipt_id}
+ * @param {number|string} receiptId
+ * @param {string} token
+ */
+export async function getStudentReceiptApi(receiptIdOrUrl, token) {
+  let endpoint = receiptIdOrUrl;
+  if (typeof receiptIdOrUrl === 'string' && (receiptIdOrUrl.startsWith('http') || receiptIdOrUrl.startsWith('/'))) {
+    endpoint = receiptIdOrUrl.startsWith('/') ? `${API_BASE_URL}${receiptIdOrUrl}` : receiptIdOrUrl;
+  } else {
+    endpoint = `${API_BASE_URL}/payments/receipts/${receiptIdOrUrl}`;
+  }
+
+  const response = await fetch(endpoint, {
+    headers: {
+      Accept: 'application/json',
+      'ngrok-skip-browser-warning': '69420',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: 'include',
+  });
+  return parsePaymentResponse(response, 'Failed to load receipt details.');
+}
+
+/**
+ * Download one student receipt.
+ * GET /payments/receipts/{receipt_id}/download
+ * @param {number|string} receiptIdOrUrl
+ * @param {string} token
+ * @param {string} [suggestedFileName]
+ */
+export async function downloadStudentReceiptApi(
+  receiptIdOrUrl,
+  token,
+  suggestedFileName = `receipt_${receiptIdOrUrl}.pdf`
+) {
+  let endpoint = receiptIdOrUrl;
+  if (typeof receiptIdOrUrl === 'string' && (receiptIdOrUrl.startsWith('http') || receiptIdOrUrl.startsWith('/'))) {
+    endpoint = receiptIdOrUrl.startsWith('/') ? `${API_BASE_URL}${receiptIdOrUrl}` : receiptIdOrUrl;
+  } else {
+    endpoint = `${API_BASE_URL}/payments/receipts/${receiptIdOrUrl}/download`;
+  }
+
+  const response = await fetch(endpoint, {
+    headers: {
+      Accept: 'application/pdf, application/json, */*',
+      'ngrok-skip-browser-warning': '69420',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    let msg = 'Failed to download receipt.';
+    try {
+      const errData = await response.json();
+      msg = Array.isArray(errData.detail)
+        ? errData.detail.map((item) => item.msg).join(', ')
+        : errData.detail || errData.message || msg;
+    } catch {
+      // response is not json
+    }
+    throw new Error(msg);
+  }
+
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    const data = await response.json();
+    const downloadUrl = data?.download_url || data?.url || data?.link;
+    if (downloadUrl) {
+      window.open(downloadUrl, '_blank');
+      return { success: true, url: downloadUrl };
+    }
+    if (data?.pdf_base64 || data?.base64) {
+      const base64Data = data.pdf_base64 || data.base64;
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      triggerBlobDownload(blob, suggestedFileName);
+      return { success: true, blob };
+    }
+  }
+
+  const blob = await response.blob();
+  triggerBlobDownload(blob, suggestedFileName);
+  return { success: true, blob };
+}
+

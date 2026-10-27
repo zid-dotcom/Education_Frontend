@@ -6,6 +6,7 @@ import {
   IndianRupee,
   LayoutDashboard,
   MessageCircle,
+  Receipt,
   ShieldCheck,
   UserPlus,
   UserRoundSearch,
@@ -157,6 +158,13 @@ export const BRANCH_NAV_CONFIG = [
         description: 'Fee payment records, receipts, and branch profit summaries',
         icon: IndianRupee,
         path: '/branch-admin/profit',
+      },
+      {
+        id: 'receipts',
+        label: 'Receipts',
+        description: 'Official fee payment receipts and tuition vouchers',
+        icon: Receipt,
+        path: '/branch-admin/receipts',
       },
       {
         id: 'enquiries',

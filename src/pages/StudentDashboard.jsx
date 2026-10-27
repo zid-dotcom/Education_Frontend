@@ -57,6 +57,7 @@ import {
 } from '../services/userannouncements';
 import { getStudentUnreadCountApi } from '../services/studentStaffMessages';
 import { useStudentModalBlur } from '../utils/useStudentModalBlur';
+import PaymentSuccessReceiptModal from '../components/common/PaymentSuccessReceiptModal';
 
 // Load modern Plus Jakarta Sans + Inter + Fraunces fonts
 const useDashboardFonts = () => {
@@ -130,6 +131,9 @@ export const enrichInstallmentsWithPayments = (installments = [], enrollment = {
     // 1. Try to find explicit matching payments in any payment array
     const matchingPayments = paymentSources.filter((p) => {
       if (!p) return false;
+      if (Array.isArray(p.installment_numbers) && p.installment_numbers.map(Number).includes(instNum)) {
+        return true;
+      }
       if (p.installment_number !== undefined && p.installment_number !== null) {
         return Number(p.installment_number) === instNum;
       }
@@ -211,6 +215,11 @@ export const enrichInstallmentsWithPayments = (installments = [], enrollment = {
         matchingPayment.credited_to_balance === false
       );
 
+    const allocatedAmount =
+      Array.isArray(matchingPayment.installment_numbers) && matchingPayment.installment_numbers.length > 1
+        ? Number(inst.amount) || Math.round(Number(matchingPayment.amount || 0) / matchingPayment.installment_numbers.length)
+        : matchingPayment.paid_amount || matchingPayment.amount || inst.paid_amount || inst.amount;
+
     return {
       ...inst,
       ...matchingPayment,
@@ -220,7 +229,7 @@ export const enrichInstallmentsWithPayments = (installments = [], enrollment = {
       approval_status: isRejected ? 'rejected' : matchingPayment.approval_status || (isPendingReview ? 'pending' : 'approved'),
       payment_reference: matchingPayment.payment_reference || inst.payment_reference,
       payment_date: matchingPayment.payment_date || matchingPayment.paid_date || inst.payment_date || inst.paid_date,
-      paid_amount: isRejected ? 0 : matchingPayment.paid_amount || matchingPayment.amount || inst.paid_amount || inst.amount,
+      paid_amount: isRejected ? 0 : allocatedAmount,
       is_paid_resolved: isPaid,
       is_pending_review_resolved: isPendingReview,
       is_rejected_resolved: isRejected,
@@ -907,14 +916,18 @@ const StudentDashboard = () => {
   const [isLoadingInstallments, setIsLoadingInstallments] = useState(false);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [payingInstallmentNumber, setPayingInstallmentNumber] = useState(null);
+  const [isPayingFullBalance, setIsPayingFullBalance] = useState(false);
   const [installmentError, setInstallmentError] = useState('');
   const [paymentSuccessMessage, setPaymentSuccessMessage] = useState('');
+  const [successReceipt, setSuccessReceipt] = useState(null);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
 
   const handleClosePaymentModal = () => {
     setSelectedPaymentEnrollment(null);
     setInstallmentError('');
     setPaymentSuccessMessage('');
     setPayingInstallmentNumber(null);
+    setIsPayingFullBalance(false);
   };
 
   const handleOpenPaymentModal = async (enrollment) => {
@@ -1146,7 +1159,7 @@ const StudentDashboard = () => {
           try {
             setPaymentProcessing(true);
             // 4. Verify payment with backend via POST /payments/verify
-            await verifyPaymentApi(
+            const verifyRes = await verifyPaymentApi(
               {
                 enrollment_id: order.enrollment_id || Number(enrollmentId),
                 razorpay_order_id: paymentResponse.razorpay_order_id,
@@ -1159,6 +1172,29 @@ const StudentDashboard = () => {
             setPaymentSuccessMessage(
               `Payment successful! Installment #${targetNumber} has been verified and cleared.`
             );
+
+            // Build receipt payload
+            const receiptData = verifyRes?.receipt || {
+              ...verifyRes,
+              receipt_id: verifyRes?.receipt_id || (verifyRes?.receipt_url ? verifyRes.receipt_url.split('/').pop() : null),
+              receipt_url: verifyRes?.receipt_url,
+              download_url: verifyRes?.download_url,
+              student_name: order.student?.name || user?.name || user?.full_name || 'Student',
+              student_email: order.student?.email || user?.email || '',
+              student_phone: order.student?.phone || user?.phone || '',
+              course_title: order.course?.title || selectedPaymentEnrollment?.course_title || selectedPaymentEnrollment?.course?.title || 'Enrolled Course',
+              course_fee: selectedPaymentEnrollment?.course_fee || selectedPaymentEnrollment?.fee,
+              amount_paid: Number(installment?.amount || installment?.paid_amount || (order.amount_paise ? order.amount_paise / 100 : null) || verifyRes?.amount || verifyRes?.amount_paid || 0),
+              payment_method: 'online',
+              payment_type: 'installment',
+              installment_number: Number(targetNumber),
+              razorpay_order_id: paymentResponse.razorpay_order_id,
+              razorpay_payment_id: paymentResponse.razorpay_payment_id,
+              payment_date: new Date().toISOString(),
+            };
+
+            setSuccessReceipt(receiptData);
+            setShowReceiptModal(true);
 
             // 5. Re-fetch fresh installment details via GET /enrollments/{enrollment_id}/installments
             try {
@@ -1267,6 +1303,224 @@ const StudentDashboard = () => {
       setInstallmentError(err.message || 'Unable to initiate payment with Razorpay. Please try again.');
       setPaymentProcessing(false);
       setPayingInstallmentNumber(null);
+    }
+  };
+
+  const handlePayFullRemainingBalance = async () => {
+    const enrollmentId = selectedPaymentEnrollment?.enrollment_id || selectedPaymentEnrollment?.id;
+    if (!enrollmentId) {
+      setInstallmentError('Enrollment reference is missing. Please close and re-open the details.');
+      return;
+    }
+
+    try {
+      setPaymentProcessing(true);
+      setIsPayingFullBalance(true);
+      setInstallmentError('');
+      setPaymentSuccessMessage('');
+
+      // 1. Create payment order for full remaining course balance
+      // Sends enrollment_id and payment_type: "full" to POST /payments/create-order
+      const order = await createPaymentOrderApi(
+        {
+          enrollment_id: Number(enrollmentId),
+          payment_type: 'full',
+        },
+        token
+      );
+
+      // 2. Ensure Razorpay SDK is loaded
+      await loadRazorpayScript();
+
+      if (!order.order_id || !order.razorpay_key_id) {
+        throw new Error('Payment order initialization was incomplete. Please try again.');
+      }
+
+      const orderAmountPaise =
+        order.amount_paise ||
+        order.amount ||
+        (selectedPaymentEnrollment?.balance_amount
+          ? Math.round(Number(selectedPaymentEnrollment.balance_amount) * 100)
+          : undefined);
+
+      const courseTitle =
+        selectedPaymentEnrollment.course_title ||
+        selectedPaymentEnrollment.course_details?.title ||
+        selectedPaymentEnrollment.course_name ||
+        'Course Tuition';
+
+      // 3. Configure and trigger Razorpay Checkout
+      const razorpay = new window.Razorpay({
+        key: order.razorpay_key_id,
+        amount: orderAmountPaise,
+        currency: order.currency || 'INR',
+        name: 'Aurum FX Academy',
+        description: `Remaining Course Balance Settlement — ${courseTitle}`,
+        order_id: order.order_id,
+        prefill: {
+          name: order.student?.name || user?.name || user?.full_name || '',
+          email: order.student?.email || user?.email || '',
+          contact: order.student?.phone || user?.phone || user?.phone_number || '',
+        },
+        notes: {
+          enrollment_id: String(order.enrollment_id || enrollmentId),
+          payment_type: 'full',
+        },
+        theme: { color: '#9C6B2E' },
+        handler: async (paymentResponse) => {
+          try {
+            setPaymentProcessing(true);
+            // 4. Verify payment with backend via POST /payments/verify
+            const verifyRes = await verifyPaymentApi(
+              {
+                enrollment_id: order.enrollment_id || Number(enrollmentId),
+                razorpay_order_id: paymentResponse.razorpay_order_id,
+                razorpay_payment_id: paymentResponse.razorpay_payment_id,
+                razorpay_signature: paymentResponse.razorpay_signature,
+              },
+              token
+            );
+
+            setPaymentSuccessMessage(
+              'Payment successful! Your entire remaining course balance has been cleared and verified.'
+            );
+
+            // Build receipt payload
+            const receiptData = verifyRes?.receipt || {
+              ...verifyRes,
+              receipt_id:
+                verifyRes?.receipt_id ||
+                (verifyRes?.receipt_url ? verifyRes.receipt_url.split('/').pop() : null),
+              receipt_url: verifyRes?.receipt_url,
+              download_url: verifyRes?.download_url,
+              student_name: order.student?.name || user?.name || user?.full_name || 'Student',
+              student_email: order.student?.email || user?.email || '',
+              student_phone: order.student?.phone || user?.phone || '',
+              course_title:
+                order.course?.title ||
+                selectedPaymentEnrollment?.course_title ||
+                selectedPaymentEnrollment?.course?.title ||
+                'Enrolled Course',
+              course_fee: selectedPaymentEnrollment?.course_fee || selectedPaymentEnrollment?.fee,
+              amount_paid: Number(
+                (order.amount_paise ? order.amount_paise / 100 : null) ||
+                  verifyRes?.amount ||
+                  verifyRes?.amount_paid ||
+                  selectedPaymentEnrollment?.balance_amount ||
+                  0
+              ),
+              payment_method: 'online',
+              payment_type: 'Remaining course balance settlement',
+              razorpay_order_id: paymentResponse.razorpay_order_id,
+              razorpay_payment_id: paymentResponse.razorpay_payment_id,
+              payment_date: new Date().toISOString(),
+            };
+
+            setSuccessReceipt(receiptData);
+            setShowReceiptModal(true);
+
+            // 5. Re-fetch fresh installment details via GET /enrollments/{enrollment_id}/installments
+            try {
+              const updatedDetails = await getEnrollmentInstallmentsApi(enrollmentId, token);
+              if (updatedDetails) {
+                const updatedList = updatedDetails.installments || updatedDetails.schedule || [];
+                const combinedPayments = [
+                  ...(Array.isArray(updatedDetails.payments) ? updatedDetails.payments : []),
+                  ...(Array.isArray(updatedDetails.payment_history) ? updatedDetails.payment_history : []),
+                  ...(Array.isArray(updatedDetails.installment_payments) ? updatedDetails.installment_payments : []),
+                  ...(Array.isArray(updatedDetails.recent_payments) ? updatedDetails.recent_payments : []),
+                  ...(Array.isArray(updatedDetails.transactions) ? updatedDetails.transactions : []),
+                  ...(Array.isArray(updatedDetails.records) ? updatedDetails.records : []),
+                  {
+                    payment_id: paymentResponse.razorpay_payment_id,
+                    razorpay_payment_id: paymentResponse.razorpay_payment_id,
+                    payment_type: 'Remaining course balance settlement',
+                    status: 'paid',
+                    payment_status: 'paid',
+                    approval_status: 'approved',
+                    amount: receiptData.amount_paid,
+                    paid_amount: receiptData.amount_paid,
+                    payment_date: new Date().toISOString().split('T')[0],
+                  },
+                ];
+
+                const enrichedList = enrichInstallmentsWithPayments(
+                  updatedList.length > 0 ? updatedList : selectedPaymentEnrollment?.installments || [],
+                  { ...selectedPaymentEnrollment, ...updatedDetails, payments: combinedPayments }
+                );
+
+                const paidCount = enrichedList.filter(isInstallmentPaidOrSubmitted).length;
+                const totalClearedAmount = enrichedList
+                  .filter(isInstallmentPaidOrSubmitted)
+                  .reduce((sum, inst) => sum + Number(inst.paid_amount || inst.amount || 0), 0);
+
+                const totalFee = updatedDetails.total_fee !== undefined ? updatedDetails.total_fee : selectedPaymentEnrollment?.total_fee;
+                const totalPaid = Math.max(
+                  Number(updatedDetails.total_paid !== undefined ? updatedDetails.total_paid : selectedPaymentEnrollment?.total_paid || 0),
+                  totalClearedAmount
+                );
+                const balance = Math.max(0, Number(totalFee || 0) - totalPaid);
+
+                const totalCount =
+                  updatedDetails.installment_count ||
+                  updatedDetails.total_installments ||
+                  (Array.isArray(enrichedList) ? enrichedList.length : selectedPaymentEnrollment?.installment_count);
+
+                setSelectedPaymentEnrollment((prev) => ({
+                  ...prev,
+                  ...updatedDetails,
+                  installments: enrichedList,
+                  payments: combinedPayments,
+                  payment_history: combinedPayments,
+                  total_paid: totalPaid,
+                  balance_amount: balance,
+                  total_fee: totalFee,
+                  paid_installment_count: paidCount,
+                  installment_count: totalCount,
+                  status: 'paid',
+                  razorpay_payment_id: paymentResponse.razorpay_payment_id || prev?.razorpay_payment_id,
+                  razorpay_order_id: paymentResponse.razorpay_order_id || prev?.razorpay_order_id,
+                }));
+              }
+            } catch (err) {
+              console.warn('Error refreshing installment data after full balance payment:', err);
+            }
+
+            // 6. Refresh full enrollments list on the student dashboard
+            const refreshedEnrollments = await getMyEnrollmentsApi(token);
+            if (Array.isArray(refreshedEnrollments)) {
+              setEnrollments(refreshedEnrollments);
+            }
+          } catch (err) {
+            setInstallmentError(
+              err.message || 'Payment verification failed. If money was debited, please contact campus support.'
+            );
+          } finally {
+            setPaymentProcessing(false);
+            setIsPayingFullBalance(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setPaymentProcessing(false);
+            setIsPayingFullBalance(false);
+          },
+        },
+      });
+
+      razorpay.on('payment.failed', (response) => {
+        setInstallmentError(
+          response.error?.description || 'Payment was declined or cancelled. Please try again.'
+        );
+        setPaymentProcessing(false);
+        setIsPayingFullBalance(false);
+      });
+
+      razorpay.open();
+    } catch (err) {
+      setInstallmentError(err.message || 'Unable to initiate payment with Razorpay. Please try again.');
+      setPaymentProcessing(false);
+      setIsPayingFullBalance(false);
     }
   };
 
@@ -1696,6 +1950,16 @@ const StudentDashboard = () => {
             >
               <MessageCircle className="h-4 w-4 text-[#8A8175]" />
               <span>Enquiries</span>
+            </Link>
+
+            {/* Payment Receipts */}
+            <Link
+              to="/student-dashboard/receipts"
+              onClick={closeSidebar}
+              className="flex items-center gap-3.5 rounded-2xl px-4 py-3 text-xs font-semibold text-[#5B5346] hover:bg-[#F1EDE4] hover:text-[#17140F] transition"
+            >
+              <Receipt className="h-4 w-4 text-[#8A8175]" />
+              <span>Payment Receipts</span>
             </Link>
           </nav>
 
@@ -2651,6 +2915,16 @@ const StudentDashboard = () => {
                         <p className="mt-1">
                           This enrollment was paid in full. No recurring installments are scheduled.
                         </p>
+                        <div className="mt-3">
+                          <Link
+                            to="/student-dashboard/receipts"
+                            onClick={handleClosePaymentModal}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-[#E3DDD0] bg-white px-3.5 py-1.5 text-xs font-bold text-[#9C6B2E] shadow-2xs hover:bg-[#FAF8F4]"
+                          >
+                            <Receipt className="h-3.5 w-3.5" />
+                            <span>View Payment Receipt</span>
+                          </Link>
+                        </div>
                       </div>
                     );
                   }
@@ -2754,24 +3028,48 @@ const StudentDashboard = () => {
                             </div>
                           </div>
 
-                          <button
-                            type="button"
-                            disabled={paymentProcessing}
-                            onClick={() => handlePayInstallment(nextUnpaidInstallment)}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#9C6B2E] px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-sm hover:bg-[#855923] transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed shrink-0 cursor-pointer"
-                          >
-                            {paymentProcessing && payingInstallmentNumber === (nextUnpaidInstallment.installment_number || 1) ? (
-                              <>
-                                <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                <span>Processing Payment...</span>
-                              </>
-                            ) : (
-                              <>
-                                <CreditCard className="h-4 w-4" />
-                                <span>Pay {formatCurrency(nextUnpaidInstallment.amount)} Now</span>
-                              </>
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
+                            <button
+                              type="button"
+                              disabled={paymentProcessing}
+                              onClick={() => handlePayInstallment(nextUnpaidInstallment)}
+                              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#9C6B2E] px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-sm hover:bg-[#855923] transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                            >
+                              {paymentProcessing && payingInstallmentNumber === (nextUnpaidInstallment.installment_number || 1) ? (
+                                <>
+                                  <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                  <span>Processing...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <CreditCard className="h-4 w-4" />
+                                  <span>Pay {formatCurrency(nextUnpaidInstallment.amount)}</span>
+                                </>
+                              )}
+                            </button>
+
+                            {Number(selectedPaymentEnrollment.balance_amount || 0) > Number(nextUnpaidInstallment.amount || 0) && (
+                              <button
+                                type="button"
+                                disabled={paymentProcessing}
+                                onClick={handlePayFullRemainingBalance}
+                                className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-[#9C6B2E] bg-white px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-extrabold text-[#9C6B2E] shadow-sm hover:bg-[#FAF8F4] transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                title="Pay entire remaining course balance and clear all remaining installments"
+                              >
+                                {paymentProcessing && isPayingFullBalance ? (
+                                  <>
+                                    <div className="h-4 w-4 border-2 border-[#9C6B2E]/30 border-t-[#9C6B2E] rounded-full animate-spin" />
+                                    <span>Settling Balance...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle2 className="h-4 w-4 text-[#9C6B2E]" />
+                                    <span>Pay Full Balance ({formatCurrency(selectedPaymentEnrollment.balance_amount)})</span>
+                                  </>
+                                )}
+                              </button>
                             )}
-                          </button>
+                          </div>
                         </div>
                       )}
 
@@ -2875,9 +3173,19 @@ const StudentDashboard = () => {
                                       {formatCurrency(inst.amount)}
                                     </p>
                                     {isPaid && (
-                                      <p className="text-[10px] font-semibold text-emerald-700">
-                                        Paid: {formatCurrency(statusInfo.paidAmount || inst.amount)}
-                                      </p>
+                                      <div className="space-y-0.5">
+                                        <p className="text-[10px] font-semibold text-emerald-700">
+                                          Paid: {formatCurrency(statusInfo.paidAmount || inst.amount)}
+                                        </p>
+                                        <Link
+                                          to="/student-dashboard/receipts"
+                                          onClick={handleClosePaymentModal}
+                                          className="inline-flex items-center gap-1 text-[10px] font-bold text-[#9C6B2E] hover:underline"
+                                        >
+                                          <Receipt className="h-2.5 w-2.5" />
+                                          <span>Receipt</span>
+                                        </Link>
+                                      </div>
                                     )}
                                   </div>
                                 </div>
@@ -2963,7 +3271,7 @@ const StudentDashboard = () => {
                 <p className="text-[11px] text-slate-500 hidden sm:block">
                   Need assistance with your enrollment or invoice? Contact campus admin.
                 </p>
-                <div className="flex items-center gap-2.5 justify-end">
+                <div className="flex flex-wrap items-center gap-2.5 justify-end">
                   {(() => {
                     const rawInst = Array.isArray(selectedPaymentEnrollment.installments)
                       ? selectedPaymentEnrollment.installments
@@ -2993,25 +3301,50 @@ const StudentDashboard = () => {
                     }
 
                     if (nextUnpaid && Number(selectedPaymentEnrollment.balance_amount || nextUnpaid.amount || 1) > 0) {
+                      const hasMultipleRemaining = Number(selectedPaymentEnrollment.balance_amount || 0) > Number(nextUnpaid.amount || 0);
+
                       return (
-                        <button
-                          type="button"
-                          disabled={paymentProcessing}
-                          onClick={() => handlePayInstallment(nextUnpaid)}
-                          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#9C6B2E] px-5 py-2.5 text-xs font-bold text-white shadow-xs transition hover:bg-[#855923] disabled:opacity-50 cursor-pointer"
-                        >
-                          {paymentProcessing ? (
-                            <>
-                              <div className="h-3.5 w-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                              <span>Processing...</span>
-                            </>
-                          ) : (
-                            <>
-                              <CreditCard className="h-3.5 w-3.5" />
-                              <span>Pay Next Installment ({formatCurrency(nextUnpaid.amount)})</span>
-                            </>
+                        <>
+                          <button
+                            type="button"
+                            disabled={paymentProcessing}
+                            onClick={() => handlePayInstallment(nextUnpaid)}
+                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#9C6B2E] px-4 py-2.5 text-xs font-bold text-white shadow-xs transition hover:bg-[#855923] disabled:opacity-50 cursor-pointer"
+                          >
+                            {paymentProcessing && !isPayingFullBalance ? (
+                              <>
+                                <div className="h-3.5 w-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                <span>Processing...</span>
+                              </>
+                            ) : (
+                              <>
+                                <CreditCard className="h-3.5 w-3.5" />
+                                <span>Pay Next Installment ({formatCurrency(nextUnpaid.amount)})</span>
+                              </>
+                            )}
+                          </button>
+
+                          {hasMultipleRemaining && (
+                            <button
+                              type="button"
+                              disabled={paymentProcessing}
+                              onClick={handlePayFullRemainingBalance}
+                              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border-2 border-[#9C6B2E] bg-white px-4 py-2.5 text-xs font-bold text-[#9C6B2E] shadow-xs transition hover:bg-[#FAF8F4] disabled:opacity-50 cursor-pointer"
+                            >
+                              {paymentProcessing && isPayingFullBalance ? (
+                                <>
+                                  <div className="h-3.5 w-3.5 border-2 border-[#9C6B2E]/30 border-t-[#9C6B2E] rounded-full animate-spin" />
+                                  <span>Settling...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle2 className="h-3.5 w-3.5 text-[#9C6B2E]" />
+                                  <span>Pay Full Balance ({formatCurrency(selectedPaymentEnrollment.balance_amount)})</span>
+                                </>
+                              )}
+                            </button>
                           )}
-                        </button>
+                        </>
                       );
                     }
                     return null;
@@ -3090,6 +3423,22 @@ const StudentDashboard = () => {
           </div>,
           document.body
         )}
+
+      {/* PAYMENT SUCCESS & RECEIPT POPUP MODAL */}
+      <PaymentSuccessReceiptModal
+        isOpen={showReceiptModal}
+        onClose={() => setShowReceiptModal(false)}
+        receipt={successReceipt}
+        receiptUrl={successReceipt?.receipt_url}
+        downloadUrl={successReceipt?.download_url}
+        token={token}
+        title="Congratulations! Your course payment has been received"
+        subtitle="Your installment payment has been cleared and verified. Below is your official receipt."
+        onViewReceipt={(rcpt, url) => {
+          if (url) window.open(url, '_blank');
+          else navigate('/student-dashboard/receipts');
+        }}
+      />
     </div>
   );
 };

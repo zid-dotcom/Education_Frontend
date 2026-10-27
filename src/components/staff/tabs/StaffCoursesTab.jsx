@@ -171,20 +171,44 @@ const StaffCoursesTab = ({
                       </span>
                     </div>
 
-                    {/* Middle Info: Residential Address, Phone, Joined Date */}
-                    <div className="grid grid-cols-2 gap-2 text-[11px] pt-2 border-t border-[#E3DDD0] bg-[#FAF8F4] p-2.5 rounded-xl">
-                      <div>
-                        <span className="text-[#8A8175] text-[10px] block font-semibold">RESIDENTIAL ADDRESS</span>
-                        <span className="text-slate-700 font-semibold text-[11px] truncate block capitalize">
-                          {getStudentAddress(s)}
-                        </span>
+                    {/* Middle Info: Residential Address, Joined Date, Phone & Fee Balance */}
+                    <div className="space-y-2 pt-2 border-t border-[#E3DDD0] bg-[#FAF8F4] p-2.5 rounded-xl text-[11px]">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <span className="text-[#8A8175] text-[10px] block font-semibold">RESIDENTIAL ADDRESS</span>
+                          <span className="text-slate-700 font-semibold text-[11px] truncate block capitalize">
+                            {getStudentAddress(s)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[#8A8175] text-[10px] block font-semibold">JOINED DATE</span>
+                          <span className="text-slate-700 font-semibold text-[11px]">{getStudentEnrolledDate(s)}</span>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-[#8A8175] text-[10px] block font-semibold">JOINED DATE</span>
-                        <span className="text-slate-700 font-semibold text-[11px]">{getStudentEnrolledDate(s)}</span>
+
+                      {/* Financial Balance Summary */}
+                      <div className="pt-2 border-t border-[#E3DDD0] flex items-center justify-between gap-2">
+                        <div>
+                          <span className="text-[#8A8175] text-[10px] block font-semibold">FEE STATUS</span>
+                          <span className="text-slate-800 font-bold text-[11px]">
+                            ₹{Number(s.total_paid || 0).toLocaleString('en-IN')} / ₹{Number(s.total_fee || activeCourseObj?.fee || 0).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                        <div>
+                          {Number(s.balance_amount || 0) <= 0 ? (
+                            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                              Fully Paid
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                              ₹{Number(s.balance_amount || 0).toLocaleString('en-IN')} Due
+                            </span>
+                          )}
+                        </div>
                       </div>
+
                       {s.phone && (
-                        <div className="col-span-2 pt-1 border-t border-[#E3DDD0] flex items-center gap-1.5 text-slate-700 text-[11px]">
+                        <div className="pt-1 border-t border-[#E3DDD0] flex items-center gap-1.5 text-slate-700 text-[11px]">
                           <Phone className="h-3 w-3 text-slate-400 shrink-0" />
                           <span className="font-mono">{s.phone}</span>
                         </div>
@@ -213,12 +237,12 @@ const StaffCoursesTab = ({
               <table className="w-full text-left text-xs">
                 <thead className="bg-[#FAF8F4] border-b border-[#E3DDD0] text-[10px] font-extrabold text-[#8A8175] uppercase tracking-wider">
                   <tr>
-                    <th className="px-6 py-3.5">Student</th>
-                    <th className="px-6 py-3.5">Contact</th>
-                    <th className="px-6 py-3.5">Residential Address</th>
-                    <th className="px-6 py-3.5">Enrollment Status</th>
-                    <th className="px-6 py-3.5">Joined Date</th>
-                    <th className="px-6 py-3.5 text-right">Action</th>
+                    <th className="px-5 py-3.5">Student</th>
+                    <th className="px-5 py-3.5">Contact</th>
+                    <th className="px-5 py-3.5">Fee & Balance</th>
+                    <th className="px-5 py-3.5">Enrollment Status</th>
+                    <th className="px-5 py-3.5">Joined Date</th>
+                    <th className="px-5 py-3.5 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E3DDD0]/50 font-medium text-slate-700">
@@ -229,7 +253,7 @@ const StaffCoursesTab = ({
                       className="hover:bg-[#FAF8F4] cursor-pointer transition-colors"
                       title="Click to view student full details"
                     >
-                      <td className="px-6 py-3.5">
+                      <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
                           <div className="h-8 w-8 rounded-xl bg-[#F1EDE4] text-[#9C6B2E] flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs border border-[#E3DDD0]">
                             {(s.name || s.student_name || 'S').charAt(0).toUpperCase()}
@@ -240,7 +264,7 @@ const StaffCoursesTab = ({
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-3.5 text-xs font-mono">
+                      <td className="px-5 py-3.5 text-xs font-mono">
                         {s.phone ? (
                           <span className="inline-flex items-center gap-1.5 text-slate-700 bg-[#FAF8F4] px-2 py-0.5 rounded-md border border-[#E3DDD0]">
                             <Phone className="h-3 w-3 text-slate-400" />
@@ -250,15 +274,28 @@ const StaffCoursesTab = ({
                           '—'
                         )}
                       </td>
-                      <td className="px-6 py-3.5 text-xs font-medium text-slate-700">
-                        {getStudentAddress(s) !== '—' ? (
-                          <span className="inline-flex items-center gap-1.5 text-slate-700 capitalize">
-                            <MapPin className="h-3.5 w-3.5 text-[#9C6B2E] shrink-0" />
-                            <span>{getStudentAddress(s)}</span>
+                      <td className="px-5 py-3.5">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-xs font-bold text-slate-800">
+                            ₹{Number(s.total_paid || 0).toLocaleString('en-IN')} / ₹{Number(s.total_fee || activeCourseObj?.fee || 0).toLocaleString('en-IN')}
                           </span>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            {Number(s.balance_amount || 0) <= 0 ? (
+                              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                Fully Paid
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                                ₹{Number(s.balance_amount || 0).toLocaleString('en-IN')} Due
+                              </span>
+                            )}
+                            {(s.payment_review_status === 'pending' || s.payment_review_status === 'awaiting_review') && (
+                              <span className="text-[9px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                                Review Pending
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </td>
                       <td className="px-6 py-3.5">
                         <span

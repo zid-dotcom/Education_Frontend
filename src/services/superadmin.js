@@ -497,3 +497,13 @@ export {
   rejectSuperAdminStaffVerificationApi,
 } from './superadminstaffverification';
 
+// ─── Expenses ───────────────────────────────────────────────────────────────
+export { getSuperAdminExpensesApi } from './expenses';
+
+// ─── Receipts ───────────────────────────────────────────────────────────────
+export {
+  getSuperAdminReceiptsApi,
+  getSuperAdminReceiptApi,
+  downloadSuperAdminReceiptApi,
+} from './superadminreceipts';
+

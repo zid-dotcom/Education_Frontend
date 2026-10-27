@@ -19,9 +19,11 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   AlertCircle,
+  TrendingDown,
   TrendingUp,
   Activity,
   Megaphone,
+  Receipt,
   X,
 } from 'lucide-react';
 import { getSuperAdminUnreadMessagesCountApi } from '../../services/superadmin';
@@ -84,6 +86,8 @@ const NAV_GROUPS = [
     label: 'Finance',
     items: [
       { id: 'profit', label: 'Branch Profit', icon: IndianRupee, path: '/super-admin/profit' },
+      { id: 'receipts', label: 'Student Receipts', icon: Receipt, path: '/super-admin/receipts' },
+      { id: 'expenses', label: 'Branch Expenses', icon: TrendingDown, path: '/super-admin/expenses' },
       { id: 'attendance', label: 'Attendance', icon: CalendarCheck, path: '/super-admin/attendance' },
       { id: 'due-students', label: 'Due Students', icon: AlertCircle, path: '/super-admin/due-students' },
     ],

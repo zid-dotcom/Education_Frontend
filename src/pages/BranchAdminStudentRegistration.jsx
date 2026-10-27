@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Check, IndianRupee, Mail, Menu, Phone, UserPlus } from "lucide-react";
+import { Check, Download, IndianRupee, Loader2, Mail, Menu, Phone, Receipt, UserPlus, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import BranchAdminSidebar from "../components/layout/BranchAdminSidebar";
@@ -9,6 +9,8 @@ import {
   createBranchAdmissionApi,
   getBranchAdmissionsApi,
 } from "../services/branchadminadmissions";
+import { downloadBranchAdminReceiptApi } from "../services/branchadminreceipts";
+import PaymentSuccessReceiptModal from "../components/common/PaymentSuccessReceiptModal";
 
 const INITIAL_FORM = {
   name: "",
@@ -109,6 +111,8 @@ function BranchAdminStudentRegistration() {
     upi_amount: "",
     status: "received"
   });
+  const [registrationReceipt, setRegistrationReceipt] = useState(null);
+  const [downloadingReceipt, setDownloadingReceipt] = useState(false);
 
   useEffect(() => {
     if (!token || !form.courseId) return;
@@ -317,13 +321,44 @@ function BranchAdminStudentRegistration() {
         token,
       );
 
+      const hasReceipt =
+        createdAdmission?.receipt ||
+        createdAdmission?.receipt_url ||
+        createdAdmission?.receipt_id ||
+        createdAdmission?.receipt_number ||
+        (registrationPayment.status === "received" && totalPay > 0);
+
+      if (hasReceipt) {
+        const receiptObj = createdAdmission?.receipt || {
+          ...createdAdmission,
+          receipt_url: createdAdmission?.receipt_url,
+          download_url: createdAdmission?.download_url,
+          receipt_id: createdAdmission?.receipt_id || (createdAdmission?.receipt_url ? String(createdAdmission.receipt_url).split('/').pop() : null),
+          receipt_number: createdAdmission?.receipt_number || createdAdmission?.receipt_id || `REC-${Date.now().toString().slice(-4)}`,
+          student_name: createdAdmission?.name || form.name.trim(),
+          student_phone: createdAdmission?.phone || form.phone.trim(),
+          student_email: createdAdmission?.email || form.email.trim(),
+          course_title: selectedCourse?.title || "Course",
+          course_fee: courseFee,
+          amount_paid: (registrationPayment.status === "received" ? totalPay : 0) || createdAdmission?.amount || createdAdmission?.paid_amount,
+          amount: (registrationPayment.status === "received" ? totalPay : 0) || createdAdmission?.amount || createdAdmission?.paid_amount,
+          payment_method: cashAmt > 0 && upiAmt > 0 ? "split" : cashAmt > 0 ? "cash" : "upi",
+          payment_type: form.paymentPlan === "installment" ? "installment" : "full",
+          installment_number: form.paymentPlan === "installment" && registrationPayment.status === "received" ? registrationPayment.term_number : null,
+          cash_amount: cashAmt,
+          upi_amount: upiAmt,
+          payment_date: new Date().toISOString(),
+        };
+        setRegistrationReceipt(receiptObj);
+      }
+
       try {
         const updatedAdmissions = await getBranchAdmissionsApi(token);
         setAdmissions(Array.isArray(updatedAdmissions) ? updatedAdmissions : []);
       } catch {
         setAdmissions((current) => [createdAdmission, ...current]);
       }
-      setSuccess(`${createdAdmission.name} registered successfully.`);
+      setSuccess(`${createdAdmission.name} registered successfully.${receiptObj ? " Payment receipt generated!" : ""}`);
       setActiveTab("registrations");
       setForm({
         ...INITIAL_FORM,
@@ -1087,7 +1122,7 @@ function BranchAdminStudentRegistration() {
                     setPaymentLoading(true);
                     setPaymentError("");
                     try {
-                      await addBranchAdmissionPaymentApi(
+                      const paymentRes = await addBranchAdmissionPaymentApi(
                         selectedAdmissionForPayment.enrollment_id,
                         {
                           installment_number: Number(paymentForm.installment_number),
@@ -1097,9 +1132,28 @@ function BranchAdminStudentRegistration() {
                         },
                         token
                       );
+                      const receiptObj =
+                        paymentRes?.receipt ||
+                        (paymentRes?.receipt_id || paymentRes?.receipt_url
+                          ? {
+                              id: paymentRes.receipt_id,
+                              receipt_id: paymentRes.receipt_id,
+                              receipt_url: paymentRes.receipt_url,
+                              download_url: paymentRes.download_url,
+                              student_name: selectedAdmissionForPayment?.student_name || selectedAdmissionForPayment?.name,
+                              course_title: selectedAdmissionForPayment?.course_title || selectedAdmissionForPayment?.course_name,
+                              amount_paid: Number(paymentForm.cash_amount || 0) + Number(paymentForm.upi_amount || 0),
+                              installment_number: Number(paymentForm.installment_number),
+                              payment_date: paymentForm.payment_date,
+                              ...paymentRes,
+                            }
+                          : null);
+                      if (receiptObj) {
+                        setRegistrationReceipt(receiptObj);
+                      }
                       const updatedAdmissions = await getBranchAdmissionsApi(token);
                       setAdmissions(Array.isArray(updatedAdmissions) ? updatedAdmissions : []);
-                      setSuccess(`Payment added.`);
+                      setSuccess(`Payment added successfully.${receiptObj ? " Receipt generated!" : ""}`);
                       setSelectedAdmissionForPayment(null);
                     } catch (err) {
                       setPaymentError(err.message || "Failed to add payment.");
@@ -1164,6 +1218,23 @@ function BranchAdminStudentRegistration() {
           </div>
         );
       })()}
+
+      {/* Generated Receipt Modal with Congratulations & Download */}
+      <PaymentSuccessReceiptModal
+        isOpen={Boolean(registrationReceipt)}
+        onClose={() => setRegistrationReceipt(null)}
+        receipt={registrationReceipt}
+        receiptUrl={registrationReceipt?.receipt_url}
+        downloadUrl={registrationReceipt?.download_url}
+        token={token}
+        isBranchAdmin={true}
+        title="Congratulations! Student course enrollment confirmed"
+        subtitle="Student admission and initial payment were successfully recorded into branch ledger. Official receipt generated below."
+        onViewReceipt={(rcpt, url) => {
+          if (url) window.open(url, "_blank");
+          else navigate("/branch-admin/receipts");
+        }}
+      />
     </div>
   );
 }
