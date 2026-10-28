@@ -1,12 +1,30 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const parseResponse = async (response, fallbackMessage) => {
-  const data = await response.json();
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    const text = await response.text().catch(() => "");
+    throw new Error(text || fallbackMessage || `Request failed with status ${response.status}`);
+  }
+
   if (!response.ok) {
-    const detail = Array.isArray(data.detail)
-      ? data.detail.map((item) => item.msg).join(", ")
-      : data.detail;
-    throw new Error(detail || fallbackMessage);
+    let detail = data?.detail || data?.message || data?.error;
+    if (Array.isArray(detail)) {
+      detail = detail
+        .map((item) => {
+          if (typeof item === "string") return item;
+          const loc = Array.isArray(item.loc)
+            ? item.loc.filter((part) => part !== "body").join(" -> ")
+            : "";
+          return loc ? `${loc}: ${item.msg || JSON.stringify(item)}` : (item.msg || JSON.stringify(item));
+        })
+        .join("; ");
+    } else if (typeof detail === "object" && detail !== null) {
+      detail = JSON.stringify(detail);
+    }
+    throw new Error(detail || fallbackMessage || `Request failed with status ${response.status}`);
   }
   return data;
 };

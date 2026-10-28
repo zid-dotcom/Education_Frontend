@@ -118,3 +118,92 @@ export async function logoutApi(token) {
   }
 }
 
+
+/**
+ * Request OTP for student forgot password
+ * POST /auth/forgot-password/request-otp
+ * @param {Object} data { email: string }
+ */
+export async function requestForgotPasswordOtpApi(data) {
+  const response = await fetch(`${API_BASE_URL}/auth/forgot-password/request-otp`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email: data.email.trim().toLowerCase() }),
+  });
+
+  const resData = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    let detail = resData?.detail || resData?.message || resData?.error;
+    if (Array.isArray(detail)) {
+      detail = detail.map((d) => d.msg || JSON.stringify(d)).join(', ');
+    }
+    throw new Error(detail || 'Failed to request OTP. Please try again.');
+  }
+
+  return resData; // { message: '...' }
+}
+
+/**
+ * Verify OTP for student forgot password
+ * POST /auth/forgot-password/verify-otp
+ * @param {Object} data { email: string, otp: string }
+ */
+export async function verifyForgotPasswordOtpApi(data) {
+  const response = await fetch(`${API_BASE_URL}/auth/forgot-password/verify-otp`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      email: data.email.trim().toLowerCase(),
+      otp: String(data.otp).trim(),
+    }),
+  });
+
+  const resData = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    let detail = resData?.detail || resData?.message || resData?.error;
+    if (Array.isArray(detail)) {
+      detail = detail.map((d) => d.msg || JSON.stringify(d)).join(', ');
+    }
+    throw new Error(detail || 'Invalid or expired OTP code.');
+  }
+
+  return resData; // { reset_token: string, message?: string }
+}
+
+/**
+ * Reset student forgotten password
+ * POST /auth/forgot-password/reset
+ * @param {Object} data { email: string, reset_token: string, new_password: string, confirm_password: string }
+ */
+export async function resetForgottenPasswordApi(data) {
+  const response = await fetch(`${API_BASE_URL}/auth/forgot-password/reset`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      email: data.email.trim().toLowerCase(),
+      reset_token: data.reset_token,
+      new_password: data.new_password,
+      confirm_password: data.confirm_password,
+    }),
+  });
+
+  const resData = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    let detail = resData?.detail || resData?.message || resData?.error;
+    if (Array.isArray(detail)) {
+      detail = detail.map((d) => d.msg || JSON.stringify(d)).join(', ');
+    }
+    throw new Error(detail || 'Failed to reset password. Please verify requirements and try again.');
+  }
+
+  return resData; // { message: string }
+}

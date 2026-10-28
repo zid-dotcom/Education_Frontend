@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
+  AlertCircle,
   AlertTriangle,
   BookOpen,
   CalendarDays,
+  Check,
   CheckCircle2,
   Clock,
   CreditCard,
@@ -27,6 +29,8 @@ import {
   updateBranchCourseApi,
 } from "../services/branchadmincourses";
 import { getCourseImageUrl } from "../services/courses";
+import { getBranchAdminGstSettingsApi, calculateGstBreakdown } from "../services/gst";
+import Toast from "../components/common/Toast";
 
 /* Same display-font pairing used across the branch admin pages
    (Fraunces headings, Inter body). No-op if already injected. */
@@ -105,7 +109,7 @@ const EMPTY_FORM = {
   level: "",
   start_date: "",
   end_date: "",
-  installment_schedule: "",
+  installment_schedule: "monthly",
   installment_count: "",
   installment_terms: [],
   curriculum: [{ title: "", topics: [""] }],
@@ -132,10 +136,43 @@ const BranchAdminCourses = () => {
   const [saving, setSaving] = useState(false);
   const [editingCourseId, setEditingCourseId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [toast, setToast] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const [gstSettings, setGstSettings] = useState({
+    cgst_percent: 0,
+    sgst_percent: 0,
+    total_gst_percent: 0,
+  });
+  const [loadingGst, setLoadingGst] = useState(false);
+
+  const fetchGstSettings = async () => {
+    if (!token) return;
+    try {
+      setLoadingGst(true);
+      const res = await getBranchAdminGstSettingsApi(token);
+      if (res && (res.cgst_percent !== undefined || res.total_gst_percent !== undefined)) {
+        setGstSettings({
+          cgst_percent: Number(res.cgst_percent ?? 0),
+          sgst_percent: Number(res.sgst_percent ?? 0),
+          total_gst_percent: Number(
+            res.total_gst_percent ?? (Number(res.cgst_percent ?? 0) + Number(res.sgst_percent ?? 0))
+          ),
+        });
+      }
+    } catch (err) {
+      console.warn("Could not load Branch Admin GST settings:", err);
+    } finally {
+      setLoadingGst(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchGstSettings();
+  }, [token]);
 
   const loadCourses = async () => {
     if (!token) return;
@@ -163,6 +200,7 @@ const BranchAdminCourses = () => {
   };
 
   const openCreate = () => {
+    fetchGstSettings();
     resetForm();
     setError("");
     setSuccess("");
@@ -228,7 +266,7 @@ const BranchAdminCourses = () => {
       setForm({
         title: details.title || "",
         description: details.description || "",
-        price: details.price ?? "",
+        price: details.base_price ?? details.price ?? "",
         duration: details.duration || "",
         category: details.category || "",
         level: details.level || "",
@@ -262,13 +300,59 @@ const BranchAdminCourses = () => {
     const { name, value } = event.target;
     setForm((current) => {
       const next = { ...current, [name]: value };
-      /* When installment_count changes, resize installment_terms array */
+      /* When installment_count changes, resize installment_terms array and auto-split if target known */
       if (name === "installment_count") {
         const count = Math.max(0, parseInt(value, 10) || 0);
         const terms = [...current.installment_terms];
-        while (terms.length < count) terms.push(emptyTerm(terms.length + 1));
-        next.installment_terms = terms.slice(0, count);
+
+        const cgst = editingCourse?.cgst_percent ?? gstSettings.cgst_percent;
+        const sgst = editingCourse?.sgst_percent ?? gstSettings.sgst_percent;
+        const bd = calculateGstBreakdown(current.price, cgst, sgst);
+        const currentTarget = bd.totalAmount;
+
+        const perTerm = count > 0 && currentTarget > 0 ? Math.floor(currentTarget / count) : "";
+        const remainder =
+          count > 0 && currentTarget > 0
+            ? Math.round((currentTarget - perTerm * count) * 100) / 100
+            : 0;
+
+        if (count > terms.length) {
+          for (let i = terms.length; i < count; i++) {
+            terms.push({
+              term_number: i + 1,
+              amount: perTerm !== "" ? String(perTerm + (i === 0 ? remainder : 0)) : "",
+              due_date: "",
+            });
+          }
+        } else {
+          terms.splice(count);
+        }
+        next.installment_terms = terms;
+        if (!next.installment_schedule) {
+          next.installment_schedule = "monthly";
+        }
       }
+
+      /* When price changes and terms exist, if terms are currently empty, auto-distribute */
+      if (name === "price") {
+        const count = Math.max(0, parseInt(current.installment_count, 10) || 0);
+        if (count > 0 && current.installment_terms.length > 0) {
+          const cgst = editingCourse?.cgst_percent ?? gstSettings.cgst_percent;
+          const sgst = editingCourse?.sgst_percent ?? gstSettings.sgst_percent;
+          const bd = calculateGstBreakdown(value, cgst, sgst);
+          const currentTarget = bd.totalAmount;
+          const allEmpty = current.installment_terms.every((t) => !t.amount);
+          if (allEmpty && currentTarget > 0) {
+            const perTerm = Math.floor(currentTarget / count);
+            const remainder = Math.round((currentTarget - perTerm * count) * 100) / 100;
+            next.installment_terms = current.installment_terms.map((t, idx) => ({
+              ...t,
+              amount: String(perTerm + (idx === 0 ? remainder : 0)),
+            }));
+          }
+        }
+      }
+
       /* When schedule is set to empty (full payment), reset count and terms */
       if (name === "installment_schedule" && !value) {
         next.installment_count = "";
@@ -350,7 +434,14 @@ const BranchAdminCourses = () => {
     setPreviewImage(URL.createObjectURL(file));
   };
 
-  /* Derived: installment price validation */
+  /* Derived GST & installment price validation */
+  const gstBreakdown = useMemo(() => {
+    const cgst = editingCourse?.cgst_percent ?? gstSettings.cgst_percent;
+    const sgst = editingCourse?.sgst_percent ?? gstSettings.sgst_percent;
+    return calculateGstBreakdown(form.price, cgst, sgst);
+  }, [form.price, editingCourse, gstSettings]);
+
+  const targetTotal = gstBreakdown.totalAmount;
   const installmentCount = Math.max(0, parseInt(form.installment_count, 10) || 0);
   const coursePrice = Number(form.price || 0);
   const installmentTotal = useMemo(
@@ -361,9 +452,9 @@ const BranchAdminCourses = () => {
       ),
     [form.installment_terms],
   );
-  const installmentDiff = coursePrice - installmentTotal;
+  const installmentDiff = Math.round((targetTotal - installmentTotal) * 100) / 100;
   const installmentAmountValid =
-    installmentCount === 0 || installmentTotal === coursePrice;
+    installmentCount === 0 || Math.abs(installmentTotal - targetTotal) < 0.01;
   /* Check every term has amount and due_date filled */
   const termsComplete =
     installmentCount === 0 ||
@@ -371,12 +462,26 @@ const BranchAdminCourses = () => {
       (t) => Number(t.amount) > 0 && t.due_date,
     );
 
+  const handleDistributeInstallmentsEvenly = () => {
+    if (installmentCount <= 0 || targetTotal <= 0) return;
+    const perTerm = Math.floor(targetTotal / installmentCount);
+    const remainder = Math.round((targetTotal - (perTerm * installmentCount)) * 100) / 100;
+    setForm((current) => ({
+      ...current,
+      installment_terms: current.installment_terms.map((term, i) => ({
+        ...term,
+        amount: String(perTerm + (i === 0 ? remainder : 0)),
+      })),
+    }));
+  };
+
   const submit = async (event) => {
     event.preventDefault();
     setError("");
     setSuccess("");
     if (!editingCourse && !imageFile) {
       setError("Please choose a course image.");
+      setToast({ type: "error", message: "Please choose a course image.", title: "Validation Error" });
       return;
     }
     if (
@@ -390,12 +495,13 @@ const BranchAdminCourses = () => {
     }
     if (installmentCount > 0 && !installmentAmountValid) {
       setError(
-        `Installment amounts must equal the course price. Current total: ${formatPrice(installmentTotal)}, Course price: ${formatPrice(coursePrice)}.`,
+        `Installment amounts must equal the GST-inclusive course fee (${formatPrice(targetTotal)}). Current total: ${formatPrice(installmentTotal)}, difference: ${formatPrice(Math.abs(installmentDiff))}.`,
       );
       return;
     }
     if (installmentCount > 0 && !termsComplete) {
       setError("Please fill in the amount and due date for every installment term.");
+      setToast({ type: "error", message: "Please fill in amount and due date for every installment.", title: "Incomplete Installment Terms" });
       return;
     }
     try {
@@ -450,8 +556,19 @@ const BranchAdminCourses = () => {
         `${saved.title} ${editingCourse ? "updated" : "created"} successfully.`,
       );
       closeModal();
+      setToast({
+        type: "success",
+        message: `Course "${saved.title}" ${editingCourse ? "updated" : "created"} successfully.`,
+        title: "Course Saved",
+      });
     } catch (err) {
-      setError(err.message || "Failed to save course.");
+      const errMsg = err.message || "Failed to save course.";
+      setError(errMsg);
+      setToast({
+        type: "error",
+        message: errMsg,
+        title: "Backend Error",
+      });
     } finally {
       setSaving(false);
     }
@@ -663,12 +780,24 @@ const BranchAdminCourses = () => {
                         <Clock className="h-3.5 w-3.5" style={{ color: "#9c6b2e" }} />
                         {course.duration || "Flexible"}
                       </span>
-                      <span
-                        className="text-xl tabular-nums"
-                        style={{ ...serif, fontWeight: 500, color: "#5c7a5a" }}
-                      >
-                        {formatPrice(course.price)}
-                      </span>
+                      <div className="text-right">
+                        <span
+                          className="text-xl tabular-nums block"
+                          style={{ ...serif, fontWeight: 500, color: "#5c7a5a" }}
+                        >
+                          {formatPrice(course.price)}
+                        </span>
+                        <span
+                          className="block text-[10px] font-medium"
+                          style={{ color: "#8a8175" }}
+                        >
+                          {course.base_price ? (
+                            <>Base: {formatPrice(course.base_price)} + GST: {formatPrice(course.total_gst_amount)}</>
+                          ) : (
+                            <>Incl. all taxes</>
+                          )}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="mt-3 grid grid-cols-2 gap-3 text-xs" style={{ color: "#8a8175" }}>
@@ -806,8 +935,13 @@ const BranchAdminCourses = () => {
                     placeholder="Describe the course outcomes and experience."
                   />
                 </label>
-                <label className="block text-sm" style={{ color: "#5b5346" }}>
-                  Price
+                <div className="block text-sm" style={{ color: "#5b5346" }}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span>Course Base Price (Pre-GST)</span>
+                    <span className="text-xs font-semibold" style={{ color: "#9c6b2e" }}>
+                      + {gstBreakdown.totalGstPercent}% GST
+                    </span>
+                  </div>
                   <input
                     name="price"
                     type="number"
@@ -820,7 +954,36 @@ const BranchAdminCourses = () => {
                     style={inputStyle}
                     placeholder="25000"
                   />
-                </label>
+                  {Number(form.price) > 0 && (
+                    <div
+                      className="mt-2.5 rounded-xl p-3 text-xs space-y-1.5"
+                      style={{ background: "#fcfbf7", border: "1px solid #e3ddd0" }}
+                    >
+                      <div className="flex justify-between" style={{ color: "#8a8175" }}>
+                        <span>Pre-GST Base Price:</span>
+                        <span className="font-semibold text-slate-800">{formatPrice(gstBreakdown.basePrice)}</span>
+                      </div>
+                      <div className="flex justify-between" style={{ color: "#8a8175" }}>
+                        <span>CGST ({gstBreakdown.cgstPercent}%):</span>
+                        <span className="font-semibold text-slate-800">+{formatPrice(gstBreakdown.cgstAmount)}</span>
+                      </div>
+                      <div className="flex justify-between" style={{ color: "#8a8175" }}>
+                        <span>SGST ({gstBreakdown.sgstPercent}%):</span>
+                        <span className="font-semibold text-slate-800">+{formatPrice(gstBreakdown.sgstAmount)}</span>
+                      </div>
+                      <div
+                        className="flex justify-between pt-1.5 font-bold"
+                        style={{ borderTop: "1px solid #efe9dd", color: "#5c7a5a" }}
+                      >
+                        <span>Total Payable (with GST):</span>
+                        <span className="text-sm">{formatPrice(gstBreakdown.totalAmount)}</span>
+                      </div>
+                      <p className="text-[11px] pt-0.5" style={{ color: "#9c6b2e" }}>
+                        ⚡ Installments will be validated against this GST-inclusive total ({formatPrice(gstBreakdown.totalAmount)}).
+                      </p>
+                    </div>
+                  )}
+                </div>
                 <label className="block text-sm" style={{ color: "#5b5346" }}>
                   Duration
                   <input
@@ -883,45 +1046,49 @@ const BranchAdminCourses = () => {
                 </label>
               </div>
 
-              {/* ──── Payment & Installments ──── */}
+              {/* ──── Payment & Installments (User Friendly - Same as Super Admin) ──── */}
               <div
-                className="rounded-xl p-4 sm:p-5"
+                className="rounded-2xl p-6 mt-6"
                 style={{ background: "#faf8f4", border: "1px solid #e3ddd0" }}
               >
-                <div className="mb-4 flex items-center gap-3">
-                  <span
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-                    style={{ background: "#f7efe0", color: "#9c6b2e" }}
-                  >
-                    <CreditCard className="h-4 w-4" />
-                  </span>
-                  <div>
-                    <h3 className="text-base" style={{ ...serif, fontWeight: 500, color: "#17140f" }}>
-                      Payment & Installments
-                    </h3>
-                    <p className="mt-0.5 text-xs" style={{ color: "#a39a8c" }}>
-                      Configure installment plans for this course.
-                    </p>
+                <div className="mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white border border-[#e3ddd0]">
+                      <CreditCard className="h-4 w-4" style={{ color: "#9c6b2e" }} />
+                    </div>
+                    <div>
+                      <h3
+                        className="text-lg font-bold"
+                        style={{ fontFamily: "'Fraunces', serif", color: "#17140f" }}
+                      >
+                        Payment & Installments
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        Configure installment plans for this course.
+                      </p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="block text-sm" style={{ color: "#5b5346" }}>
-                    Installment Schedule
+                <div className="grid gap-4 sm:grid-cols-2 mb-6">
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">
+                      Installment Schedule
+                    </label>
                     <select
                       name="installment_schedule"
-                      value={form.installment_schedule}
+                      value={form.installment_schedule || "monthly"}
                       onChange={updateField}
-                      className={inputClass}
-                      style={inputStyle}
+                      className="w-full rounded-xl border border-[#e3ddd0] bg-white px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#9c6b2e]"
                     >
-                      <option value="">Select schedule</option>
                       <option value="monthly">Monthly</option>
                       <option value="weekly">Weekly</option>
                     </select>
-                  </label>
-                  <label className="block text-sm" style={{ color: "#5b5346" }}>
-                    Installment Count
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">
+                      Installment Count
+                    </label>
                     <input
                       name="installment_count"
                       type="number"
@@ -929,202 +1096,163 @@ const BranchAdminCourses = () => {
                       step="1"
                       value={form.installment_count}
                       onChange={updateField}
-                      className={inputClass}
-                      style={inputStyle}
-                      placeholder="0"
+                      placeholder="e.g. 2"
+                      className="w-full rounded-xl border border-[#e3ddd0] bg-white px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#9c6b2e]"
                     />
-                  </label>
+                  </div>
                 </div>
 
                 {/* ── Installment Term Cards ── */}
                 {installmentCount > 0 && (
-                  <div className="mt-5">
-                    <div
-                      className="mb-4 pb-3"
-                      style={{ borderBottom: "1px solid #e3ddd0" }}
-                    >
-                      <h4
-                        className="text-sm font-medium"
-                        style={{ color: "#17140f" }}
-                      >
-                        Installment Terms
-                      </h4>
-                      <p className="mt-0.5 text-xs" style={{ color: "#a39a8c" }}>
-                        Define amount and due date for each installment.
-                      </p>
+                  <div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-4 border-b border-[#e3ddd0] pb-2">
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-800">
+                          Installment Terms
+                        </h4>
+                        <p className="text-xs text-slate-400">
+                          Define amount and due date for each installment.
+                        </p>
+                      </div>
+                      {targetTotal > 0 && installmentCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleDistributeInstallmentsEvenly}
+                          className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-amber-100/70 text-[#9c6b2e] border border-amber-300 hover:bg-amber-200/70 transition cursor-pointer"
+                        >
+                          Distribute {formatPrice(targetTotal)} Evenly
+                        </button>
+                      )}
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {form.installment_terms.map((term, idx) => (
                         <div
                           key={idx}
-                          className="rounded-xl p-4"
-                          style={{
-                            background: "#ffffff",
-                            border: "1px solid #e3ddd0",
-                          }}
+                          className="rounded-xl p-4 bg-white border border-[#e3ddd0]"
                         >
-                          <p
-                            className="mb-3 text-xs font-semibold tracking-wide uppercase"
-                            style={{ color: "#9c6b2e" }}
-                          >
-                            Term {idx + 1}
-                          </p>
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <label
-                              className="block text-sm"
-                              style={{ color: "#5b5346" }}
-                            >
-                              Amount
-                              <div className="relative mt-1">
-                                <span
-                                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm"
-                                  style={{ color: "#a39a8c" }}
-                                >
+                          <div className="text-xs font-bold text-[#9c6b2e] uppercase tracking-wider mb-3">
+                            TERM {idx + 1}
+                          </div>
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            <div>
+                              <label className="block text-xs text-slate-500 mb-1">
+                                Amount
+                              </label>
+                              <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                                   ₹
                                 </span>
                                 <input
                                   type="number"
                                   min="0"
                                   step="0.01"
-                                  required
                                   value={term.amount}
                                   onChange={(e) =>
                                     updateTermField(idx, "amount", e.target.value)
                                   }
-                                  className={`${inputClass} mt-0 pl-7`}
-                                  style={inputStyle}
-                                  placeholder="10000"
+                                  placeholder=""
+                                  className="w-full rounded-lg border border-[#e3ddd0] bg-white pl-8 pr-3 py-2 text-sm focus:outline-none focus:border-[#9c6b2e]"
                                 />
                               </div>
-                            </label>
-                            <label
-                              className="block text-sm"
-                              style={{ color: "#5b5346" }}
-                            >
-                              Due Date
+                            </div>
+                            <div>
+                              <label className="block text-xs text-slate-500 mb-1">
+                                Due Date
+                              </label>
                               <input
                                 type="date"
-                                required
                                 value={term.due_date}
                                 onChange={(e) =>
                                   updateTermField(idx, "due_date", e.target.value)
                                 }
-                                className={inputClass}
-                                style={inputStyle}
+                                className="w-full rounded-lg border border-[#e3ddd0] bg-white px-3 py-2 text-sm focus:outline-none focus:border-[#9c6b2e]"
                               />
-                            </label>
+                            </div>
                           </div>
                         </div>
                       ))}
                     </div>
 
-                    {/* ── Price Summary ── */}
-                    <div
-                      className="mt-4 rounded-xl p-4"
-                      style={{
-                        background: installmentAmountValid
-                          ? "#eef2ea"
-                          : "#fef2f2",
-                        border: `1px solid ${
-                          installmentAmountValid ? "#d3e0cd" : "#fecaca"
-                        }`,
-                      }}
-                    >
-                      <div className="flex items-start gap-3">
-                        <span
-                          className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-                          style={{
-                            background: installmentAmountValid
-                              ? "#d3e0cd"
-                              : "#fecaca",
-                            color: installmentAmountValid
-                              ? "#39533a"
-                              : "#b91c1c",
-                          }}
+                    {/* ── Price Summary Box (Identical to Super Admin) ── */}
+                    {(() => {
+                      const diff = Math.round((targetTotal - installmentTotal) * 100) / 100;
+                      const isMatched = Math.abs(diff) < 0.01;
+                      return (
+                        <div
+                          className={`rounded-xl p-4 mt-6 border flex flex-wrap items-center justify-between gap-4 ${
+                            isMatched
+                              ? "bg-[#eef2ea] border-[#d5e0d5]"
+                              : "bg-amber-50/70 border-amber-300"
+                          }`}
                         >
-                          {installmentAmountValid ? (
-                            <CheckCircle2 className="h-4 w-4" />
-                          ) : (
-                            <AlertTriangle className="h-4 w-4" />
-                          )}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`flex h-6 w-6 items-center justify-center rounded-full bg-white border ${
+                                isMatched
+                                  ? "border-[#5c7a5a]"
+                                  : "border-amber-500"
+                              }`}
+                            >
+                              <Check
+                                className={`h-3.5 w-3.5 ${
+                                  isMatched ? "text-[#5c7a5a]" : "text-amber-600"
+                                }`}
+                              />
+                            </div>
                             <div>
-                              <span
-                                className="text-xs"
-                                style={{ color: "#8a8175" }}
-                              >
-                                Total Installments
-                              </span>
-                              <p
-                                className="font-medium tabular-nums"
-                                style={{ color: "#17140f" }}
-                              >
+                              <p className="text-[11px] text-slate-500">
+                                Installments Sum
+                              </p>
+                              <p className="font-bold text-slate-800">
                                 {formatPrice(installmentTotal)}
                               </p>
                             </div>
-                            <div>
-                              <span
-                                className="text-xs"
-                                style={{ color: "#8a8175" }}
-                              >
-                                Course Price
-                              </span>
-                              <p
-                                className="font-medium tabular-nums"
-                                style={{ color: "#17140f" }}
-                              >
-                                {formatPrice(coursePrice)}
-                              </p>
-                            </div>
-                            <div>
-                              <span
-                                className="text-xs"
-                                style={{ color: "#8a8175" }}
-                              >
-                                Difference
-                              </span>
-                              <p
-                                className="font-medium tabular-nums"
-                                style={{
-                                  color: installmentAmountValid
-                                    ? "#5c7a5a"
-                                    : "#b91c1c",
-                                }}
-                              >
-                                {installmentDiff === 0
-                                  ? "₹0"
-                                  : installmentDiff > 0
-                                    ? `−${formatPrice(Math.abs(installmentDiff))}`
-                                    : `+${formatPrice(Math.abs(installmentDiff))}`}
-                              </p>
-                            </div>
                           </div>
-                          {!installmentAmountValid && (
-                            <p
-                              className="mt-2 text-xs font-medium"
-                              style={{ color: "#b91c1c" }}
-                            >
-                              Installment amounts must equal the course price.
+                          <div>
+                            <p className="text-[11px] text-slate-500">
+                              Base Price (Pre-GST)
                             </p>
-                          )}
+                            <p className="font-semibold text-slate-700">
+                              {formatPrice(gstBreakdown.basePrice)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[11px] text-slate-500">
+                              GST ({gstBreakdown.totalGstPercent}%)
+                            </p>
+                            <p className="font-semibold text-amber-700">
+                              +{formatPrice(gstBreakdown.totalGstAmount)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[11px] text-slate-500">
+                              Target (With GST)
+                            </p>
+                            <p className="font-bold text-[#9c6b2e]">
+                              {formatPrice(targetTotal)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[11px] text-slate-500">Status</p>
+                            <p
+                              className={`font-bold ${
+                                isMatched ? "text-emerald-700" : "text-amber-800"
+                              }`}
+                            >
+                              {isMatched
+                                ? "✓ Balanced"
+                                : `Diff: ${formatPrice(Math.abs(diff))} ${
+                                    diff > 0 ? "remaining" : "over"
+                                  }`}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
-
-              {previewImage && (
-                <img
-                  src={previewImage}
-                  alt="Course preview"
-                  className="h-40 w-full rounded-xl object-cover"
-                  style={{ border: "1px solid #e3ddd0" }}
-                />
-              )}
 
               {/* Curriculum */}
               <div
@@ -1214,6 +1342,23 @@ const BranchAdminCourses = () => {
                 </div>
               </div>
 
+              {error && (
+                <div
+                  className="rounded-xl p-3.5 mb-2 text-xs font-semibold flex items-start gap-2.5"
+                  style={{ background: "#fef2f2", color: "#991b1b", border: "1px solid #fecaca" }}
+                >
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                  <span className="flex-1 leading-relaxed">{error}</span>
+                  <button
+                    type="button"
+                    onClick={() => setError("")}
+                    className="text-red-400 hover:text-red-700"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
               <button
                 type="submit"
                 disabled={saving}
@@ -1231,6 +1376,7 @@ const BranchAdminCourses = () => {
           </div>
         </div>
       )}
+      <Toast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 };

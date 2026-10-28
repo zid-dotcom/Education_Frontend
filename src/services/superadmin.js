@@ -1,14 +1,31 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const parseResponse = async (response, fallbackMessage) => {
-  const resData = await response.json();
-  if (!response.ok) {
-    const detail = Array.isArray(resData.detail)
-      ? resData.detail.map((item) => item.msg).join(', ')
-      : resData.detail;
-    throw new Error(detail || fallbackMessage);
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    const text = await response.text().catch(() => '');
+    throw new Error(text || fallbackMessage || `Request failed with status ${response.status}`);
   }
-  return resData;
+  if (!response.ok) {
+    let detail = data?.detail || data?.message || data?.error;
+    if (Array.isArray(detail)) {
+      detail = detail
+        .map((item) => {
+          if (typeof item === 'string') return item;
+          const loc = Array.isArray(item.loc)
+            ? item.loc.filter((p) => p !== 'body').join(' -> ')
+            : '';
+          return loc ? `${loc}: ${item.msg || JSON.stringify(item)}` : (item.msg || JSON.stringify(item));
+        })
+        .join('; ');
+    } else if (typeof detail === 'object' && detail !== null) {
+      detail = JSON.stringify(detail);
+    }
+    throw new Error(detail || fallbackMessage || `Request failed with status ${response.status}`);
+  }
+  return data;
 };
 
 const authHeaders = (token) => ({
@@ -243,8 +260,8 @@ export async function updateSuperAdminStaffStatusApi(staffId, status, token) {
   return parseResponse(res, 'Failed to update staff status.');
 }
 
-// ─── Profit ───────────────────────────────────────────────────────────────────
-export const BACKEND_SUPPORTS_PROFIT_DATE_RANGE = false;
+// ─── Profit / Revenue ──────────────────────────────────────────────────────────
+export const BACKEND_SUPPORTS_PROFIT_DATE_RANGE = true;
 
 export function buildProfitDateQuery(dateOrRange) {
   if (!dateOrRange) return '';
@@ -252,16 +269,16 @@ export function buildProfitDateQuery(dateOrRange) {
     return `?date=${encodeURIComponent(dateOrRange)}`;
   }
   const { fromDate, toDate, date } = dateOrRange;
-  if (BACKEND_SUPPORTS_PROFIT_DATE_RANGE) {
-    const params = new URLSearchParams();
+  const params = new URLSearchParams();
+  if (fromDate && toDate && fromDate === toDate) {
+    params.append('date', fromDate);
+  } else {
     if (fromDate) params.append('from_date', fromDate);
     if (toDate) params.append('to_date', toDate);
-    const qs = params.toString();
-    return qs ? `?${qs}` : '';
+    if (!fromDate && !toDate && date) params.append('date', date);
   }
-  // Single-date fallback: backend currently accepts single `date` parameter
-  const singleDate = fromDate || date || toDate;
-  return singleDate ? `?date=${encodeURIComponent(singleDate)}` : '';
+  const qs = params.toString();
+  return qs ? `?${qs}` : '';
 }
 
 export async function getSuperAdminProfitBranchesApi(token) {
@@ -507,3 +524,10 @@ export {
   downloadSuperAdminReceiptApi,
 } from './superadminreceipts';
 
+
+// ─── GST Settings ───────────────────────────────────────────────────────────
+export {
+  getSuperAdminGstSettingsApi,
+  updateSuperAdminGstSettingsApi,
+  calculateGstBreakdown,
+} from './gst';

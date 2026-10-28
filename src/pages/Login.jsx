@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ForgotPasswordModal from '../components/common/ForgotPasswordModal';
 import hero3 from '../assets/hero3.png';
 import hero4 from '../assets/hero4.png';
 import { 
@@ -23,6 +24,7 @@ const Login = () => {
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   // Form State
   const [name, setName] = useState('');
@@ -320,9 +322,20 @@ const Login = () => {
 
             {/* Password field */}
             <div>
-              <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-700">
+                  Password
+                </label>
+                {isLoginMode && (
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    className="text-xs font-semibold text-[#9c6b2e] hover:text-[#7d5220] hover:underline cursor-pointer"
+                  >
+                    Forgot Password?
+                  </button>
+                )}
+              </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <Lock className="w-5 h-5" />
@@ -423,6 +436,17 @@ const Login = () => {
         />
       </div>
       </div>
+      {/* Student Forgot Password Modal */}
+      <ForgotPasswordModal
+        isOpen={showForgotPassword}
+        onClose={() => setShowForgotPassword(false)}
+        initialEmail={email}
+        onSuccess={(updatedEmail) => {
+          if (updatedEmail) setEmail(updatedEmail);
+          setPassword('');
+          setSuccessMsg('Password reset successful! Please log in with your new password.');
+        }}
+      />
     </div>
   );
 };

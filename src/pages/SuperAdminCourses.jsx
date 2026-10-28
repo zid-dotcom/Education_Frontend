@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
+  AlertCircle,
   BookOpen,
   ChevronDown,
   Edit3,
@@ -14,6 +15,7 @@ import {
   CreditCard,
   Check,
   MapPin,
+  Percent,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
@@ -25,6 +27,8 @@ import {
   updateSuperAdminBranchCourseApi,
   deleteSuperAdminBranchCourseApi,
 } from '../services/superadmin';
+import { getSuperAdminGstSettingsApi, calculateGstBreakdown } from '../services/gst';
+import Toast from '../components/common/Toast';
 
 const PAGE_CSS = `
 @keyframes sa-rise { from { opacity:0; transform:translateY(16px) scale(.97); } to { opacity:1; transform:translateY(0) scale(1); } }
@@ -57,6 +61,12 @@ const SuperAdminCourses = () => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [branches, setBranches] = useState([]);
+  const [gstSettings, setGstSettings] = useState({
+    cgst_percent: 0,
+    sgst_percent: 0,
+    total_gst_percent: 0,
+  });
+  const [loadingGst, setLoadingGst] = useState(false);
   const [selectedBranchId, setSelectedBranchId] = useState('all');
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -72,6 +82,53 @@ const SuperAdminCourses = () => {
   const [form, setForm] = useState(EMPTY_COURSE);
   const [imageFile, setImageFile] = useState(null);
   const [formErrors, setFormErrors] = useState({});
+  const [toast, setToast] = useState(null);
+
+  const fetchGstSettings = async () => {
+    if (!token) return;
+    try {
+      setLoadingGst(true);
+      const res = await getSuperAdminGstSettingsApi(token);
+      if (res && (res.cgst_percent !== undefined || res.total_gst_percent !== undefined)) {
+        setGstSettings({
+          cgst_percent: Number(res.cgst_percent ?? 0),
+          sgst_percent: Number(res.sgst_percent ?? 0),
+          total_gst_percent: Number(
+            res.total_gst_percent ?? (Number(res.cgst_percent ?? 0) + Number(res.sgst_percent ?? 0))
+          ),
+        });
+      }
+    } catch (err) {
+      console.warn('Could not load Super Admin GST settings:', err);
+    } finally {
+      setLoadingGst(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchGstSettings();
+  }, [token]);
+
+  const gstBreakdown = React.useMemo(() => {
+    const activeCgst = editingCourse?.cgst_percent ?? gstSettings.cgst_percent;
+    const activeSgst = editingCourse?.sgst_percent ?? gstSettings.sgst_percent;
+    return calculateGstBreakdown(form.price, activeCgst, activeSgst);
+  }, [form.price, editingCourse, gstSettings]);
+
+  const handleDistributeInstallmentsEvenly = () => {
+    const count = Number(form.installment_count) || (form.installment_terms ? form.installment_terms.length : 0);
+    if (count <= 0 || gstBreakdown.totalAmount <= 0) return;
+    const perTerm = Math.floor(gstBreakdown.totalAmount / count);
+    const remainder = Math.round((gstBreakdown.totalAmount - perTerm * count) * 100) / 100;
+    setForm((prev) => {
+      const terms = (prev.installment_terms || []).map((t, idx) => ({
+        ...t,
+        amount: String(perTerm + (idx === 0 ? remainder : 0)),
+      }));
+      return { ...prev, installment_terms: terms };
+    });
+  };
+
 
   useEffect(() => {
     if (!token) return;
@@ -154,6 +211,7 @@ const SuperAdminCourses = () => {
   }, [selectedBranchId, branches, loading, token]);
 
   const openCreate = () => {
+    fetchGstSettings();
     setEditingCourse(null);
     setForm({ ...EMPTY_COURSE, branch_ids: selectedBranchId && selectedBranchId !== 'all' ? [selectedBranchId] : [] });
     setImageFile(null);
@@ -190,7 +248,7 @@ const SuperAdminCourses = () => {
       branch_id: course.branch_id || selectedBranchId,
       title: course.title || '',
       description: course.description || '',
-      price: course.price ?? '',
+      price: course.base_price ?? course.price ?? '',
       duration: course.duration || '',
       category: course.category || '',
       level: course.level || '',
@@ -225,14 +283,43 @@ const SuperAdminCourses = () => {
       const count = countValue || 0;
       setForm((prev) => {
         const newTerms = [...(prev.installment_terms || [])];
+        const targetTotal = gstBreakdown.totalAmount;
+        const perTerm = count > 0 && targetTotal > 0 ? Math.floor(targetTotal / count) : '';
+        const remainder =
+          count > 0 && targetTotal > 0
+            ? Math.round((targetTotal - perTerm * count) * 100) / 100
+            : 0;
+
         if (count > newTerms.length) {
           for (let i = newTerms.length; i < count; i++) {
-            newTerms.push({ amount: '', due_date: '' });
+            newTerms.push({
+              amount: perTerm !== '' ? String(perTerm + (i === 0 ? remainder : 0)) : '',
+              due_date: '',
+            });
           }
         } else {
           newTerms.splice(count);
         }
         return { ...prev, installment_count: countValue, installment_terms: newTerms };
+      });
+    } else if (name === 'price') {
+      setForm((prev) => {
+        const next = { ...prev, price: val };
+        const count = Math.max(0, parseInt(prev.installment_count, 10) || 0);
+        if (count > 0 && prev.installment_terms?.length > 0) {
+          const bd = calculateGstBreakdown(val, gstBreakdown.cgstPercent, gstBreakdown.sgstPercent);
+          const currentTarget = bd.totalAmount;
+          const allEmpty = prev.installment_terms.every((t) => !t.amount);
+          if (allEmpty && currentTarget > 0) {
+            const perTerm = Math.floor(currentTarget / count);
+            const remainder = Math.round((currentTarget - perTerm * count) * 100) / 100;
+            next.installment_terms = prev.installment_terms.map((t, idx) => ({
+              ...t,
+              amount: String(perTerm + (idx === 0 ? remainder : 0)),
+            }));
+          }
+        }
+        return next;
       });
     } else {
       setForm((prev) => ({ ...prev, [name]: val }));
@@ -332,6 +419,16 @@ const SuperAdminCourses = () => {
       }
     }
 
+    const installmentTotal = (form.installment_terms || []).reduce(
+      (acc, t) => acc + (Number(t.amount) || 0),
+      0
+    );
+    if (form.installment_count && Number(form.installment_count) > 0) {
+      if (Math.abs(installmentTotal - gstBreakdown.totalAmount) > 0.01) {
+        validationErrors.installment_total = `Installments total (₹${installmentTotal.toLocaleString('en-IN')}) must equal the GST-inclusive course fee (₹${gstBreakdown.totalAmount.toLocaleString('en-IN')}). Difference: ₹${Math.abs(gstBreakdown.totalAmount - installmentTotal).toLocaleString('en-IN')}.`;
+      }
+    }
+
     if (form.installment_terms?.length > 0) {
       form.installment_terms.forEach((term, index) => {
         if (!term.amount) {
@@ -371,7 +468,10 @@ const SuperAdminCourses = () => {
 
     if (Object.keys(validationErrors).length > 0) {
       setFormErrors(validationErrors);
-      setError("Please fix the highlighted errors in the form.");
+      const firstErr = Object.values(validationErrors)[0];
+      const errMsg = firstErr || "Please fix the highlighted errors in the form.";
+      setError(errMsg);
+      setToast({ type: "error", message: errMsg, title: "Validation Error" });
       return;
     }
 
@@ -716,14 +816,26 @@ const SuperAdminCourses = () => {
 
                         <div className="space-y-2 border-t pt-3 border-sky-100">
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-xs text-slate-400">Fee</span>
-                            <span
-                              className="font-bold text-base flex items-center"
-                              style={{ color: '#9c6b2e' }}
-                            >
-                              <IndianRupee className="h-3.5 w-3.5" />
-                              {(Number(course.price) || 0).toLocaleString('en-IN')}
-                            </span>
+                            <span className="text-xs text-slate-400">Total Fee</span>
+                            <div className="text-right">
+                              <span
+                                className="font-bold text-base flex items-center justify-end"
+                                style={{ color: '#9c6b2e' }}
+                              >
+                                <IndianRupee className="h-3.5 w-3.5" />
+                                {(Number(course.price) || 0).toLocaleString('en-IN')}
+                                <span className="ml-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                                  Incl. GST
+                                </span>
+                              </span>
+                              <span className="text-[10px] text-slate-500 font-medium block mt-0.5">
+                                {course.base_price ? (
+                                  <>Base: ₹{(Number(course.base_price) || 0).toLocaleString('en-IN')} + GST ({course.total_gst_percent !== undefined && course.total_gst_percent !== null ? `${course.total_gst_percent}%` : 'Calculated'}): ₹{(Number(course.total_gst_amount) || 0).toLocaleString('en-IN')}</>
+                                ) : (
+                                  <>Inclusive of GST</>
+                                )}
+                              </span>
+                            </div>
                           </div>
 
                           <div className="flex items-center justify-between text-xs text-slate-500">
@@ -931,9 +1043,14 @@ const SuperAdminCourses = () => {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                    Course Fee (₹) *
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                      Course Base Price (Pre-GST) (₹) *
+                    </label>
+                    <span className="text-[11px] text-amber-800 font-medium">
+                      + {gstBreakdown.totalGstPercent}% GST calculated
+                    </span>
+                  </div>
                   <input
                     type="number"
                     name="price"
@@ -944,6 +1061,32 @@ const SuperAdminCourses = () => {
                     placeholder="e.g. 25000"
                     className="w-full rounded-xl border border-[#e3ddd0] bg-white px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#9c6b2e]"
                   />
+                  {formErrors.price && (
+                    <p className="mt-1 text-xs text-red-600 font-semibold">{formErrors.price}</p>
+                  )}
+                  {Number(form.price) > 0 && (
+                    <div className="mt-2.5 rounded-xl bg-amber-50/80 border border-amber-200/90 p-3 text-xs space-y-1.5">
+                      <div className="flex justify-between text-slate-600">
+                        <span>Pre-GST Base Price:</span>
+                        <span className="font-semibold text-slate-800">₹{gstBreakdown.basePrice.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-600">
+                        <span>CGST ({gstBreakdown.cgstPercent}%):</span>
+                        <span className="font-semibold text-slate-800">+ ₹{gstBreakdown.cgstAmount.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-600">
+                        <span>SGST ({gstBreakdown.sgstPercent}%):</span>
+                        <span className="font-semibold text-slate-800">+ ₹{gstBreakdown.sgstAmount.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="border-t border-amber-200 pt-1.5 flex justify-between font-bold text-[#9c6b2e]">
+                        <span>Total Payable (GST-inclusive):</span>
+                        <span className="text-sm">₹{gstBreakdown.totalAmount.toLocaleString('en-IN')}</span>
+                      </div>
+                      <p className="text-[11px] text-amber-800 pt-0.5">
+                        ⚡ Installment schedules must total this GST-inclusive amount (₹{gstBreakdown.totalAmount.toLocaleString('en-IN')}).
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
@@ -1134,27 +1277,47 @@ const SuperAdminCourses = () => {
                       ))}
                       
                       {/* Summary Box */}
-                      <div className="rounded-xl p-4 mt-6 bg-[#eef2ea] border border-[#d5e0d5] flex flex-wrap items-center justify-between gap-4">
-                         <div className="flex items-center gap-3">
-                           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white border border-[#5c7a5a]">
-                             <Check className="h-3.5 w-3.5 text-[#5c7a5a]" />
-                           </div>
-                           <div>
-                             <p className="text-[11px] text-slate-500">Total Installments</p>
-                             <p className="font-bold text-slate-800">₹{form.installment_terms.reduce((acc, t) => acc + (Number(t.amount) || 0), 0)}</p>
-                           </div>
-                         </div>
-                         <div>
-                           <p className="text-[11px] text-slate-500">Course Price</p>
-                           <p className="font-bold text-slate-800">₹{form.price || 0}</p>
-                         </div>
-                         <div>
-                           <p className="text-[11px] text-slate-500">Difference</p>
-                           <p className="font-bold text-slate-800">
-                             ₹{Number(form.price || 0) - form.installment_terms.reduce((acc, t) => acc + (Number(t.amount) || 0), 0)}
-                           </p>
-                         </div>
-                      </div>
+                      {(() => {
+                        const installmentSum = form.installment_terms.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+                        const targetTotal = gstBreakdown.totalAmount;
+                        const diff = Math.round((targetTotal - installmentSum) * 100) / 100;
+                        const isMatched = Math.abs(diff) < 0.01;
+                        return (
+                          <div className={`rounded-xl p-4 mt-6 border flex flex-wrap items-center justify-between gap-4 ${
+                            isMatched ? 'bg-[#eef2ea] border-[#d5e0d5]' : 'bg-amber-50/70 border-amber-300'
+                          }`}>
+                            <div className="flex items-center gap-3">
+                              <div className={`flex h-6 w-6 items-center justify-center rounded-full bg-white border ${
+                                isMatched ? 'border-[#5c7a5a]' : 'border-amber-500'
+                              }`}>
+                                <Check className={`h-3.5 w-3.5 ${isMatched ? 'text-[#5c7a5a]' : 'text-amber-600'}`} />
+                              </div>
+                              <div>
+                                <p className="text-[11px] text-slate-500">Installments Sum</p>
+                                <p className="font-bold text-slate-800">₹{installmentSum.toLocaleString('en-IN')}</p>
+                              </div>
+                            </div>
+                            <div>
+                              <p className="text-[11px] text-slate-500">Base Price (Pre-GST)</p>
+                              <p className="font-semibold text-slate-700">₹{gstBreakdown.basePrice.toLocaleString('en-IN')}</p>
+                            </div>
+                            <div>
+                              <p className="text-[11px] text-slate-500">GST ({gstBreakdown.totalGstPercent}%)</p>
+                              <p className="font-semibold text-amber-700">+₹{gstBreakdown.totalGstAmount.toLocaleString('en-IN')}</p>
+                            </div>
+                            <div>
+                              <p className="text-[11px] text-slate-500">Target (With GST)</p>
+                              <p className="font-bold text-[#9c6b2e]">₹{targetTotal.toLocaleString('en-IN')}</p>
+                            </div>
+                            <div>
+                              <p className="text-[11px] text-slate-500">Status</p>
+                              <p className={`font-bold ${isMatched ? 'text-emerald-700' : 'text-red-600'}`}>
+                                {isMatched ? '✓ Balanced' : `Diff: ₹${Math.abs(diff).toLocaleString('en-IN')} ${diff > 0 ? 'remaining' : 'over'}`}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
@@ -1273,6 +1436,20 @@ const SuperAdminCourses = () => {
                 )}
               </div>
 
+              {error && (
+                <div className="rounded-xl p-3.5 mt-4 text-xs font-semibold flex items-start gap-2.5 bg-red-50 text-red-800 border border-red-200">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                  <span className="flex-1 leading-relaxed">{error}</span>
+                  <button
+                    type="button"
+                    onClick={() => setError('')}
+                    className="text-red-400 hover:text-red-700"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
               <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-sky-100">
                 <button
                   type="button"
@@ -1305,6 +1482,7 @@ const SuperAdminCourses = () => {
           </div>
         </div>
       )}
+      <Toast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 };

@@ -23,6 +23,7 @@ import {
   TrendingUp,
   Activity,
   Megaphone,
+  Percent,
   Receipt,
   X,
 } from 'lucide-react';
@@ -68,28 +69,44 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: 'Operations',
+    label: 'Branches',
     items: [
       { id: 'branches', label: 'Branches', icon: Building2, path: '/admin/branches' },
       { id: 'branch-admins', label: 'Branch Admins', icon: Users, path: '/admin/branch-admins' },
       { id: 'navigation-settings', label: 'Branch Navigation', icon: SlidersHorizontal, path: '/super-admin/navigation-settings' },
+    ],
+  },
+  {
+    label: 'Courses',
+    items: [
       { id: 'courses', label: 'Courses', icon: BookOpen, path: '/super-admin/courses' },
-      { id: 'staff', label: 'Staff', icon: UserPlus, path: '/super-admin/staff' },
-      { id: 'staff-verification', label: 'Staff Verification', icon: ShieldCheck, path: '/super-admin/staff-verification' },
-      { id: 'staff-monitoring', label: 'Staff Monitoring', icon: Activity, path: '/super-admin/staff-monitoring' },
-      { id: 'students', label: 'All Students', icon: Users, path: '/super-admin/students' },
       { id: 'enrollments', label: 'Course Enrollments', icon: GraduationCap, path: '/super-admin/enrollments' },
       { id: 'purchases', label: 'Purchase Approval', icon: ShoppingCart, path: '/super-admin/purchases' },
     ],
   },
   {
+    label: 'Students',
+    items: [
+      { id: 'students', label: 'All Students', icon: Users, path: '/super-admin/students' },
+      { id: 'due-students', label: 'Due Students', icon: AlertCircle, path: '/super-admin/due-students' },
+    ],
+  },
+  {
+    label: 'Staff',
+    items: [
+      { id: 'staff', label: 'Staff', icon: UserPlus, path: '/super-admin/staff' },
+      { id: 'staff-verification', label: 'Staff Verification', icon: ShieldCheck, path: '/super-admin/staff-verification' },
+      { id: 'staff-monitoring', label: 'Staff Monitoring', icon: Activity, path: '/super-admin/staff-monitoring' },
+      { id: 'attendance', label: 'Attendance', icon: CalendarCheck, path: '/super-admin/attendance' },
+    ],
+  },
+  {
     label: 'Finance',
     items: [
-      { id: 'profit', label: 'Branch Profit', icon: IndianRupee, path: '/super-admin/profit' },
-      { id: 'receipts', label: 'Student Receipts', icon: Receipt, path: '/super-admin/receipts' },
+      { id: 'profit', label: 'Branch Revenue', icon: IndianRupee, path: '/super-admin/profit' },
       { id: 'expenses', label: 'Branch Expenses', icon: TrendingDown, path: '/super-admin/expenses' },
-      { id: 'attendance', label: 'Attendance', icon: CalendarCheck, path: '/super-admin/attendance' },
-      { id: 'due-students', label: 'Due Students', icon: AlertCircle, path: '/super-admin/due-students' },
+      { id: 'receipts', label: 'Student Receipts', icon: Receipt, path: '/super-admin/receipts' },
+      { id: 'gst-settings', label: 'GST Settings', icon: Percent, path: '/super-admin/gst-settings' },
     ],
   },
   {
@@ -289,7 +306,7 @@ const SuperAdminSidebar = ({
               </p>
               <div className="space-y-0.5">
                 {group.items.map(({ id, label, icon: Icon, path }) => {
-                  const isActive = activePage === id;
+                  const isActive = activePage === id || (id === 'due-students' && activePage === 'dueStudents');
                   return (
                     <button
                       key={id}

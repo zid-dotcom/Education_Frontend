@@ -170,7 +170,12 @@ const CourseCard = ({ course, onApply, linkPrefix = '/courses' }) => {
         >
           <div className="flex flex-col">
             <span className="text-[10px] uppercase font-bold text-slate-400">Course Fee</span>
-            <span className="text-base sm:text-lg font-black text-slate-900">{priceDisplay}</span>
+            <div className="flex items-baseline gap-1.5 flex-wrap">
+              <span className="text-base sm:text-lg font-black text-slate-900">{priceDisplay}</span>
+              <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                Incl. taxes
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">

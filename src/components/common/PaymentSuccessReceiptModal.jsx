@@ -1,19 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  Calendar,
+  ArrowLeft,
   Check,
-  CheckCircle2,
-  Clock,
   Download,
-  FileText,
-  IndianRupee,
+  Eye,
   Loader2,
-  Mail,
-  PartyPopper,
-  Phone,
   Receipt,
-  Sparkles,
   X,
 } from "lucide-react";
 import jsPDF from "jspdf";
@@ -22,10 +15,8 @@ import { getStudentReceiptApi } from "../../services/payments";
 import { getBranchAdminReceiptApi } from "../../services/branchadminreceipts";
 import OfficialReceiptVoucherCard from "./OfficialReceiptVoucherCard";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
-
 const serif = { fontFamily: "'Fraunces', ui-serif, Georgia, serif" };
-const sans = { fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" };
+const sans = { fontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif" };
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat("en-IN", {
@@ -33,21 +24,6 @@ const formatCurrency = (amount) =>
     currency: "INR",
     maximumFractionDigits: 0,
   }).format(Number(amount || 0));
-
-const formatDate = (dateStr) => {
-  if (!dateStr) return "Not provided";
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
-    return new Intl.DateTimeFormat("en-IN", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    }).format(d);
-  } catch {
-    return dateStr;
-  }
-};
 
 const formatDateTime = (dateStr) => {
   if (!dateStr) return "Not provided";
@@ -96,7 +72,6 @@ const formatPaymentType = (receipt) => {
 
   const rawPaymentType = String(receipt.payment_type || "").trim();
 
-  // If payment_type is exactly "Remaining course balance settlement", map to installment label if available
   if (rawPaymentType.toLowerCase() === "remaining course balance settlement") {
     let instNo = null;
     if (Array.isArray(receipt.installment_numbers) && receipt.installment_numbers.length > 0) {
@@ -150,449 +125,248 @@ const formatPaymentType = (receipt) => {
   return "Course Tuition Fee";
 };
 
-const getPaymentMethodBadge = (method, receipt = {}) => {
-  const m = String(
-    method ||
-      receipt.payment_method ||
-      receipt.payment_mode ||
-      (receipt.cash_amount && receipt.upi_amount
-        ? "split"
-        : receipt.cash_amount
-        ? "cash"
-        : receipt.upi_amount
-        ? "upi"
-        : "online")
-  ).toLowerCase();
+/* Scoped celebration popup styling matching user reference code */
+const POPUP_STYLES = `
+:root {
+  --ink: #0f172a;
+  --muted: #64748b;
+  --g1: #10b981;
+  --g2: #06b6d4;
+  --glow: rgba(16, 185, 129, 0.35);
+}
 
-  if (m.includes("cash") && m.includes("upi")) {
-    return {
-      label: "Split (Cash + UPI)",
-      bg: "#fef3c7",
-      text: "#92400e",
-      border: "#fde68a",
-    };
+.ps-card-enter {
+  animation: psCardRise 0.5s cubic-bezier(0.2, 1.1, 0.3, 1) forwards;
+}
+
+@keyframes psCardRise {
+  0% {
+    transform: translateY(40px) scale(0.9);
+    opacity: 0;
   }
-  if (m.includes("cash")) {
-    return {
-      label: "Cash Payment",
-      bg: "#ecfdf5",
-      text: "#065f46",
-      border: "#a7f3d0",
-    };
+  100% {
+    transform: none;
+    opacity: 1;
   }
-  if (m.includes("upi")) {
-    return {
-      label: "UPI Direct",
-      bg: "#f0fdf4",
-      text: "#15803d",
-      border: "#bbf7d0",
-    };
+}
+
+.ps-card-ambient::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -110px;
+  width: 400px;
+  height: 270px;
+  transform: translateX(-50%);
+  background: radial-gradient(closest-side, rgba(16, 185, 129, 0.35), transparent);
+  pointer-events: none;
+}
+
+/* Badge animations */
+.ps-badge-box {
+  position: relative;
+  width: 112px;
+  height: 112px;
+  margin: 0 auto 20px;
+  z-index: 1;
+}
+
+.ps-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981, #06b6d4);
+  opacity: 0;
+  animation: psPulse 1.8s ease-out 0.7s infinite;
+}
+
+.ps-pulse.p2 {
+  animation-delay: 1.3s;
+}
+
+.ps-disc {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981, #06b6d4);
+  box-shadow: 0 18px 40px -8px rgba(16, 185, 129, 0.35), 0 0 0 9px rgba(16, 185, 129, 0.12);
+  transform: scale(0);
+  animation: psPop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) 0.25s forwards;
+}
+
+.ps-tick-path {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 6.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 52;
+  stroke-dashoffset: 52;
+  animation: psDraw 0.5s cubic-bezier(0.65, 0, 0.35, 1) 0.75s forwards;
+}
+
+@keyframes psPop {
+  to {
+    transform: scale(1);
   }
-  return {
-    label: "Online / Razorpay",
-    bg: "#eff6ff",
-    text: "#1e40af",
-    border: "#bfdbfe",
-  };
-};
+}
+
+@keyframes psDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes psPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.35;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+/* Staggered entrance for texts and buttons */
+.ps-stagger {
+  opacity: 0;
+  transform: translateY(12px);
+  animation: psRise 0.55s ease forwards;
+}
+
+.ps-stagger-0 {
+  animation-delay: 0.75s;
+}
+
+.ps-stagger-1 {
+  animation-delay: 0.85s;
+}
+
+.ps-stagger-2 {
+  animation-delay: 0.95s;
+}
+
+.ps-stagger-3 {
+  animation-delay: 1.05s;
+}
+
+@keyframes psRise {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+`;
 
 /**
- * Reusable Voucher Component with safe HEX styling for html2canvas-pro
+ * Single-Burst Canvas Confetti
+ * Fires once at initial popup open and clears automatically when particles fade out.
  */
-function SuccessVoucherCard({ receipt }) {
-  if (!receipt) return null;
+function SingleBurstConfetti() {
+  const canvasRef = useRef(null);
 
-  const amountPaid = getReceiptAmount(receipt);
-  const paymentTypeLabel = formatPaymentType(receipt);
-  const methodBadge = getPaymentMethodBadge(receipt.payment_method, receipt);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-  const receiptNo =
-    receipt.receipt_number ||
-    receipt.receipt_id ||
-    (receipt.id ? `REC-${receipt.id}` : "AUR-REC-CONFIRMED");
+    let raf = null;
+    let particles = [];
+    const colors = ["#10b981", "#06b6d4", "#6366f1", "#f59e0b", "#f43f5e", "#ffffff"];
 
-  const dateStr =
-    receipt.payment_date ||
-    receipt.created_at ||
-    receipt.date ||
-    receipt.timestamp ||
-    new Date().toISOString();
+    function sizeCanvas() {
+      const r = canvas.getBoundingClientRect();
+      const d = window.devicePixelRatio || 1;
+      canvas.width = r.width * d;
+      canvas.height = r.height * d;
+      ctx.setTransform(d, 0, 0, d, 0, 0);
+    }
 
-  const studentName =
-    receipt.student_name ||
-    receipt.student?.name ||
-    receipt.name ||
-    "Student";
+    function burst() {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      sizeCanvas();
+      const cx = canvas.clientWidth / 2;
+      const cy = 100;
+      particles = Array.from({ length: 80 }, () => {
+        const a = Math.random() * Math.PI * 2;
+        const s = 4 + Math.random() * 7;
+        return {
+          x: cx,
+          y: cy,
+          vx: Math.cos(a) * s,
+          vy: Math.sin(a) * s - 3,
+          w: 5 + Math.random() * 6,
+          h: 3 + Math.random() * 4,
+          r: Math.random() * 6,
+          vr: (Math.random() - 0.5) * 0.4,
+          c: colors[Math.floor(Math.random() * colors.length)],
+          life: 1,
+        };
+      });
 
-  const studentPhone =
-    receipt.student_phone ||
-    receipt.student?.phone ||
-    receipt.phone ||
-    "";
+      cancelAnimationFrame(raf);
+      function tick() {
+        ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+        particles.forEach((p) => {
+          p.vy += 0.22;
+          p.vx *= 0.985;
+          p.x += p.vx;
+          p.y += p.vy;
+          p.r += p.vr;
+          p.life -= 0.011;
+          if (p.life <= 0) return;
+          ctx.save();
+          ctx.globalAlpha = Math.max(p.life, 0);
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.r);
+          ctx.fillStyle = p.c;
+          ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+          ctx.restore();
+        });
+        particles = particles.filter((p) => p.life > 0);
+        if (particles.length > 0) {
+          raf = requestAnimationFrame(tick);
+        } else {
+          ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+        }
+      }
+      tick();
+    }
 
-  const studentEmail =
-    receipt.student_email ||
-    receipt.student?.email ||
-    receipt.email ||
-    "";
+    const timer = setTimeout(burst, 750);
 
-  const courseTitle =
-    receipt.course_title ||
-    receipt.course?.title ||
-    receipt.course_name ||
-    "Selected Course";
-
-  const courseFee =
-    receipt.course_fee !== undefined && receipt.course_fee !== null
-      ? Number(receipt.course_fee)
-      : null;
-
-  const totalCoursePaid =
-    receipt.total_paid !== undefined && receipt.total_paid !== null
-      ? Number(receipt.total_paid)
-      : null;
-
-  const balanceAmount =
-    receipt.balance_amount !== undefined && receipt.balance_amount !== null
-      ? Number(receipt.balance_amount)
-      : receipt.balance !== undefined && receipt.balance !== null
-      ? Number(receipt.balance)
-      : null;
-
-  const hasCourseFee = courseFee !== null && !isNaN(courseFee) && courseFee > 0;
-  const hasTotalPaid = totalCoursePaid !== null && !isNaN(totalCoursePaid);
-  const hasBalance = balanceAmount !== null && !isNaN(balanceAmount);
+    return () => {
+      clearTimeout(timer);
+      if (raf) cancelAnimationFrame(raf);
+      if (canvas && ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    };
+  }, []);
 
   return (
-    <div
-      className="p-5 sm:p-7 space-y-5 rounded-2xl"
-      style={{
-        background: "#ffffff",
-        border: "1px solid #e3ddd0",
-        color: "#1c1a17",
-      }}
-    >
-      {/* 1. Brand Header & Receipt Meta */}
-      <div
-        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5"
-        style={{ borderBottom: "1px solid #e3ddd0" }}
-      >
-        <div className="flex items-center gap-3">
-          <div
-            className="flex h-12 w-12 items-center justify-center rounded-2xl text-lg font-bold shadow-xs select-none"
-            style={{ background: "#17140f", color: "#f4b942" }}
-          >
-            A
-          </div>
-          <div>
-            <h2
-              className="text-xl font-bold tracking-tight text-slate-900 leading-tight"
-              style={serif}
-            >
-              Aurum FX Academy
-            </h2>
-            <p className="text-[11px] font-semibold tracking-wide" style={{ color: "#9c6b2e" }}>
-              Official Student Tuition & Fee Receipt
-            </p>
-          </div>
-        </div>
-
-        <div className="text-left sm:text-right space-y-1">
-          <span
-            className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold border"
-            style={{
-              background: "#ecfdf5",
-              color: "#065f46",
-              borderColor: "#a7f3d0",
-            }}
-          >
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Payment Verified</span>
-          </span>
-          <p className="text-xs font-bold font-mono text-slate-900">
-            Receipt Number: {receiptNo}
-          </p>
-          <p className="text-[11px]" style={{ color: "#8a8175" }}>
-            Date: {formatDateTime(dateStr)}
-          </p>
-        </div>
-      </div>
-
-      {/* 2. Student & Course Information */}
-      <div
-        className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-2xl p-4.5"
-        style={{ background: "#faf8f4", border: "1px solid #e3ddd0" }}
-      >
-        <div>
-          <h4
-            className="text-[10px] font-bold uppercase tracking-wider"
-            style={{ color: "#9c6b2e" }}
-          >
-            Student Details
-          </h4>
-          <p className="mt-1 text-sm font-bold text-slate-900">{studentName}</p>
-          {studentEmail && (
-            <p className="text-xs" style={{ color: "#5b5346" }}>
-              {studentEmail}
-            </p>
-          )}
-          {studentPhone && (
-            <p className="text-xs font-mono" style={{ color: "#5b5346" }}>
-              {studentPhone}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <h4
-            className="text-[10px] font-bold uppercase tracking-wider"
-            style={{ color: "#9c6b2e" }}
-          >
-            Course & Payment Term
-          </h4>
-          <p className="mt-1 text-sm font-bold text-slate-900">{courseTitle}</p>
-          <p className="text-xs font-medium" style={{ color: "#5b5346" }}>
-            {paymentTypeLabel}
-          </p>
-        </div>
-      </div>
-
-      {/* 3. Payment Item Table */}
-      <div
-        className="overflow-hidden rounded-2xl"
-        style={{ border: "1px solid #e3ddd0" }}
-      >
-        <table className="w-full text-xs">
-          <thead>
-            <tr
-              className="font-bold"
-              style={{
-                background: "#f1ede4",
-                color: "#7a531f",
-                borderBottom: "1px solid #e3ddd0",
-              }}
-            >
-              <th className="px-4 py-3 text-left">Description</th>
-              <th className="px-4 py-3 text-center">Payment Method</th>
-              <th className="px-4 py-3 text-right">Amount Paid</th>
-            </tr>
-          </thead>
-          <tbody style={{ background: "#ffffff" }}>
-            <tr style={{ borderBottom: "1px solid #efe9dd" }}>
-              <td className="px-4 py-3.5">
-                <p className="font-bold text-slate-900">{courseTitle}</p>
-                <p className="text-[11px]" style={{ color: "#8a8175" }}>
-                  {paymentTypeLabel}
-                </p>
-              </td>
-              <td className="px-4 py-3.5 text-center">
-                <span
-                  className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold border"
-                  style={{
-                    background: methodBadge.bg,
-                    color: methodBadge.text,
-                    borderColor: methodBadge.border,
-                  }}
-                >
-                  {methodBadge.label}
-                </span>
-              </td>
-              <td className="px-4 py-3.5 text-right font-bold text-slate-900 tabular-nums text-sm">
-                {formatCurrency(amountPaid)}
-              </td>
-            </tr>
-
-            {/* Total Cleared Row */}
-            <tr
-              className="font-extrabold text-sm"
-              style={{ background: "#faf8f4", borderTop: "2px solid #e3ddd0" }}
-            >
-              <td className="px-4 py-3 text-slate-900">Total Cleared (This Receipt)</td>
-              <td className="px-4 py-3 text-center text-xs font-bold" style={{ color: "#047857" }}>
-                Verified & Received
-              </td>
-              <td
-                className="px-4 py-3 text-right text-base tabular-nums"
-                style={{ color: "#9c6b2e" }}
-              >
-                {formatCurrency(amountPaid)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      {/* 4. Course Fee Clearance Breakdown (if fee/balance data available) */}
-      {(hasCourseFee || hasTotalPaid || hasBalance) && (
-        <div
-          className="rounded-2xl p-4 space-y-2"
-          style={{ background: "#faf8f4", border: "1px solid #e3ddd0" }}
-        >
-          <div
-            className="flex items-center justify-between pb-2"
-            style={{ borderBottom: "1px solid #efe9dd" }}
-          >
-            <span
-              className="text-[11px] font-bold uppercase tracking-wider"
-              style={{ color: "#9c6b2e" }}
-            >
-              Course Tuition Fee Ledger
-            </span>
-            <span className="text-[10px]" style={{ color: "#8a8175" }}>
-              Overall Enrollment Balance
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1">
-            {hasCourseFee && (
-              <div
-                className="p-2.5 rounded-xl"
-                style={{ background: "#ffffff", border: "1px solid #e8e2d5" }}
-              >
-                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#8a8175" }}>
-                  Total Course Fee
-                </p>
-                <p className="text-sm font-extrabold text-slate-900 mt-0.5 tabular-nums">
-                  {formatCurrency(courseFee)}
-                </p>
-              </div>
-            )}
-            {hasTotalPaid && (
-              <div
-                className="p-2.5 rounded-xl"
-                style={{ background: "#ffffff", border: "1px solid #e8e2d5" }}
-              >
-                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#8a8175" }}>
-                  Cumulative Paid
-                </p>
-                <p className="text-sm font-extrabold text-emerald-700 mt-0.5 tabular-nums">
-                  {formatCurrency(totalCoursePaid)}
-                </p>
-              </div>
-            )}
-            {hasBalance && (
-              <div
-                className="p-2.5 rounded-xl"
-                style={{ background: "#ffffff", border: "1px solid #e8e2d5" }}
-              >
-                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#8a8175" }}>
-                  Remaining Due
-                </p>
-                <p
-                  className={`text-sm font-extrabold mt-0.5 tabular-nums ${
-                    balanceAmount <= 0 ? "text-emerald-700" : "text-amber-700"
-                  }`}
-                >
-                  {balanceAmount <= 0 ? "Fully Paid (Nil)" : formatCurrency(balanceAmount)}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 5. Transaction & Gateway Audit Identifiers */}
-      {(receipt.razorpay_order_id ||
-        receipt.razorpay_payment_id ||
-        receipt.transaction_reference ||
-        receipt.upi_transaction_id) && (
-        <div
-          className="rounded-2xl p-4 space-y-2"
-          style={{ background: "#faf8f4", border: "1px solid #e3ddd0" }}
-        >
-          <div
-            className="flex items-center justify-between pb-2"
-            style={{ borderBottom: "1px solid #efe9dd" }}
-          >
-            <span
-              className="text-[11px] font-bold uppercase tracking-wider"
-              style={{ color: "#9c6b2e" }}
-            >
-              Transaction & Gateway References
-            </span>
-            <span className="text-[10px]" style={{ color: "#8a8175" }}>
-              Verification Audit Identifiers
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-            {receipt.transaction_reference && (
-              <div
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 py-1.5 px-3 rounded-xl"
-                style={{ background: "#ffffff", border: "1px solid #e8e2d5" }}
-              >
-                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#8a8175" }}>
-                  Transaction Ref:
-                </span>
-                <code className="font-mono text-xs font-bold select-all break-all text-slate-900">
-                  {receipt.transaction_reference}
-                </code>
-              </div>
-            )}
-            {receipt.razorpay_order_id && (
-              <div
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 py-1.5 px-3 rounded-xl"
-                style={{ background: "#ffffff", border: "1px solid #e8e2d5" }}
-              >
-                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#8a8175" }}>
-                  Razorpay Order ID:
-                </span>
-                <code className="font-mono text-xs font-bold select-all break-all text-slate-900">
-                  {receipt.razorpay_order_id}
-                </code>
-              </div>
-            )}
-            {receipt.razorpay_payment_id && (
-              <div
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 py-1.5 px-3 rounded-xl"
-                style={{ background: "#ffffff", border: "1px solid #e8e2d5" }}
-              >
-                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#8a8175" }}>
-                  Razorpay Payment ID:
-                </span>
-                <code className="font-mono text-xs font-bold select-all break-all text-slate-900">
-                  {receipt.razorpay_payment_id}
-                </code>
-              </div>
-            )}
-            {receipt.upi_transaction_id && (
-              <div
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 py-1.5 px-3 rounded-xl"
-                style={{ background: "#ffffff", border: "1px solid #e8e2d5" }}
-              >
-                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#8a8175" }}>
-                  UPI Ref ID:
-                </span>
-                <code className="font-mono text-xs font-bold select-all break-all text-slate-900">
-                  {receipt.upi_transaction_id}
-                </code>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 6. Footer Note */}
-      <div
-        className="pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px]"
-        style={{ borderTop: "1px solid #e3ddd0", color: "#8a8175" }}
-      >
-        <p>Thank you for choosing Aurum FX Academy.</p>
-        <p className="font-medium text-slate-700">Official Fee Acknowledgment • Valid without physical signature</p>
-      </div>
-    </div>
+    <canvas
+      ref={canvasRef}
+      className="absolute inset-0 w-full h-full pointer-events-none z-20"
+      style={{ pointerEvents: "none" }}
+    />
   );
 }
 
 /**
  * PaymentSuccessReceiptModal
  * 
- * Pops up immediately after a student purchases a course (full/installment)
- * or when branch admin registers a student or records an installment.
- * 
- * 1. Shows Congratulations message & status banner
- * 2. Displays the full receipt voucher
- * 3. Provides Download Receipt PDF button & Dismiss/View all buttons
+ * Stage 1: Animated Pop-up exactly matching user's reference code:
+ *          - Concentric pulsing glow with disc pop & drawn SVG checkmark
+ *          - Initial single-burst canvas confetti shower (only shows once on entry, never loops)
+ *          - Differentiated messaging:
+ *              • Student: "Congratulations, {Name}!" + "Thank you for your payment"
+ *              • Branch Admin: "Payment Recorded Successfully!" + "Thanks! {Name}'s payment completed successfully"
+ *          - Two action options: "View Receipt" (opens official receipt modal) and "Download Receipt" (PDF)
+ * Stage 2: Authentic Official Receipt Voucher View with complete ledger details,
+ *          inspection, print, and PDF generation.
  */
 export default function PaymentSuccessReceiptModal({
   isOpen,
@@ -602,15 +376,24 @@ export default function PaymentSuccessReceiptModal({
   downloadUrl = null,
   token = null,
   isBranchAdmin = false,
-  title = "Congratulations! Your course has been purchased",
-  subtitle = "Your enrollment has been confirmed. Below is your official fee payment receipt.",
+  title = "Congratulations! Your course payment has been received",
+  subtitle = "Your installment payment has been cleared and verified. Below is your official receipt.",
   onViewReceipt = null,
   onViewAll = null,
 }) {
+  const [currentStep, setCurrentStep] = useState("celebration"); // "celebration" | "receipt"
   const [activeReceipt, setActiveReceipt] = useState(receipt || null);
   const [downloading, setDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const offscreenPrintRef = useRef(null);
+
+  // When modal opens, always start at celebration step
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentStep("celebration");
+      setDownloadSuccess(false);
+    }
+  }, [isOpen]);
 
   // Sync initial receipt prop
   useEffect(() => {
@@ -660,6 +443,104 @@ export default function PaymentSuccessReceiptModal({
   if (!isOpen) return null;
 
   const currentReceipt = activeReceipt || receipt || {};
+  const amountPaid = getReceiptAmount(currentReceipt);
+  const courseTitle =
+    currentReceipt.course_title ||
+    currentReceipt.course?.title ||
+    currentReceipt.course_name ||
+    currentReceipt.description ||
+    "Enrolled Course";
+
+  // Check user role from localStorage if available
+  const isAdminRole = isBranchAdmin || (() => {
+    try {
+      const u = JSON.parse(localStorage.getItem("user") || "{}");
+      return u?.role === "branch_admin" || u?.role === "admin" || u?.role === "super_admin";
+    } catch {
+      return false;
+    }
+  })();
+
+  // Extract student name
+  const rawStudentName =
+    currentReceipt.student_name ||
+    currentReceipt.student?.name ||
+    currentReceipt.student?.full_name ||
+    currentReceipt.student_full_name ||
+    currentReceipt.full_name ||
+    currentReceipt.name ||
+    "";
+
+  let resolvedStudentName = rawStudentName;
+  if (!resolvedStudentName && !isAdminRole) {
+    try {
+      const stored = localStorage.getItem("user");
+      if (stored) {
+        const u = JSON.parse(stored);
+        if (u?.name) {
+          resolvedStudentName = u.name;
+        }
+      }
+    } catch {}
+  }
+
+  const getFirstName = (fullName) => {
+    if (!fullName) return "";
+    const cleaned = String(fullName).trim();
+    if (!cleaned) return "";
+    const parts = cleaned.split(/\s+/);
+    const first = parts[0];
+    return first.charAt(0).toUpperCase() + first.slice(1);
+  };
+
+  const getPossessiveName = (fullName) => {
+    if (!fullName) return "student";
+    const cleaned = String(fullName).trim();
+    const parts = cleaned.split(/\s+/);
+    const first = parts[0];
+    const cap = first.charAt(0).toUpperCase() + first.slice(1);
+    return cap.endsWith("s") ? `${cap}'` : `${cap}'s`;
+  };
+
+  const studentFirstName = getFirstName(resolvedStudentName);
+  const studentPossessive = getPossessiveName(resolvedStudentName);
+
+  // Differentiate messaging for Branch Admin vs Student
+  let popupTitle = "Congratulations!";
+  let popupThanks = "Thank you for your payment";
+  let popupMessage =
+    "Your payment was successful. We truly appreciate your trust. Your receipt is ready — click below to view or download your official receipt.";
+
+  if (isAdminRole) {
+    // When branch admin records fee
+    popupTitle = "Payment Recorded Successfully!";
+    popupThanks = studentFirstName
+      ? `Thanks! ${studentPossessive} payment completed successfully`
+      : "Thanks! Payment completed successfully";
+    popupMessage = studentFirstName
+      ? `The installment payment for ${studentFirstName} has been recorded into the branch ledger. Below is the official receipt.`
+      : "The fee payment has been recorded into the branch ledger. Below is the official receipt.";
+  } else {
+    // When student pays
+    popupTitle = studentFirstName
+      ? `Congratulations, ${studentFirstName}!`
+      : "Congratulations!";
+    popupThanks = "Thank you for your payment";
+    popupMessage =
+      "Your payment was successful. We truly appreciate your trust. Your receipt is ready — click below to view or download your official receipt.";
+  }
+
+  const receiptNo =
+    currentReceipt.receipt_number ||
+    currentReceipt.receipt_id ||
+    (currentReceipt.id ? `REC-${currentReceipt.id}` : "AUR-REC-CONFIRMED");
+
+  const dateStr = formatDateTime(
+    currentReceipt.payment_date ||
+      currentReceipt.created_at ||
+      currentReceipt.date ||
+      new Date().toISOString()
+  );
 
   /**
    * Generates a clean, single-page PDF voucher using html2canvas-pro + jsPDF
@@ -678,12 +559,8 @@ export default function PaymentSuccessReceiptModal({
         currentReceipt.receipt_id ||
         currentReceipt.id ||
         "REC";
-      const studentName = (
-        currentReceipt.student_name ||
-        currentReceipt.name ||
-        "Student"
-      ).replace(/[\s\W]+/g, "_");
-      const fileName = `AURUM_RECEIPT_${receiptId}_${studentName}.pdf`;
+      const cleanStudent = (resolvedStudentName || "Student").replace(/[\s\W]+/g, "_");
+      const fileName = `AURUM_RECEIPT_${receiptId}_${cleanStudent}.pdf`;
 
       if (document.fonts && document.fonts.ready) {
         try {
@@ -722,12 +599,12 @@ export default function PaymentSuccessReceiptModal({
 
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF("p", "mm", "a4");
-      const pageWidth = pdf.internal.pageSize.getWidth(); // 210mm
-      const pageHeight = pdf.internal.pageSize.getHeight(); // 297mm
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
 
       const margin = 8;
-      const maxContentWidth = pageWidth - margin * 2; // 194mm
-      const maxContentHeight = pageHeight - margin * 2; // 281mm
+      const maxContentWidth = pageWidth - margin * 2;
+      const maxContentHeight = pageHeight - margin * 2;
 
       const contentWidth = maxContentWidth;
       const contentHeight = (canvas.height * contentWidth) / canvas.width;
@@ -741,17 +618,15 @@ export default function PaymentSuccessReceiptModal({
         const ratio = maxContentHeight / contentHeight;
         finalHeight = maxContentHeight;
         finalWidth = contentWidth * ratio;
-        posX = margin + (maxContentWidth - finalWidth) / 2;
+        posX = (pageWidth - finalWidth) / 2;
       }
 
       pdf.addImage(imgData, "PNG", posX, posY, finalWidth, finalHeight);
       pdf.save(fileName);
-
       setDownloadSuccess(true);
       setTimeout(() => setDownloadSuccess(false), 4000);
     } catch (err) {
       console.error("PDF generation failed:", err);
-      // Fallback: If downloadUrl is present, open it
       const targetDl = downloadUrl || currentReceipt.download_url;
       if (targetDl) {
         window.open(targetDl, "_blank");
@@ -765,133 +640,251 @@ export default function PaymentSuccessReceiptModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[999999] flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
+      className="fixed inset-0 z-[999999] flex items-center justify-center p-4 overflow-y-auto"
       role="dialog"
       aria-modal="true"
     >
-      {/* Fullscreen Backdrop spanning entire viewport over sidebar and all UI */}
+      <style>{POPUP_STYLES}</style>
+
+      {/* Fullscreen Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-950/75 backdrop-blur-md transition-opacity duration-300"
+        className="fixed inset-0 bg-[#080f21]/60 backdrop-blur-[10px] transition-opacity duration-300"
         onClick={onClose}
       />
 
-      <div
-        className="relative w-full max-w-3xl max-h-[90vh] my-auto flex flex-col overflow-hidden rounded-3xl bg-[#faf8f4] shadow-2xl border border-[#e3ddd0] animate-in zoom-in-95 duration-200 z-10"
-        style={sans}
-      >
-        {/* Modal Top Header with Celebration */}
+      {/* ─────────────────────────────────────────────────────────────
+          STAGE 1: ANIMATED POP-UP (EXACT MATCH TO REFERENCE CODE)
+         ───────────────────────────────────────────────────────────── */}
+      {currentStep === "celebration" && (
         <div
-          className="relative px-6 pt-6 pb-7 sm:px-8 sm:pt-7 sm:pb-8 border-b border-[#e3ddd0] overflow-hidden shrink-0"
-          style={{
-            background: "linear-gradient(135deg, #1f1b13 0%, #2e2619 100%)",
-            color: "#ffffff",
-          }}
+          className="ps-card-enter ps-card-ambient relative w-full max-w-[400px] my-auto rounded-[28px] bg-white shadow-[0_40px_80px_-20px_rgba(2,8,23,0.55)] overflow-hidden z-10 text-center px-7 py-9 sm:px-8 sm:py-10"
+          style={sans}
         >
-          {/* Subtle gold glow & decorative sparkles */}
-          <div
-            className="absolute top-0 right-0 -mr-16 -mt-16 w-52 h-52 rounded-full opacity-20 blur-2xl pointer-events-none"
-            style={{ background: "#f4b942" }}
-          />
-          <div
-            className="absolute bottom-0 left-1/3 -mb-10 w-40 h-40 rounded-full opacity-15 blur-xl pointer-events-none"
-            style={{ background: "#10b981" }}
-          />
+          {/* Initial Single-Burst Confetti Canvas (Shower occurs once on open, then disappears) */}
+          <SingleBurstConfetti />
 
-          <div className="flex items-start justify-between gap-4 relative z-10">
-            <div className="flex items-start gap-3.5 sm:gap-4 flex-1 min-w-0">
-              <div
-                className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl shadow-lg ring-4 ring-[#f4b942]/20 mt-1"
-                style={{
-                  background: "linear-gradient(135deg, #f4b942 0%, #c48b28 100%)",
-                  color: "#17140f",
-                }}
+          {/* Close Button matching reference code */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-4 right-4 z-30 w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-all duration-200 flex items-center justify-center cursor-pointer hover:rotate-90"
+            title="Close popup"
+            aria-label="Close"
+          >
+            <X className="w-4 h-4" />
+          </button>
+
+          {/* Animated Badge matching reference code */}
+          <div className="ps-badge-box">
+            <span className="ps-pulse"></span>
+            <span className="ps-pulse p2"></span>
+            <div className="ps-disc"></div>
+            <svg viewBox="0 0 112 112" className="absolute inset-0 w-full h-full">
+              <path className="ps-tick-path" d="M34 58l16 16 30-33" />
+            </svg>
+          </div>
+
+          {/* Title with staggered entrance */}
+          <h2 className="ps-stagger ps-stagger-0 text-2xl sm:text-[28px] font-extrabold text-[#0f172a] tracking-tight leading-snug">
+            {popupTitle}
+          </h2>
+
+          {/* Subheading with gradient text matching reference code */}
+          <p
+            className="ps-stagger ps-stagger-1 text-base sm:text-[17px] font-bold mt-2"
+            style={{
+              background: "linear-gradient(135deg, #10b981, #06b6d4)",
+              WebkitBackgroundClip: "text",
+              backgroundClip: "text",
+              color: "transparent",
+            }}
+          >
+            {popupThanks}
+          </p>
+
+          {/* Description text */}
+          <p className="ps-stagger ps-stagger-2 text-xs sm:text-[13.5px] text-[#64748b] leading-relaxed mt-2.5 max-w-[300px] mx-auto">
+            {popupMessage}
+          </p>
+
+          {/* Amount Summary Tag */}
+          {amountPaid > 0 && (
+            <div className="ps-stagger ps-stagger-2 mt-3.5 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/70 text-emerald-800 text-xs font-semibold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              <span>{formatCurrency(amountPaid)} Paid</span>
+              {courseTitle && (
+                <>
+                  <span className="text-emerald-300">•</span>
+                  <span className="text-emerald-700 font-medium truncate max-w-[130px]">
+                    {courseTitle}
+                  </span>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="ps-stagger ps-stagger-3 mt-6 space-y-2.5">
+            {/* Primary Action: View Receipt (opens receipt modal) */}
+            <button
+              type="button"
+              onClick={() => setCurrentStep("receipt")}
+              className="w-full py-3.5 px-6 rounded-[14px] text-sm sm:text-base font-bold text-white shadow-[0_12px_24px_-8px_rgba(16,185,129,0.35)] hover:shadow-[0_16px_30px_-8px_rgba(16,185,129,0.35)] hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              style={{
+                background: "linear-gradient(135deg, #10b981, #06b6d4)",
+              }}
+            >
+              <Eye className="w-4 h-4" />
+              <span>View Receipt</span>
+            </button>
+
+            {/* Secondary Action: Download Receipt */}
+            <button
+              type="button"
+              disabled={downloading}
+              onClick={handleDownloadPdf}
+              className="w-full py-3 px-5 rounded-[14px] border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs sm:text-sm font-semibold text-slate-700 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              {downloading ? (
+                <Loader2 className="w-4 h-4 animate-spin text-teal-600" />
+              ) : downloadSuccess ? (
+                <Check className="w-4 h-4 text-emerald-600" />
+              ) : (
+                <Download className="w-4 h-4 text-teal-600" />
+              )}
+              <span>
+                {downloading
+                  ? "Generating PDF…"
+                  : downloadSuccess
+                  ? "Saved to Downloads!"
+                  : "Download Receipt"}
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          STAGE 2: AUTHENTIC OFFICIAL RECEIPT VOUCHER VIEW
+         ───────────────────────────────────────────────────────────── */}
+      {currentStep === "receipt" && (
+        <div
+          className="relative w-full max-w-3xl max-h-[92vh] my-auto flex flex-col overflow-hidden rounded-3xl bg-[#faf8f4] shadow-2xl border border-[#e3ddd0] animate-in zoom-in-95 duration-200 z-10"
+          style={sans}
+        >
+          {/* Authentic Document Viewer Header */}
+          <div
+            className="px-5 py-4 sm:px-7 sm:py-4.5 border-b border-[#e3ddd0] bg-white flex items-center justify-between gap-3 shrink-0"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                type="button"
+                onClick={() => setCurrentStep("celebration")}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[#e3ddd0] bg-stone-50 hover:bg-stone-100 text-xs font-semibold text-slate-600 transition cursor-pointer shrink-0"
+                title="Back to confirmation"
               >
-                <PartyPopper className="h-6 w-6 sm:h-7 sm:w-7" />
-              </div>
-              <div className="flex-1 min-w-0 pr-2">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide uppercase bg-[#f4b942]/20 text-[#fbd278] border border-[#f4b942]/40 mb-1.5">
-                  <Sparkles className="w-3 h-3 text-[#f4b942]" />
-                  <span>Success & Confirmation</span>
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Back</span>
+              </button>
+
+              <div className="h-6 w-px bg-slate-200 hidden sm:block" />
+
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 border border-amber-200 text-[#9c6b2e]">
+                  <Receipt className="h-5 w-5" />
                 </div>
-                <h2
-                  className="text-lg sm:text-2xl font-bold tracking-tight text-white leading-snug break-words"
-                  style={serif}
-                >
-                  {title}
-                </h2>
-                <p className="text-xs sm:text-sm text-amber-100/90 font-medium leading-relaxed mt-2 max-w-2xl">
-                  {subtitle}
-                </p>
+                <div className="min-w-0">
+                  <h3
+                    className="text-base sm:text-lg font-bold text-slate-900 leading-tight truncate"
+                    style={serif}
+                  >
+                    Official Fee Receipt
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-medium truncate">
+                    Ref #{receiptNo} • Issued on {dateStr}
+                  </p>
+                </div>
               </div>
             </div>
 
             <button
               type="button"
               onClick={onClose}
-              className="rounded-full p-2 text-amber-200/70 hover:bg-white/10 hover:text-white transition-colors cursor-pointer shrink-0 mt-0.5"
+              className="rounded-full p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
               title="Close receipt popup"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
-        </div>
 
-        {/* Modal Scrollable Body showing Full Receipt Voucher */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-          <OfficialReceiptVoucherCard receipt={currentReceipt} />
-        </div>
-
-        {/* Modal Bottom Footer Actions */}
-        <div
-          className="px-6 py-4 sm:px-8 sm:py-5 border-t border-[#e3ddd0] bg-white flex flex-col-reverse sm:flex-row items-center justify-between gap-3 shrink-0"
-        >
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 rounded-xl border border-transparent bg-slate-100 text-xs font-bold text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
-          >
-            Done & Close
-          </button>
-
-          <button
-            type="button"
-            disabled={downloading}
-            onClick={handleDownloadPdf}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-white shadow-md transition-all disabled:opacity-50 cursor-pointer"
-            style={{
-              background: downloadSuccess ? "#059669" : "#9c6b2e",
-            }}
-          >
-            {downloading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : downloadSuccess ? (
-              <Check className="w-4 h-4" />
-            ) : (
-              <Download className="w-4 h-4" />
-            )}
-            <span>
-              {downloading
-                ? "Generating PDF…"
-                : downloadSuccess
-                ? "Downloaded Successfully!"
-                : "Download Receipt PDF"}
-            </span>
-          </button>
-        </div>
-
-        {/* Offscreen element for high-res PDF generation */}
-        <div
-          style={{
-            position: "absolute",
-            left: "-9999px",
-            top: "-9999px",
-            width: "720px",
-            background: "#ffffff",
-          }}
-        >
-          <div ref={offscreenPrintRef} style={{ width: "720px", background: "#ffffff", padding: "20px" }}>
+          {/* Clean Receipt Body - Official Voucher */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
             <OfficialReceiptVoucherCard receipt={currentReceipt} />
           </div>
+
+          {/* Document Viewer Footer Actions */}
+          <div
+            className="px-5 py-3.5 sm:px-7 sm:py-4 border-t border-[#e3ddd0] bg-white flex flex-col-reverse sm:flex-row items-center justify-between gap-3 shrink-0"
+          >
+            <button
+              type="button"
+              onClick={() => setCurrentStep("celebration")}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl border border-[#e3ddd0] bg-stone-50 text-xs font-bold text-slate-600 hover:bg-stone-100 transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to Confirmation</span>
+            </button>
+
+            <div className="flex items-center gap-2.5 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 rounded-xl border border-transparent bg-slate-100 text-xs font-bold text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
+              >
+                Done & Close
+              </button>
+
+              <button
+                type="button"
+                disabled={downloading}
+                onClick={handleDownloadPdf}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white shadow-md transition-all disabled:opacity-50 cursor-pointer"
+                style={{
+                  background: downloadSuccess ? "#059669" : "#9c6b2e",
+                }}
+              >
+                {downloading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : downloadSuccess ? (
+                  <Check className="w-4 h-4" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                <span>
+                  {downloading
+                    ? "Generating PDF…"
+                    : downloadSuccess
+                    ? "Downloaded Successfully!"
+                    : "Download Receipt PDF"}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden offscreen element for high-res PDF generation */}
+      <div
+        style={{
+          position: "absolute",
+          left: "-9999px",
+          top: "-9999px",
+          width: "720px",
+          background: "#ffffff",
+        }}
+      >
+        <div ref={offscreenPrintRef} style={{ width: "720px", background: "#ffffff", padding: "20px" }}>
+          <OfficialReceiptVoucherCard receipt={currentReceipt} />
         </div>
       </div>
     </div>,

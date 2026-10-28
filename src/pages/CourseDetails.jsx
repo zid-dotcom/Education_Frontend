@@ -417,9 +417,30 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
                 
                 <div>
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Program Fee</span>
-                  <div className="mt-1 text-3xl font-black text-slate-950 sm:text-4xl">
-                    {priceDisplay}
+                  <div className="mt-1 flex items-baseline gap-2 flex-wrap">
+                    <span className="text-3xl font-black text-slate-950 sm:text-4xl">
+                      {priceDisplay}
+                    </span>
+                    <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      Incl. {course.total_gst_percent !== undefined && course.total_gst_percent !== null ? `${course.total_gst_percent}% ` : ''}GST
+                    </span>
                   </div>
+                  {course.base_price && (
+                    <div className="mt-2.5 rounded-xl bg-stone-50/90 p-2.5 border border-[#e3ddd0] text-xs space-y-1">
+                      <div className="flex justify-between text-slate-600">
+                        <span>Base Tuition:</span>
+                        <span className="font-semibold text-slate-800">₹{(Number(course.base_price) || 0).toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-600">
+                        <span>CGST{course.cgst_percent !== undefined && course.cgst_percent !== null ? ` (${course.cgst_percent}%)` : ''}:</span>
+                        <span className="font-medium text-slate-700">+ ₹{(Number(course.cgst_amount) || 0).toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-600">
+                        <span>SGST{course.sgst_percent !== undefined && course.sgst_percent !== null ? ` (${course.sgst_percent}%)` : ''}:</span>
+                        <span className="font-medium text-slate-700">+ ₹{(Number(course.sgst_amount) || 0).toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-3 pt-4 border-t border-slate-100 text-xs font-medium text-slate-700">

@@ -245,6 +245,7 @@ const RecordPaymentModal = ({
   enrollment,
   onSubmit,
   isSubmitting,
+  token,
 }) => {
   const [paymentMode, setPaymentMode] = useState("cash"); // 'cash' | 'upi' | 'split'
   const [paymentScope, setPaymentScope] = useState("installment"); // 'installment' | 'full_balance'
@@ -254,8 +255,53 @@ const RecordPaymentModal = ({
   const [selectedInstallmentNumber, setSelectedInstallmentNumber] = useState("");
   const [validationError, setValidationError] = useState("");
 
-  const balance = Number(enrollment?.balance_amount ?? enrollment?.remaining_amount ?? 0);
-  const installments = Array.isArray(enrollment?.installments) ? enrollment.installments : [];
+  const [liveInstallmentsData, setLiveInstallmentsData] = useState(null);
+  const [loadingSchedule, setLoadingSchedule] = useState(false);
+
+  // Fetch live installment schedule & balances from backend whenever modal opens
+  useEffect(() => {
+    const enrId = enrollment?.enrollment_id ?? enrollment?.id;
+    if (!isOpen || !enrId || !token) {
+      setLiveInstallmentsData(null);
+      return;
+    }
+    let isMounted = true;
+    setLoadingSchedule(true);
+    getEnrollmentInstallmentsApi(enrId, token)
+      .then((res) => {
+        if (isMounted) setLiveInstallmentsData(res);
+      })
+      .catch((err) => {
+        console.warn("Could not load live installments for record payment modal:", err);
+      })
+      .finally(() => {
+        if (isMounted) setLoadingSchedule(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, enrollment?.enrollment_id, enrollment?.id, token]);
+
+  const installments = useMemo(() => {
+    if (Array.isArray(liveInstallmentsData)) return liveInstallmentsData;
+    if (Array.isArray(liveInstallmentsData?.installments)) return liveInstallmentsData.installments;
+    if (Array.isArray(liveInstallmentsData?.schedule)) return liveInstallmentsData.schedule;
+    if (Array.isArray(enrollment?.installments)) return enrollment.installments;
+    return [];
+  }, [liveInstallmentsData, enrollment]);
+
+  const balance = useMemo(() => {
+    if (liveInstallmentsData?.balance_amount !== undefined && liveInstallmentsData.balance_amount !== null) {
+      return Number(liveInstallmentsData.balance_amount);
+    }
+    if (liveInstallmentsData?.remaining_amount !== undefined && liveInstallmentsData.remaining_amount !== null) {
+      return Number(liveInstallmentsData.remaining_amount);
+    }
+    if (liveInstallmentsData?.remaining_balance !== undefined && liveInstallmentsData.remaining_balance !== null) {
+      return Number(liveInstallmentsData.remaining_balance);
+    }
+    return Number(enrollment?.balance_amount ?? enrollment?.remaining_amount ?? 0);
+  }, [liveInstallmentsData, enrollment]);
 
   // Find next unpaid installment to suggest
   const nextUnpaidInstallment = useMemo(() => {
@@ -396,9 +442,14 @@ const RecordPaymentModal = ({
               <IndianRupee className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-[#9c6b2e]">
-                In-Person Fee Collection
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#9c6b2e]">
+                  In-Person Fee Collection
+                </p>
+                {loadingSchedule && (
+                  <Loader2 className="h-3 w-3 animate-spin text-[#9c6b2e]" />
+                )}
+              </div>
               <h2 className="text-lg font-bold text-slate-900 leading-tight">
                 Record Installment Payment
               </h2>
@@ -1361,7 +1412,24 @@ const EnrollmentDetailsModal = ({
               {balanceNum > 0 && (
                 <button
                   type="button"
-                  onClick={() => onOpenRecordPayment(enrollment)}
+                  onClick={() =>
+                    onOpenRecordPayment({
+                      ...enrollment,
+                      ...(apiInstallmentsData || {}),
+                      installments:
+                        enrichedInstallments?.length > 0
+                          ? enrichedInstallments
+                          : apiInstallmentsData?.installments || enrollment.installments,
+                      balance_amount:
+                        apiInstallmentsData?.balance_amount ??
+                        enrollment.balance_amount ??
+                        enrollment.remaining_amount,
+                      remaining_amount:
+                        apiInstallmentsData?.remaining_amount ??
+                        enrollment.remaining_amount ??
+                        enrollment.balance_amount,
+                    })
+                  }
                   className="ba-press inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold text-white shadow-sm transition"
                   style={{ background: "#9c6b2e" }}
                 >
@@ -1645,10 +1713,10 @@ const BranchAdminEnrollments = () => {
   };
 
   // Main fetcher
-  const loadAllData = async () => {
+  const loadAllData = async (silent = false) => {
     if (!token) return;
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       setError("");
 
       const [
@@ -1712,7 +1780,7 @@ const BranchAdminEnrollments = () => {
     } catch (err) {
       setError(err?.message || "Failed to load branch student records.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -1832,6 +1900,7 @@ const BranchAdminEnrollments = () => {
 
       const paymentRes = await recordBranchAdminInstallmentPaymentApi(enrollmentId, payload, token);
 
+      let receiptObj = null;
       const hasReceipt =
         paymentRes?.receipt ||
         paymentRes?.receipt_url ||
@@ -1840,7 +1909,7 @@ const BranchAdminEnrollments = () => {
         Boolean(payload.amount);
 
       if (hasReceipt) {
-        const receiptObj = paymentRes?.receipt || {
+        receiptObj = paymentRes?.receipt || {
           ...paymentRes,
           receipt_url: paymentRes?.receipt_url,
           download_url: paymentRes?.download_url,
@@ -1876,11 +1945,65 @@ const BranchAdminEnrollments = () => {
         }`
       );
       setTimeout(() => setSuccess(""), 5000);
+
+      // Close the record modal immediately so it does not linger behind the receipt
       setRecordingEnrollment(null);
 
-      // Reload data to reflect updated balances and payment history
-      loadAllData();
+      // Optimistically update all state lists immediately for instantaneous UI updates
+      const paidAmt = Number(payload.amount || 0);
+      const updateStudentOptimistically = (item) => {
+        const id = item.enrollment_id ?? item.id;
+        if (String(id) === String(enrollmentId)) {
+          const currentPaid = Number(item.total_paid ?? item.paid_amount ?? 0);
+          const currentBal = Number(item.balance_amount ?? item.remaining_amount ?? 0);
+          const newPaid = currentPaid + paidAmt;
+          const newBal = Math.max(0, currentBal - paidAmt);
+
+          let updatedInstallments = item.installments;
+          if (Array.isArray(item.installments)) {
+            updatedInstallments = item.installments.map((inst) => {
+              const instNum = Number(inst.installment_number);
+              if (payload.installment_number && instNum === Number(payload.installment_number)) {
+                return {
+                  ...inst,
+                  status: "paid",
+                  paid_amount: Number(inst.amount || paidAmt),
+                  remaining_amount: 0,
+                  is_paid: true,
+                };
+              }
+              return inst;
+            });
+          }
+
+          return {
+            ...item,
+            total_paid: newPaid,
+            paid_amount: newPaid,
+            balance_amount: newBal,
+            remaining_amount: newBal,
+            installments: updatedInstallments,
+          };
+        }
+        return item;
+      };
+
+      setEnrollments((prev) => prev.map(updateStudentOptimistically));
+      setInstallmentStudents((prev) => prev.map(updateStudentOptimistically));
+      setFullyPaidStudents((prev) => prev.map(updateStudentOptimistically));
+      setSelectedEnrollment((prev) => {
+        if (!prev) return null;
+        const id = prev.enrollment_id ?? prev.id;
+        if (String(id) === String(enrollmentId)) {
+          return updateStudentOptimistically(prev);
+        }
+        return prev;
+      });
+
+      // Reload data cleanly in background to sync with backend
+      await loadAllData(true);
     } catch (err) {
+      console.error("Error recording installment payment:", err);
       setError(err?.message || "Failed to record installment payment.");
       setTimeout(() => setError(""), 6000);
     } finally {
@@ -1905,8 +2028,8 @@ const BranchAdminEnrollments = () => {
       setSuccess(`Payment of ${amountStr} for ${studentName} approved successfully.`);
       setTimeout(() => setSuccess(""), 5000);
 
-      // Re-fetch approvals and students data
-      loadAllData();
+      // Re-fetch approvals and students data silently
+      loadAllData(true);
     } catch (err) {
       setError(err?.message || "Failed to approve payment.");
       setTimeout(() => setError(""), 6000);
@@ -1929,7 +2052,7 @@ const BranchAdminEnrollments = () => {
       setTimeout(() => setSuccess(""), 5000);
       setRejectingPayment(null);
 
-      loadAllData();
+      loadAllData(true);
     } catch (err) {
       setError(err?.message || "Failed to reject payment.");
       setTimeout(() => setError(""), 6000);
@@ -2958,6 +3081,7 @@ const BranchAdminEnrollments = () => {
         enrollment={recordingEnrollment}
         onSubmit={handleRecordPaymentSubmit}
         isSubmitting={isSubmittingRecord}
+        token={token}
       />
 
       {/* Reject Online Payment Modal */}

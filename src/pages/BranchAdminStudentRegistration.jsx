@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Check, Download, IndianRupee, Loader2, Mail, Menu, Phone, Receipt, UserPlus, X } from "lucide-react";
+import React, { useEffect, useState, useRef } from "react";
+import { Check, Download, Eye, EyeOff, IndianRupee, Loader2, Mail, Menu, Phone, Receipt, UserPlus, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import BranchAdminSidebar from "../components/layout/BranchAdminSidebar";
@@ -99,8 +99,20 @@ function BranchAdminStudentRegistration() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const errorRef = useRef(null);
+
+  const scrollToError = () => {
+    setTimeout(() => {
+      if (errorRef.current) {
+        errorRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      } else {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }, 50);
+  };
+
   const [selectedAdmissionForPayment, setSelectedAdmissionForPayment] = useState(null);
-  const [paymentForm, setPaymentForm] = useState({ cash_amount: 0, upi_amount: 0, installment_number: 1, payment_date: "" });
+  const [paymentForm, setPaymentForm] = useState({ cash_amount: 0, upi_amount: 0, upi_transaction_id: "", installment_number: 1, payment_date: "" });
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState("");
   const [selectedCourseDetails, setSelectedCourseDetails] = useState(null);
@@ -109,10 +121,12 @@ function BranchAdminStudentRegistration() {
     term_number: 1,
     cash_amount: "",
     upi_amount: "",
+    upi_transaction_id: "",
     status: "received"
   });
   const [registrationReceipt, setRegistrationReceipt] = useState(null);
   const [downloadingReceipt, setDownloadingReceipt] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (!token || !form.courseId) return;
@@ -123,22 +137,40 @@ function BranchAdminStudentRegistration() {
         if (isMounted) {
           setSelectedCourseDetails(details);
           const fee = Number(details.price) || 0;
-          if (details?.installment_terms?.length > 0) {
-            setEditableInstallments(details.installment_terms.map(t => ({ ...t })));
+          let terms = details?.installment_terms;
+          if (typeof terms === "string") {
+            try {
+              terms = JSON.parse(terms);
+            } catch {
+              terms = [];
+            }
+          }
+          if (Array.isArray(terms) && terms.length > 0) {
+            setEditableInstallments(
+              terms.map((t, idx) => ({
+                term_number: Number(t.term_number || t.installment_number || idx + 1),
+                amount: Number(t.amount) || 0,
+                due_date: t.due_date ? String(t.due_date).slice(0, 10) : "",
+              }))
+            );
           } else if (details?.installment_count > 0) {
-             const count = Number(details.installment_count);
-             const amt = Math.round(fee / count);
-             const today = new Date();
-             const terms = Array.from({ length: count }, (_, i) => {
-                const dueDate = new Date(today);
-                dueDate.setMonth(today.getMonth() + i);
-                return { term_number: i + 1, amount: amt, due_date: dueDate.toISOString().slice(0, 10) };
-             });
-             const totalSoFar = amt * (count - 1);
-             terms[count - 1].amount = fee - totalSoFar;
-             setEditableInstallments(terms);
+            const count = Number(details.installment_count);
+            const amt = Math.round(fee / count);
+            const today = new Date();
+            const generatedTerms = Array.from({ length: count }, (_, i) => {
+              const dueDate = new Date(today);
+              dueDate.setMonth(today.getMonth() + i);
+              return {
+                term_number: i + 1,
+                amount: amt,
+                due_date: dueDate.toISOString().slice(0, 10),
+              };
+            });
+            const totalSoFar = amt * (count - 1);
+            generatedTerms[count - 1].amount = fee - totalSoFar;
+            setEditableInstallments(generatedTerms);
           } else {
-             setEditableInstallments([]);
+            setEditableInstallments([]);
           }
         }
       } catch (err) {
@@ -237,6 +269,15 @@ function BranchAdminStudentRegistration() {
           })()
         : {}),
     }));
+    if (name === "courseId") {
+      setRegistrationPayment({
+        term_number: 1,
+        cash_amount: "",
+        upi_amount: "",
+        upi_transaction_id: "",
+        status: "received",
+      });
+    }
   };
 
   const changePaymentPlan = (paymentPlan) => {
@@ -250,76 +291,133 @@ function BranchAdminStudentRegistration() {
       term_number: 1,
       cash_amount: "",
       upi_amount: "",
-      status: "received"
+      upi_transaction_id: "",
+      status: "received",
     });
+    if (paymentPlan === "installment" && editableInstallments.length === 0 && installmentCount > 0) {
+      const amt = Math.round(courseFee / installmentCount);
+      const today = new Date();
+      const generated = Array.from({ length: installmentCount }, (_, i) => {
+        const dueDate = new Date(today);
+        dueDate.setMonth(today.getMonth() + i);
+        return {
+          term_number: i + 1,
+          amount: i === installmentCount - 1 ? courseFee - amt * (installmentCount - 1) : amt,
+          due_date: dueDate.toISOString().slice(0, 10),
+        };
+      });
+      setEditableInstallments(generated);
+    }
   };
 
   const submit = async (event) => {
     event.preventDefault();
     setError("");
     setSuccess("");
+
     if (!selectedCourse) {
       setError("Select a course before registering the student.");
+      scrollToError();
       return;
     }
-    if (form.paymentPlan === "installment") {
-       const totalInst = editableInstallments.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-       if (totalInst !== courseFee) {
-         setError(`The sum of all installments (${formatCurrency(totalInst)}) must equal the course fee (${formatCurrency(courseFee)}).`);
-         return;
-       }
+
+    if (!form.password || form.password.length < 8) {
+      setError("Student account password must be at least 8 characters long.");
+      scrollToError();
+      return;
+    }
+
+    const isInstallment = form.paymentPlan === "installment";
+    const isPaymentReceived = registrationPayment.status === "received";
+
+    if (isInstallment) {
+      if (editableInstallments.length === 0) {
+        setError("No installments configured for this course. Please switch to Full payment or configure installments.");
+        scrollToError();
+        return;
+      }
+      const totalInst = editableInstallments.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+      if (totalInst !== courseFee) {
+        setError(`The sum of all installments (${formatCurrency(totalInst)}) must equal the course fee (${formatCurrency(courseFee)}).`);
+        scrollToError();
+        return;
+      }
+      const hasInvalidTerm = editableInstallments.some(t => !t.due_date || Number(t.amount) <= 0);
+      if (hasInvalidTerm) {
+        setError("All installment terms must have a valid due date and an amount greater than zero.");
+        scrollToError();
+        return;
+      }
     }
 
     const cashAmt = Number(registrationPayment.cash_amount) || 0;
     const upiAmt = Number(registrationPayment.upi_amount) || 0;
     const totalPay = cashAmt + upiAmt;
 
-    if (registrationPayment.status === "received") {
-       if (totalPay <= 0) {
-         setError("Enter a payment amount greater than zero.");
-         return;
-       }
-       if (form.paymentPlan === "installment") {
-         const selectedTerm = editableInstallments.find(t => t.term_number === registrationPayment.term_number);
-         if (selectedTerm && totalPay !== selectedTerm.amount) {
-           setError(`Cash + UPI (${formatCurrency(totalPay)}) must equal Term ${selectedTerm.term_number}'s full amount (${formatCurrency(selectedTerm.amount)}).`);
-           return;
-         }
-       } else {
-         if (totalPay !== courseFee) {
-           setError(`Cash + UPI (${formatCurrency(totalPay)}) must equal the course fee (${formatCurrency(courseFee)}).`);
-           return;
-         }
-       }
+    if (isPaymentReceived) {
+      if (totalPay <= 0) {
+        setError("Enter a payment amount greater than zero when status is received.");
+        scrollToError();
+        return;
+      }
+      if (isInstallment) {
+        const selectedTerm = editableInstallments.find(t => t.term_number === registrationPayment.term_number);
+        if (selectedTerm && totalPay !== Number(selectedTerm.amount)) {
+          setError(`Cash + UPI (${formatCurrency(totalPay)}) must equal Term ${selectedTerm.term_number}'s full amount (${formatCurrency(selectedTerm.amount)}).`);
+          scrollToError();
+          return;
+        }
+      } else {
+        if (totalPay !== courseFee) {
+          setError(`Cash + UPI (${formatCurrency(totalPay)}) must equal the course fee (${formatCurrency(courseFee)}).`);
+          scrollToError();
+          return;
+        }
+      }
+
+      if (upiAmt > 0 && !registrationPayment.upi_transaction_id?.trim()) {
+        setError("UPI Transaction ID is required when paying with UPI.");
+        scrollToError();
+        return;
+      }
     }
 
     setSaving(true);
     let createdAdmission;
     try {
-      createdAdmission = await createBranchAdmissionApi(
-        {
-          name: form.name.trim(),
-          phone: form.phone.trim(),
-          email: form.email.trim(),
-          parent_name: form.guardianName.trim(),
-          parent_phone: form.guardianPhone.trim(),
-          highest_qualification: form.qualification.trim(),
-          address: form.address.trim(),
-          password: form.password,
-          course_id: Number(selectedCourse.id),
-          payment_status: registrationPayment.status === "received" ? "received" : "not_received",
-          cash_amount: registrationPayment.status === "received" ? cashAmt : 0,
-          upi_amount: registrationPayment.status === "received" ? upiAmt : 0,
-          payment_date: registrationPayment.status === "received" ? new Date().toISOString().slice(0, 10) : null,
-          installment_number: form.paymentPlan === "installment" && registrationPayment.status === "received" ? registrationPayment.term_number : null,
-          installments: editableInstallments.length > 0 ? editableInstallments.map(t => ({
-            installment_number: t.term_number,
-            amount: Number(t.amount) || 0,
-            due_date: t.due_date
-          })) : [],
-        },
-        token,
-      );
+      const payload = {
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim(),
+        parent_name: form.guardianName.trim(),
+        parent_phone: form.guardianPhone.trim(),
+        highest_qualification: form.qualification.trim(),
+        address: form.address.trim(),
+        password: form.password,
+        course_id: Number(selectedCourse.id),
+        installments: isInstallment && editableInstallments.length > 0
+          ? editableInstallments.map((t, idx) => ({
+              installment_number: Number(t.term_number || idx + 1),
+              amount: Number(t.amount) || 0,
+              due_date: t.due_date ? String(t.due_date).slice(0, 10) : new Date().toISOString().slice(0, 10),
+            }))
+          : null,
+        first_installment_amount: null,
+        payment_status: isPaymentReceived ? "received" : "not_received",
+        cash_amount: isPaymentReceived ? cashAmt : 0,
+        upi_amount: isPaymentReceived ? upiAmt : 0,
+        upi_transaction_id: isPaymentReceived && upiAmt > 0
+          ? registrationPayment.upi_transaction_id.trim()
+          : null,
+        installment_number: isInstallment && isPaymentReceived
+          ? (Number(registrationPayment.term_number) || 1)
+          : null,
+        payment_date: isPaymentReceived
+          ? new Date().toISOString().slice(0, 10)
+          : null,
+      };
+
+      createdAdmission = await createBranchAdmissionApi(payload, token);
 
       const hasReceipt =
         createdAdmission?.receipt ||
@@ -328,8 +426,9 @@ function BranchAdminStudentRegistration() {
         createdAdmission?.receipt_number ||
         (registrationPayment.status === "received" && totalPay > 0);
 
+      let receiptObj = null;
       if (hasReceipt) {
-        const receiptObj = createdAdmission?.receipt || {
+        receiptObj = createdAdmission?.receipt || {
           ...createdAdmission,
           receipt_url: createdAdmission?.receipt_url,
           download_url: createdAdmission?.download_url,
@@ -340,13 +439,14 @@ function BranchAdminStudentRegistration() {
           student_email: createdAdmission?.email || form.email.trim(),
           course_title: selectedCourse?.title || "Course",
           course_fee: courseFee,
-          amount_paid: (registrationPayment.status === "received" ? totalPay : 0) || createdAdmission?.amount || createdAdmission?.paid_amount,
-          amount: (registrationPayment.status === "received" ? totalPay : 0) || createdAdmission?.amount || createdAdmission?.paid_amount,
+          amount_paid: (isPaymentReceived ? totalPay : 0) || createdAdmission?.amount || createdAdmission?.paid_amount,
+          amount: (isPaymentReceived ? totalPay : 0) || createdAdmission?.amount || createdAdmission?.paid_amount,
           payment_method: cashAmt > 0 && upiAmt > 0 ? "split" : cashAmt > 0 ? "cash" : "upi",
-          payment_type: form.paymentPlan === "installment" ? "installment" : "full",
-          installment_number: form.paymentPlan === "installment" && registrationPayment.status === "received" ? registrationPayment.term_number : null,
+          payment_type: isInstallment ? "installment" : "full",
+          installment_number: isInstallment && isPaymentReceived ? registrationPayment.term_number : null,
           cash_amount: cashAmt,
           upi_amount: upiAmt,
+          upi_transaction_id: isPaymentReceived && upiAmt > 0 ? (registrationPayment.upi_transaction_id?.trim() || null) : null,
           payment_date: new Date().toISOString(),
         };
         setRegistrationReceipt(receiptObj);
@@ -365,6 +465,13 @@ function BranchAdminStudentRegistration() {
         courseId: String(selectedCourse.id),
         paymentAmount: String(courseFee),
       });
+      setRegistrationPayment({
+        term_number: 1,
+        cash_amount: "",
+        upi_amount: "",
+        upi_transaction_id: "",
+        status: "received",
+      });
     } catch (err) {
       if (createdAdmission) {
         setError(`Student was registered, but payment could not be recorded: ${err.message}`);
@@ -378,6 +485,7 @@ function BranchAdminStudentRegistration() {
       } else {
         setError(err.message || "Failed to register student.");
       }
+      scrollToError();
     } finally {
       setSaving(false);
     }
@@ -435,11 +543,23 @@ function BranchAdminStudentRegistration() {
         <div className="mx-auto w-full max-w-6xl space-y-8 px-6 py-8 sm:px-10">
           {error && (
             <div
+              ref={errorRef}
               role="alert"
-              className="rounded-lg px-4 py-3 text-sm font-medium"
+              className="flex items-start justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium"
               style={{ background: "#f8eae5", color: "#7c3324", border: "1px solid #eccec4" }}
             >
-              {error}
+              <div className="flex items-start gap-2">
+                <span className="shrink-0 font-bold mt-0.5">⚠️</span>
+                <span>{error}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setError("")}
+                className="shrink-0 text-[#7c3324] hover:opacity-75"
+                aria-label="Dismiss error"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
           )}
           {success && (
@@ -532,8 +652,49 @@ function BranchAdminStudentRegistration() {
                   <textarea name="address" required rows="2" value={form.address} onChange={updateField} className={INPUT_CLASS} style={INPUT_STYLE} />
                 </label>
                 <label className="block text-sm" style={{ color: "#5b5346" }}>
-                  Student account password
-                  <input name="password" type="password" minLength="8" required value={form.password} onChange={updateField} className={INPUT_CLASS} style={INPUT_STYLE} autoComplete="new-password" />
+                  <div className="flex items-center justify-between">
+                    <span>Student account password</span>
+                    <span
+                      className="text-xs font-medium"
+                      style={{
+                        color:
+                          form.password && form.password.length < 8
+                            ? "#c25438"
+                            : form.password && form.password.length >= 8
+                            ? "#39533a"
+                            : "#8a8175",
+                      }}
+                    >
+                      {form.password
+                        ? `${form.password.length}/8 min characters`
+                        : "Min. 8 characters required"}
+                    </span>
+                  </div>
+                  <div className="relative mt-1">
+                    <input
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      minLength="8"
+                      required
+                      placeholder="Minimum 8 characters (e.g. 12345678)"
+                      value={form.password}
+                      onChange={updateField}
+                      className={INPUT_CLASS}
+                      style={{ ...INPUT_STYLE, paddingRight: "40px", marginTop: 0 }}
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-slate-600 focus:outline-none"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <p className="mt-1 text-xs" style={{ color: "#8a8175" }}>
+                    Student will use this password to sign in to their portal. Must be at least 8 characters.
+                  </p>
                 </label>
                 <label className="block text-sm sm:col-span-2" style={{ color: "#5b5346" }}>
                   Course purchased
@@ -602,8 +763,9 @@ function BranchAdminStudentRegistration() {
                             <input
                               type="date"
                               required
-                              value={term.due_date || ""}
+                              value={term.due_date ? String(term.due_date).slice(0, 10) : ""}
                               onChange={(e) => {
+                                setError("");
                                 const newInst = [...editableInstallments];
                                 newInst[idx].due_date = e.target.value;
                                 setEditableInstallments(newInst);
@@ -663,7 +825,10 @@ function BranchAdminStudentRegistration() {
                           Paying for Term
                           <select
                             value={registrationPayment.term_number}
-                            onChange={(e) => setRegistrationPayment(prev => ({ ...prev, term_number: Number(e.target.value) }))}
+                            onChange={(e) => {
+                              setError("");
+                              setRegistrationPayment(prev => ({ ...prev, term_number: Number(e.target.value) }));
+                            }}
                             className={INPUT_CLASS}
                             style={INPUT_STYLE}
                           >
@@ -675,22 +840,66 @@ function BranchAdminStudentRegistration() {
                           </select>
                         </label>
                       )}
+
                       <div className="grid grid-cols-2 gap-4">
                         <label className="block text-sm" style={{ color: "#5b5346" }}>
                           Cash Amount
                           <div className="relative mt-1">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "#8a8175" }}>₹</span>
-                            <input type="number" min="0" value={registrationPayment.cash_amount} onChange={(e) => setRegistrationPayment(prev => ({ ...prev, cash_amount: e.target.value }))} className={INPUT_CLASS} style={{ ...INPUT_STYLE, paddingLeft: '28px', marginTop: 0 }} />
+                            <input
+                              type="number"
+                              min="0"
+                              value={registrationPayment.cash_amount}
+                              onChange={(e) => {
+                                setError("");
+                                setRegistrationPayment(prev => ({ ...prev, cash_amount: e.target.value }));
+                              }}
+                              className={INPUT_CLASS}
+                              style={{ ...INPUT_STYLE, paddingLeft: '28px', marginTop: 0 }}
+                              placeholder="0"
+                            />
                           </div>
                         </label>
                         <label className="block text-sm" style={{ color: "#5b5346" }}>
                           UPI Amount
                           <div className="relative mt-1">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "#8a8175" }}>₹</span>
-                            <input type="number" min="0" value={registrationPayment.upi_amount} onChange={(e) => setRegistrationPayment(prev => ({ ...prev, upi_amount: e.target.value }))} className={INPUT_CLASS} style={{ ...INPUT_STYLE, paddingLeft: '28px', marginTop: 0 }} />
+                            <input
+                              type="number"
+                              min="0"
+                              value={registrationPayment.upi_amount}
+                              onChange={(e) => {
+                                setError("");
+                                setRegistrationPayment(prev => ({ ...prev, upi_amount: e.target.value }));
+                              }}
+                              className={INPUT_CLASS}
+                              style={{ ...INPUT_STYLE, paddingLeft: '28px', marginTop: 0 }}
+                              placeholder="0"
+                            />
                           </div>
                         </label>
                       </div>
+
+                      {Number(registrationPayment.upi_amount) > 0 && (
+                        <label className="block text-sm" style={{ color: "#5b5346" }}>
+                          <span className="flex items-center justify-between">
+                            <span>UPI Transaction ID</span>
+                            <span className="text-xs text-amber-700 font-medium">Required for UPI payment</span>
+                          </span>
+                          <input
+                            type="text"
+                            required
+                            placeholder="Enter 12-digit UPI reference / transaction ID (e.g. 123456789012)"
+                            value={registrationPayment.upi_transaction_id || ""}
+                            onChange={(e) => {
+                              setError("");
+                              setRegistrationPayment(prev => ({ ...prev, upi_transaction_id: e.target.value }));
+                            }}
+                            className={INPUT_CLASS}
+                            style={INPUT_STYLE}
+                          />
+                        </label>
+                      )}
                     </div>
                   )}
                 </div>
@@ -725,6 +934,16 @@ function BranchAdminStudentRegistration() {
                     </dd>
                   </div>
                 </dl>
+                {error && (
+                  <div
+                    role="alert"
+                    className="mt-4 flex items-start gap-2 rounded-lg p-3 text-xs font-semibold"
+                    style={{ background: "#f8eae5", color: "#7c3324", border: "1px solid #eccec4" }}
+                  >
+                    <span className="shrink-0 font-bold mt-0.5">⚠️</span>
+                    <span className="flex-1 leading-relaxed">{error}</span>
+                  </div>
+                )}
                 <button
                   type="submit"
                   disabled={saving || loading || !selectedCourse || courses.length === 0}
@@ -823,6 +1042,7 @@ function BranchAdminStudentRegistration() {
                                setPaymentForm({
                                  cash_amount: nextInstAmt,
                                  upi_amount: 0,
+                                 upi_transaction_id: "",
                                  installment_number: nextInstNum,
                                  payment_date: new Date().toISOString().slice(0, 10)
                                });
@@ -915,6 +1135,11 @@ function BranchAdminStudentRegistration() {
                                     <p className="mt-0.5 text-sm font-medium">
                                       {formatCurrency(payment.cash_amount)} / {formatCurrency(payment.upi_amount)}
                                     </p>
+                                    {payment.upi_transaction_id && (
+                                      <p className="text-[11px] font-mono mt-0.5" style={{ color: "#8a6d43" }}>
+                                        Ref: {payment.upi_transaction_id}
+                                      </p>
+                                    )}
                                   </div>
                                   <div>
                                     <p className="text-xs" style={{ color: "#a39a8c" }}>Total · status</p>
@@ -960,7 +1185,7 @@ function BranchAdminStudentRegistration() {
           let paymentMethod = "No payment recorded";
           if (pCash > 0 && pUpi > 0) paymentMethod = `Cash: ${formatCurrency(pCash)} + UPI: ${formatCurrency(pUpi)}`;
           else if (pCash > 0) paymentMethod = `Cash: ${formatCurrency(pCash)}`;
-          else if (pUpi > 0) paymentMethod = `UPI: ${formatCurrency(pUpi)}`;
+          else if (pUpi > 0) paymentMethod = inst.upi_transaction_id ? `UPI: ${formatCurrency(pUpi)} (Ref: ${inst.upi_transaction_id})` : `UPI: ${formatCurrency(pUpi)}`;
           else if (paidAmount > 0) paymentMethod = "Recorded";
           return {
             term_number: inst.installment_number,
@@ -991,7 +1216,7 @@ function BranchAdminStudentRegistration() {
               const pUpi = Number(p.upi_amount) || 0;
               if (pCash > 0 && pUpi > 0) return `Cash: ${formatCurrency(pCash)} + UPI: ${formatCurrency(pUpi)}`;
               if (pCash > 0) return `Cash: ${formatCurrency(pCash)}`;
-              if (pUpi > 0) return `UPI: ${formatCurrency(pUpi)}`;
+              if (pUpi > 0) return p.upi_transaction_id ? `UPI: ${formatCurrency(pUpi)} (Ref: ${p.upi_transaction_id})` : `UPI: ${formatCurrency(pUpi)}`;
               return "Recorded";
             })(),
             isPaid: balance <= 0,
@@ -1115,8 +1340,14 @@ function BranchAdminStudentRegistration() {
                 <form
                   onSubmit={async (e) => {
                     e.preventDefault();
-                    if (paymentForm.cash_amount <= 0 && paymentForm.upi_amount <= 0) {
-                       setPaymentError("Please enter a valid amount.");
+                    const cashVal = Number(paymentForm.cash_amount) || 0;
+                    const upiVal = Number(paymentForm.upi_amount) || 0;
+                    if (cashVal <= 0 && upiVal <= 0) {
+                       setPaymentError("Please enter a valid amount greater than zero.");
+                       return;
+                    }
+                    if (upiVal > 0 && !paymentForm.upi_transaction_id?.trim()) {
+                       setPaymentError("UPI Transaction ID is required when paying with UPI.");
                        return;
                     }
                     setPaymentLoading(true);
@@ -1126,8 +1357,9 @@ function BranchAdminStudentRegistration() {
                         selectedAdmissionForPayment.enrollment_id,
                         {
                           installment_number: Number(paymentForm.installment_number),
-                          cash_amount: Number(paymentForm.cash_amount),
-                          upi_amount: Number(paymentForm.upi_amount),
+                          cash_amount: cashVal,
+                          upi_amount: upiVal,
+                          upi_transaction_id: upiVal > 0 ? paymentForm.upi_transaction_id.trim() : null,
                           payment_date: paymentForm.payment_date,
                         },
                         token
@@ -1142,9 +1374,10 @@ function BranchAdminStudentRegistration() {
                               download_url: paymentRes.download_url,
                               student_name: selectedAdmissionForPayment?.student_name || selectedAdmissionForPayment?.name,
                               course_title: selectedAdmissionForPayment?.course_title || selectedAdmissionForPayment?.course_name,
-                              amount_paid: Number(paymentForm.cash_amount || 0) + Number(paymentForm.upi_amount || 0),
+                              amount_paid: cashVal + upiVal,
                               installment_number: Number(paymentForm.installment_number),
                               payment_date: paymentForm.payment_date,
+                              upi_transaction_id: upiVal > 0 ? paymentForm.upi_transaction_id.trim() : null,
                               ...paymentRes,
                             }
                           : null);
@@ -1174,23 +1407,77 @@ function BranchAdminStudentRegistration() {
                         {paymentError}
                       </div>
                     )}
-                    <label className="block text-sm" style={{ color: "#5b5346" }}>
-                      Cash Amount
-                      <div className="relative mt-1">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "#8a8175" }}>₹</span>
-                        <input type="number" min="0" value={paymentForm.cash_amount} onChange={(e) => setPaymentForm(prev => ({ ...prev, cash_amount: e.target.value }))} className={INPUT_CLASS} style={{ ...INPUT_STYLE, paddingLeft: '28px' }} />
-                      </div>
-                    </label>
-                    <label className="block text-sm" style={{ color: "#5b5346" }}>
-                      UPI Amount
-                      <div className="relative mt-1">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "#8a8175" }}>₹</span>
-                        <input type="number" min="0" value={paymentForm.upi_amount} onChange={(e) => setPaymentForm(prev => ({ ...prev, upi_amount: e.target.value }))} className={INPUT_CLASS} style={{ ...INPUT_STYLE, paddingLeft: '28px' }} />
-                      </div>
-                    </label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <label className="block text-sm" style={{ color: "#5b5346" }}>
+                        Cash Amount
+                        <div className="relative mt-1">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "#8a8175" }}>₹</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={paymentForm.cash_amount}
+                            onChange={(e) => {
+                              setPaymentError("");
+                              setPaymentForm(prev => ({ ...prev, cash_amount: e.target.value }));
+                            }}
+                            className={INPUT_CLASS}
+                            style={{ ...INPUT_STYLE, paddingLeft: '28px', marginTop: 0 }}
+                            placeholder="0"
+                          />
+                        </div>
+                      </label>
+                      <label className="block text-sm" style={{ color: "#5b5346" }}>
+                        UPI Amount
+                        <div className="relative mt-1">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "#8a8175" }}>₹</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={paymentForm.upi_amount}
+                            onChange={(e) => {
+                              setPaymentError("");
+                              setPaymentForm(prev => ({ ...prev, upi_amount: e.target.value }));
+                            }}
+                            className={INPUT_CLASS}
+                            style={{ ...INPUT_STYLE, paddingLeft: '28px', marginTop: 0 }}
+                            placeholder="0"
+                          />
+                        </div>
+                      </label>
+                    </div>
+                    {Number(paymentForm.upi_amount) > 0 && (
+                      <label className="block text-sm" style={{ color: "#5b5346" }}>
+                        <span className="flex items-center justify-between">
+                          <span>UPI Transaction ID</span>
+                          <span className="text-xs text-amber-700 font-medium">Required for UPI payment</span>
+                        </span>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Enter UPI reference / transaction ID"
+                          value={paymentForm.upi_transaction_id || ""}
+                          onChange={(e) => {
+                            setPaymentError("");
+                            setPaymentForm(prev => ({ ...prev, upi_transaction_id: e.target.value }));
+                          }}
+                          className={INPUT_CLASS}
+                          style={INPUT_STYLE}
+                        />
+                      </label>
+                    )}
                     <label className="block text-sm" style={{ color: "#5b5346" }}>
                       Payment Date
-                      <input required type="date" value={paymentForm.payment_date} onChange={(e) => setPaymentForm(prev => ({ ...prev, payment_date: e.target.value }))} className={INPUT_CLASS} style={{ ...INPUT_STYLE, marginTop: '4px' }} />
+                      <input
+                        required
+                        type="date"
+                        value={paymentForm.payment_date}
+                        onChange={(e) => {
+                          setPaymentError("");
+                          setPaymentForm(prev => ({ ...prev, payment_date: e.target.value }));
+                        }}
+                        className={INPUT_CLASS}
+                        style={{ ...INPUT_STYLE, marginTop: '4px' }}
+                      />
                     </label>
                   </div>
 

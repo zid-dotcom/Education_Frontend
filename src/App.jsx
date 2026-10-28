@@ -73,6 +73,7 @@ import SuperAdminStudents from './pages/SuperAdminStudents';
 import SuperAdminProfit from './pages/SuperAdminProfit';
 import SuperAdminReceipts from './pages/SuperAdminReceipts';
 import SuperAdminExpenses from './pages/SuperAdminExpenses';
+import SuperAdminGstSettings from './pages/SuperAdminGstSettings';
 import SuperAdminAttendance from './pages/SuperAdminAttendance';
 import SuperAdminAnnouncements from './pages/SuperAdminAnnouncements';
 import SuperAdminStaff from './pages/SuperAdminStaff';
@@ -543,6 +544,15 @@ function App() {
             element={
               <ProtectedRoute adminOnly>
                 <SuperAdminExpenses />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/super-admin/gst-settings"
+            element={
+              <ProtectedRoute adminOnly>
+                <SuperAdminGstSettings />
               </ProtectedRoute>
             }
           />

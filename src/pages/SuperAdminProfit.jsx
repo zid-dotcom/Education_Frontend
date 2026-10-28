@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ChevronDown, IndianRupee, Loader2, RefreshCw, TrendingUp, Users, AlertCircle, X, CreditCard,
-  Calendar, GraduationCap, MapPin, Mail, Phone, BookOpen, Receipt
+  Calendar, GraduationCap, MapPin, Mail, Phone, BookOpen, Receipt, Banknote, Smartphone
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
@@ -125,12 +125,40 @@ const SuperAdminProfit = () => {
     }
   }, [selectedBranchId, fromDate, toDate, token]);
 
-  const enrollments = Array.isArray(todayProfit?.enrollments) ? todayProfit.enrollments : Array.isArray(todayProfit?.payments) ? todayProfit.payments : Array.isArray(todayProfit?.recent_payments) ? todayProfit.recent_payments : [];
+  const enrollments = Array.isArray(todayProfit?.enrollments)
+    ? todayProfit.enrollments
+    : Array.isArray(todayProfit?.payments)
+    ? todayProfit.payments
+    : Array.isArray(todayProfit?.recent_payments)
+    ? todayProfit.recent_payments
+    : [];
   
-  const totalTodayProfit = todayProfit?.today_profit ?? todayProfit?.total_collected ?? todayProfit?.total_profit ?? 0;
-  const totalCollectedToday = enrollments.reduce((sum, e) => sum + (Number(e.amount_paid_on_date ?? e.amount) || 0), 0);
-  const totalEnrollments = todayProfit?.total_enrollments ?? enrollments.length;
-  const studentsWithBalance = enrollments.filter(e => Number(e.balance_amount) > 0).length;
+  const totalReceived =
+    todayProfit?.total_received ??
+    todayProfit?.today_profit ??
+    todayProfit?.total_collected ??
+    todayProfit?.total_profit ??
+    0;
+
+  const totalEnrolledStudents =
+    todayProfit?.total_enrolled_students ??
+    todayProfit?.total_enrollments ??
+    enrollments.length;
+
+  const cashReceived = todayProfit?.cash_received ?? 0;
+
+  const razorpayReceived =
+    todayProfit?.razorpay_received ??
+    todayProfit?.online_received ??
+    0;
+
+  const upiReceived = todayProfit?.upi_received ?? 0;
+
+  const dueStudentAmount =
+    todayProfit?.due_student_amount ??
+    todayProfit?.outstanding_due ??
+    todayProfit?.total_due ??
+    0;
 
   return (
     <div className="min-h-screen md:flex" style={{ fontFamily: "'Inter', system-ui, sans-serif", background: '#faf8f4', color: '#17140f' }}>
@@ -141,7 +169,7 @@ const SuperAdminProfit = () => {
         <header className="flex items-center justify-between border-b px-6 py-5 sm:px-10" style={{ borderColor: '#e3ddd0', background: '#ffffff' }}>
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#9c6b2e' }}>Super Admin</p>
-            <h1 className="mt-1 text-2xl font-bold" style={{ fontFamily: "'Fraunces', serif" }}>Branch Profit</h1>
+            <h1 className="mt-1 text-2xl font-bold" style={{ fontFamily: "'Fraunces', serif" }}>Branch Revenue</h1>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -230,26 +258,65 @@ const SuperAdminProfit = () => {
 
               {profitLoading ? (
                 <div className="space-y-6">
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    {[1, 2, 3, 4].map(i => <div key={i} className="h-28 rounded-2xl bg-slate-200 animate-pulse"></div>)}
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="h-28 rounded-2xl bg-slate-200 animate-pulse"></div>)}
                   </div>
                   <div className="h-64 rounded-2xl bg-slate-200 animate-pulse"></div>
                 </div>
               ) : !selectedBranchId ? (
                 <div className="rounded-2xl px-5 py-14 text-center text-sm font-medium" style={{ background: '#ffffff', border: '1px solid #e3ddd0', color: '#5b5346' }}>
-                  Please select a branch from the dropdown above to view its profit data.
+                  Please select a branch from the dropdown above to view its revenue data.
                 </div>
               ) : (
                 <>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <StatCard label={fromDate === toDate ? "Date Profit" : "Branch Profit (From Date)"} value={fmt(totalTodayProfit)} icon={TrendingUp} accent="#f59e0b" delay={0} />
-                    <StatCard label={fromDate === toDate ? "Date Enrollments" : "Enrollments (From Date)"} value={totalEnrollments} icon={Users} accent="#8b5cf6" delay={60} />
-                    <StatCard label="Students With Balance" value={studentsWithBalance} icon={AlertCircle} accent="#ef4444" delay={120} />
+                    <StatCard
+                      label="Total Received"
+                      value={fmt(totalReceived)}
+                      icon={IndianRupee}
+                      accent="#10b981"
+                      delay={0}
+                    />
+                    <StatCard
+                      label="Students Enrolled"
+                      value={Number(totalEnrolledStudents || 0).toLocaleString('en-IN')}
+                      icon={Users}
+                      accent="#8b5cf6"
+                      delay={50}
+                    />
+                    <StatCard
+                      label="Cash Received"
+                      value={fmt(cashReceived)}
+                      icon={Banknote}
+                      accent="#059669"
+                      delay={100}
+                    />
+                    <StatCard
+                      label="Razorpay Received"
+                      value={fmt(razorpayReceived)}
+                      icon={CreditCard}
+                      accent="#3b82f6"
+                      delay={150}
+                    />
+                    <StatCard
+                      label="UPI Received"
+                      value={fmt(upiReceived)}
+                      icon={Smartphone}
+                      accent="#f59e0b"
+                      delay={200}
+                    />
+                    <StatCard
+                      label="Outstanding Due"
+                      value={fmt(dueStudentAmount)}
+                      icon={AlertCircle}
+                      accent="#ef4444"
+                      delay={250}
+                    />
                   </div>
 
-                  {totalEnrollments === 0 ? (
+                  {enrollments.length === 0 ? (
                     <div className="rounded-2xl px-5 py-14 text-center text-sm" style={{ background: '#ffffff', border: '1px solid #e3ddd0', color: '#a39a8c' }}>
-                      No payments or enrollments found for the selected date.
+                      No payments or enrollments found for the selected date range.
                     </div>
                   ) : (
                     <section className="rounded-2xl overflow-hidden" style={{ background: '#ffffff', border: '1px solid #e3ddd0' }}>
