@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   AlertCircle,
   ArrowLeft,
@@ -43,6 +43,7 @@ import {
   X,
   XCircle,
   FolderDown,
+  Star,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getCourseImageUrl } from '../services/courses';
@@ -898,6 +899,7 @@ const StudentDashboard = () => {
   useDashboardFonts();
   const { user, token, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [enrollments, setEnrollments] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -911,6 +913,7 @@ const StudentDashboard = () => {
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
   const [copiedKey, setCopiedKey] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [nextDueInstallment, setNextDueInstallment] = useState(null);
 
   // Installment payment states
   const [isLoadingInstallments, setIsLoadingInstallments] = useState(false);
@@ -921,6 +924,15 @@ const StudentDashboard = () => {
   const [paymentSuccessMessage, setPaymentSuccessMessage] = useState('');
   const [successReceipt, setSuccessReceipt] = useState(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+
+  // Auto-open receipt modal if navigating from a newly completed course purchase
+  useEffect(() => {
+    if (location.state?.newPurchaseReceipt) {
+      setSuccessReceipt(location.state.newPurchaseReceipt);
+      setShowReceiptModal(true);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, location.pathname, navigate]);
 
   const handleClosePaymentModal = () => {
     setSelectedPaymentEnrollment(null);
@@ -1092,6 +1104,121 @@ const StudentDashboard = () => {
       setIsLoadingInstallments(false);
     }
   };
+
+  // Automatically calculate or fetch the next installment due details across enrolled courses
+  useEffect(() => {
+    let isMounted = true;
+    if (!token || !Array.isArray(enrollments) || enrollments.length === 0) {
+      setNextDueInstallment(null);
+      return;
+    }
+
+    const loadNextDueDetails = async () => {
+      // Find candidate enrollments that have installment plan or balance > 0
+      const activeInstallmentEnrollments = enrollments.filter(
+        (e) =>
+          e.payment_plan === 'installment' ||
+          Number(e.balance_amount || 0) > 0 ||
+          (Array.isArray(e.installments) && e.installments.length > 0)
+      );
+
+      if (activeInstallmentEnrollments.length === 0) {
+        if (isMounted) setNextDueInstallment(null);
+        return;
+      }
+
+      // Check if any enrollment already has rich installments list in memory
+      for (const enr of activeInstallmentEnrollments) {
+        const rawList = enr.installments || enr.schedule || [];
+        if (Array.isArray(rawList) && rawList.length > 0) {
+          const enriched = enrichInstallmentsWithPayments(rawList, enr);
+          const nextUnpaid = enriched.find((i) => !isInstallmentPaidOrSubmitted(i));
+          if (nextUnpaid && Number(nextUnpaid.amount || enr.balance_amount || 0) > 0) {
+            if (isMounted) {
+              setNextDueInstallment({
+                enrollment: { ...enr, installments: enriched },
+                enrollmentId: enr.enrollment_id || enr.id,
+                courseTitle: enr.course_title || enr.course_details?.title || enr.course_name || 'Enrolled Course',
+                installmentNumber: nextUnpaid.installment_number || 1,
+                amount: nextUnpaid.amount,
+                dueDate: nextUnpaid.due_date,
+                balanceAmount: enr.balance_amount,
+              });
+            }
+            return;
+          }
+        }
+      }
+
+      // If not populated in list, fetch schedule for active installment enrollments
+      try {
+        for (const enr of activeInstallmentEnrollments) {
+          const enrollmentId = enr.enrollment_id || enr.id;
+          if (!enrollmentId) continue;
+
+          try {
+            const details = await getEnrollmentInstallmentsApi(enrollmentId, token);
+            if (!details) continue;
+
+            const detailsArray = Array.isArray(details) ? details : [];
+            const detailsObj = Array.isArray(details) ? {} : (details || {});
+            const rawInstList =
+              detailsObj.installments ||
+              detailsObj.schedule ||
+              (detailsArray.length > 0 && detailsArray[0]?.due_date ? detailsArray : enr.installments) ||
+              [];
+
+            const combinedPayments = [
+              ...detailsArray,
+              ...(Array.isArray(detailsObj.payments) ? detailsObj.payments : []),
+              ...(Array.isArray(detailsObj.payment_history) ? detailsObj.payment_history : []),
+              ...(Array.isArray(detailsObj.installment_payments) ? detailsObj.installment_payments : []),
+              ...(Array.isArray(detailsObj.recent_payments) ? detailsObj.recent_payments : []),
+              ...(Array.isArray(detailsObj.transactions) ? detailsObj.transactions : []),
+              ...(Array.isArray(detailsObj.records) ? detailsObj.records : []),
+              ...(Array.isArray(enr?.payments) ? enr.payments : []),
+              ...(Array.isArray(enr?.payment_history) ? enr.payment_history : []),
+            ];
+
+            const enrichedList = enrichInstallmentsWithPayments(
+              rawInstList,
+              { ...enr, ...detailsObj, payments: combinedPayments }
+            );
+
+            const nextUnpaid = enrichedList.find((i) => !isInstallmentPaidOrSubmitted(i));
+            if (nextUnpaid && Number(nextUnpaid.amount || detailsObj.balance_amount || enr.balance_amount || 0) > 0) {
+              if (isMounted) {
+                setNextDueInstallment({
+                  enrollment: { ...enr, ...detailsObj, installments: enrichedList },
+                  enrollmentId,
+                  courseTitle: enr.course_title || enr.course_details?.title || detailsObj.course_title || enr.course_name || 'Enrolled Course',
+                  installmentNumber: nextUnpaid.installment_number || 1,
+                  amount: nextUnpaid.amount,
+                  dueDate: nextUnpaid.due_date,
+                  balanceAmount: detailsObj.balance_amount ?? enr.balance_amount,
+                });
+              }
+              return;
+            }
+          } catch (e) {
+            // continue checking next enrollment
+          }
+        }
+      } catch (err) {
+        console.warn('Could not load next installment due details for header:', err);
+      }
+
+      if (isMounted) {
+        setNextDueInstallment(null);
+      }
+    };
+
+    loadNextDueDetails();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [enrollments, token]);
 
   const handlePayInstallment = async (installment) => {
     const enrollmentId = selectedPaymentEnrollment?.enrollment_id || selectedPaymentEnrollment?.id;
@@ -1961,6 +2088,16 @@ const StudentDashboard = () => {
               <Receipt className="h-4 w-4 text-[#8A8175]" />
               <span>Payment Receipts</span>
             </Link>
+
+            {/* Course Reviews */}
+            <Link
+              to="/student-dashboard/reviews"
+              onClick={closeSidebar}
+              className="flex items-center gap-3.5 rounded-2xl px-4 py-3 text-xs font-semibold text-[#5B5346] hover:bg-[#F1EDE4] hover:text-[#17140F] transition"
+            >
+              <Star className="h-4 w-4 text-[#8A8175]" />
+              <span>Course Reviews</span>
+            </Link>
           </nav>
 
           {/* Bottom Actions */}
@@ -2020,6 +2157,38 @@ const StudentDashboard = () => {
               />
             </div>
 
+            {/* Next Installment Due Detail (Red Text Alert for immediate catch) */}
+            {nextDueInstallment && (
+              <button
+                type="button"
+                onClick={() => handleOpenPaymentModal(nextDueInstallment.enrollment)}
+                className="group hidden sm:flex items-center gap-2.5 rounded-2xl bg-red-50 hover:bg-red-100/90 border border-red-200/90 px-3.5 py-1.5 sm:py-2 text-left shadow-xs transition-all duration-200 cursor-pointer shrink-0"
+                title="Click to view & pay next installment"
+              >
+                <span className="relative flex h-2.5 w-2.5 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
+                </span>
+                <div className="leading-tight">
+                  <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-red-600 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3 text-red-600 shrink-0" />
+                    Installment #{nextDueInstallment.installmentNumber} Due
+                  </p>
+                  <p className="text-xs sm:text-sm font-extrabold text-red-600 tracking-tight">
+                    Amount Due: {formatCurrency(nextDueInstallment.amount)}
+                    {nextDueInstallment.dueDate && (
+                      <span className="text-[11px] font-bold text-red-500 ml-1.5 font-sans">
+                        | Due: {formatDate(nextDueInstallment.dueDate)}
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <span className="hidden md:inline-flex items-center rounded-lg bg-red-600 px-2 py-0.5 text-[10px] font-extrabold uppercase text-white shadow-xs group-hover:bg-red-700 transition ml-0.5">
+                  Pay
+                </span>
+              </button>
+            )}
+
             {/* Profile & Notification Widget */}
             <div className="flex items-center gap-3 shrink-0">
               <Link
@@ -2062,6 +2231,36 @@ const StudentDashboard = () => {
               </div>
             </div>
           </header>
+
+          {/* Mobile Installment Due Banner in Red Text */}
+          {nextDueInstallment && (
+            <div className="sm:hidden pb-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => handleOpenPaymentModal(nextDueInstallment.enrollment)}
+                className="w-full flex items-center justify-between gap-2.5 rounded-xl bg-red-50 border border-red-200/90 px-3.5 py-2 text-left shadow-xs transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+                  </span>
+                  <div className="min-w-0 truncate">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-red-600">
+                      Installment #{nextDueInstallment.installmentNumber} Due
+                    </p>
+                    <p className="text-xs font-black text-red-600 truncate">
+                      Amount Due: {formatCurrency(nextDueInstallment.amount)}
+                      {nextDueInstallment.dueDate && ` | Due: ${formatDate(nextDueInstallment.dueDate)}`}
+                    </p>
+                  </div>
+                </div>
+                <span className="inline-flex items-center rounded-lg bg-red-600 px-2 py-1 text-[10px] font-extrabold uppercase text-white shadow-xs shrink-0">
+                  Pay
+                </span>
+              </button>
+            </div>
+          )}
 
           {/* Scrollable Dashboard Body */}
           <div className="flex-1 min-h-0 overflow-y-auto pr-1 sm:pr-2 custom-student-scrollbar">
@@ -2436,16 +2635,26 @@ const StudentDashboard = () => {
                                   </div>
                                 )}
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => handleOpenPaymentModal(enrollment)}
-                                className="rounded-xl bg-[#9C6B2E] px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#855923] flex items-center gap-1.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
-                              >
-                                <Receipt className="h-3.5 w-3.5" />
-                                {Number(enrollment.balance_amount) > 0 && enrollment.payment_plan === 'installment'
-                                  ? 'View & Pay'
-                                  : 'View'}
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <Link
+                                  to="/student-dashboard/reviews"
+                                  className="rounded-xl border border-[#E3DDD0] bg-[#FAF8F4] px-3 py-2 text-xs font-bold text-[#9C6B2E] transition hover:bg-[#F1EDE4] flex items-center gap-1.5 cursor-pointer"
+                                  title="Write a review for this course"
+                                >
+                                  <Star className="h-3.5 w-3.5 fill-[#9C6B2E]/20 text-[#9C6B2E]" />
+                                  <span>Review</span>
+                                </Link>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenPaymentModal(enrollment)}
+                                  className="rounded-xl bg-[#9C6B2E] px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#855923] flex items-center gap-1.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                                >
+                                  <Receipt className="h-3.5 w-3.5" />
+                                  {Number(enrollment.balance_amount) > 0 && enrollment.payment_plan === 'installment'
+                                    ? 'View & Pay'
+                                    : 'View'}
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>

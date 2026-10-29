@@ -16,6 +16,7 @@ import {
   X,
   FolderDown,
   Receipt,
+  Star,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getUserAnnouncementsApi } from '../../services/userannouncements';
@@ -59,10 +60,13 @@ const StudentLayout = () => {
   const isStudyMaterialsActive = location.pathname.startsWith('/student-dashboard/study-materials');
   const isMessagesActive = location.pathname.startsWith('/student-dashboard/messages');
   const isReceiptsActive = location.pathname.startsWith('/student-dashboard/receipts');
+  const isReviewsActive = location.pathname.startsWith('/student-dashboard/reviews');
   const isDashboardActive =
-    !isCatalogActive && !isInstitutionAnnouncementsActive && !isAnnouncementsActive && !isEnquiriesActive && !isAssignmentsActive && !isMessagesActive && !isStudyMaterialsActive && !isReceiptsActive;
+    !isCatalogActive && !isInstitutionAnnouncementsActive && !isAnnouncementsActive && !isEnquiriesActive && !isAssignmentsActive && !isMessagesActive && !isStudyMaterialsActive && !isReceiptsActive && !isReviewsActive;
 
-  const pageTitle = isReceiptsActive
+  const pageTitle = isReviewsActive
+    ? 'Course Reviews'
+    : isReceiptsActive
     ? 'Payment Receipts'
     : isMessagesActive
     ? 'Faculty Messages'
@@ -368,6 +372,20 @@ const StudentLayout = () => {
             >
               <Receipt className={`h-4 w-4 ${isReceiptsActive ? 'text-[#9C6B2E]' : 'text-[#8A8175]'}`} />
               <span>Payment Receipts</span>
+            </Link>
+
+            {/* Course Reviews */}
+            <Link
+              to="/student-dashboard/reviews"
+              onClick={closeSidebar}
+              className={`flex items-center gap-3.5 rounded-2xl px-4 py-3 text-xs transition ${
+                isReviewsActive
+                  ? 'bg-[#F1EDE4] font-bold text-[#17140F] shadow-xs border border-[#E3DDD0]/80'
+                  : 'font-semibold text-[#5B5346] hover:bg-[#F1EDE4] hover:text-[#17140F]'
+              }`}
+            >
+              <Star className={`h-4 w-4 ${isReviewsActive ? 'text-[#9C6B2E]' : 'text-[#8A8175]'}`} />
+              <span>Course Reviews</span>
             </Link>
           </nav>
 

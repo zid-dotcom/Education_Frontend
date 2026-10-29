@@ -17,6 +17,7 @@ import {
   Users,
   Activity,
   Receipt,
+  Star,
   X,
 } from "lucide-react";
 import { getBranchUnreadMessageCountApi } from "../../services/branchadminmessages";
@@ -24,6 +25,11 @@ import {
   getMyBranchSidebarNavigationApi,
   normalizeNavSettings,
 } from "../../services/sidebarnavigation";
+import {
+  getBranchAdminPendingPurchasesApi,
+  getBranchAdminPurchasesApi,
+} from "../../services/branchadminpurchases";
+import { getBranchAdminPendingInstallmentPaymentsApi } from "../../services/branchadminenrollments";
 
 /* Same display-font pairing used across the branch admin pages
    (Fraunces headings, Inter body). No-op if already injected. */
@@ -75,6 +81,7 @@ const NAV_GROUPS = [
       { id: "courses", backendKey: "courses", label: "Courses", icon: BookOpen, path: "/branch-admin/courses" },
       { id: "course-enrollments", backendKey: "course_enrolments", label: "Course enrollments", icon: UserRoundSearch, path: "/branch-admin/course-enrollments" },
       { id: "purchases", backendKey: "course_approvals", label: "Course approvals", icon: CheckCircle2, path: "/branch-admin/purchases" },
+      { id: "reviews", backendKey: "course_reviews", label: "Course reviews", icon: Star, path: "/branch-admin/reviews" },
     ],
   },
   {
@@ -124,6 +131,7 @@ const BranchAdminSidebar = ({
 }) => {
   useDisplayFonts();
   const [unreadMessageCount, setUnreadMessageCount] = React.useState(0);
+  const [pendingApprovalCount, setPendingApprovalCount] = React.useState(0);
   const [navSettings, setNavSettings] = React.useState(() => {
     try {
       const cached = localStorage.getItem("branchAdminNavSettings");
@@ -174,6 +182,94 @@ const BranchAdminSidebar = ({
 
     loadUnreadMessages();
     const refreshTimer = window.setInterval(loadUnreadMessages, 30000);
+    return () => {
+      isMounted = false;
+      window.clearInterval(refreshTimer);
+    };
+  }, [activePage]);
+
+  // Fetch pending course approvals count for sidebar badge
+  useEffect(() => {
+    let isMounted = true;
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const loadPendingApprovals = async () => {
+      try {
+        const [pendingPurchasesRes, allPurchasesRes, pendingPaymentsRes] =
+          await Promise.allSettled([
+            getBranchAdminPendingPurchasesApi(token),
+            getBranchAdminPurchasesApi(token),
+            getBranchAdminPendingInstallmentPaymentsApi(token),
+          ]);
+
+        let count = 0;
+
+        // 1. Dedicated pending course purchases/admissions endpoint
+        if (pendingPurchasesRes.status === "fulfilled") {
+          const val = pendingPurchasesRes.value;
+          const list = Array.isArray(val)
+            ? val
+            : Array.isArray(val?.pending)
+            ? val.pending
+            : Array.isArray(val?.purchases)
+            ? val.purchases
+            : Array.isArray(val?.enrollments)
+            ? val.enrollments
+            : Array.isArray(val?.data)
+            ? val.data
+            : [];
+          count = list.length;
+        }
+
+        // 2. If direct endpoint returned 0, check purchases history for pending branch approval
+        if (count === 0 && allPurchasesRes.status === "fulfilled") {
+          const val = allPurchasesRes.value;
+          const list = Array.isArray(val)
+            ? val
+            : Array.isArray(val?.purchases)
+            ? val.purchases
+            : Array.isArray(val?.enrollments)
+            ? val.enrollments
+            : Array.isArray(val?.data)
+            ? val.data
+            : [];
+          count = list.filter((p) => {
+            const cs = String(p.course_status || p.status || "").toLowerCase();
+            const ba = String(p.branch_approval_status || "").toLowerCase();
+            const sa = String(p.super_admin_approval_status || "").toLowerCase();
+            return (
+              cs === "pending" ||
+              cs === "applied" ||
+              ba === "pending" ||
+              (!cs && sa === "pending")
+            );
+          }).length;
+        }
+
+        // 3. Fallback to pending online installment payments if purchases pending is 0
+        if (count === 0 && pendingPaymentsRes.status === "fulfilled") {
+          const val = pendingPaymentsRes.value;
+          const list = Array.isArray(val)
+            ? val
+            : Array.isArray(val?.pending)
+            ? val.pending
+            : Array.isArray(val?.payments)
+            ? val.payments
+            : Array.isArray(val?.data)
+            ? val.data
+            : [];
+          count = list.length;
+        }
+
+        if (isMounted) setPendingApprovalCount(count);
+      } catch {
+        if (isMounted) setPendingApprovalCount(0);
+      }
+    };
+
+    loadPendingApprovals();
+    const refreshTimer = window.setInterval(loadPendingApprovals, 30000);
     return () => {
       isMounted = false;
       window.clearInterval(refreshTimer);
@@ -329,6 +425,15 @@ const BranchAdminSidebar = ({
                             aria-label={`${unreadMessageCount} unread messages`}
                           >
                             {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
+                          </span>
+                        )}
+                        {id === "purchases" && pendingApprovalCount > 0 && (
+                          <span
+                            className="flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold"
+                            style={{ background: "#9c6b2e", color: "#ffffff" }}
+                            aria-label={`${pendingApprovalCount} pending course approvals`}
+                          >
+                            {pendingApprovalCount > 99 ? "99+" : pendingApprovalCount}
                           </span>
                         )}
                       </button>

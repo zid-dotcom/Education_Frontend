@@ -39,6 +39,7 @@ import StaffDashboard from './pages/StaffDashboard';
 import BranchAdminLogin from './pages/BranchAdminLogin';
 import SuperAdminLogin from './pages/SuperAdminLogin';
 import BranchAdminCourses from './pages/BranchAdminCourses';
+import BranchAdminReviews from './pages/BranchAdminReviews';
 import BranchAdminAnnouncements from './pages/BranchAdminAnnouncements';
 import BranchAdminEnrollments from './pages/BranchAdminEnrollments';
 import BranchAdminStudentRegistration from './pages/BranchAdminStudentRegistration';
@@ -66,6 +67,7 @@ import SuperAdminBranchOverview from './pages/SuperAdminBranchOverview';
 import SuperAdminBranchNavigation from './pages/SuperAdminBranchNavigation';
 import SuperAdminEnquiries from './pages/SuperAdminEnquiries';
 import SuperAdminCourses from './pages/SuperAdminCourses';
+import SuperAdminReviews from './pages/SuperAdminReviews';
 import SuperAdminEnrollments from './pages/SuperAdminEnrollments';
 import SuperAdminPurchases from './pages/SuperAdminPurchases';
 import SuperAdminDueStudents from './pages/SuperAdminDueStudents';
@@ -91,6 +93,7 @@ import StudentAssignments from './pages/StudentAssignments';
 import StudentStudyMaterials from './pages/StudentStudyMaterials';
 import StudentMessages from './pages/StudentMessages';
 import StudentReceipts from './pages/StudentReceipts';
+import StudentReviews from './pages/StudentReviews';
 import StudentLayout from './components/layout/StudentLayout';
 
 // Scroll to top helper component on route change
@@ -222,6 +225,15 @@ function App() {
             element={
               <ProtectedRoute branchAdminOnly>
                 <BranchAdminCourses />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/branch-admin/reviews"
+            element={
+              <ProtectedRoute branchAdminOnly>
+                <BranchAdminReviews />
               </ProtectedRoute>
             }
           />
@@ -483,6 +495,15 @@ function App() {
             element={
               <ProtectedRoute adminOnly>
                 <SuperAdminCourses />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/super-admin/reviews"
+            element={
+              <ProtectedRoute adminOnly>
+                <SuperAdminReviews />
               </ProtectedRoute>
             }
           />
@@ -800,6 +821,17 @@ function App() {
             }
           >
             <Route index element={<StudentReceipts />} />
+          </Route>
+
+          <Route
+            path="/student-dashboard/reviews"
+            element={
+              <ProtectedRoute studentOnly>
+                <StudentLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<StudentReviews />} />
           </Route>
 
           {/* Public Frontend Routes with Main Navbar & Footer */}

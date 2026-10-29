@@ -68,6 +68,12 @@ const SuperAdminPurchases = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [selectedPurchase, setSelectedPurchase] = useState(null);
+  const [tabCounts, setTabCounts] = useState({
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+    history: 0,
+  });
   const [rejectingPurchaseId, setRejectingPurchaseId] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
 
@@ -84,24 +90,41 @@ const SuperAdminPurchases = () => {
       });
   }, [token]);
 
-  const loadPurchases = async (tab, branchId = selectedBranchId) => {
+  const loadPurchases = async (tab = activeTab, branchId = selectedBranchId) => {
     if (!token) return;
     setLoading(true);
     setError('');
     setSuccess('');
     try {
       const bId = branchId ? Number(branchId) : undefined;
-      let data;
+      const [pendingRes, approvedRes, rejectedRes, historyRes] = await Promise.allSettled([
+        getSuperAdminPendingPurchasesApi(token, bId),
+        getSuperAdminApprovedPurchasesApi(token, bId),
+        getSuperAdminRejectedPurchasesApi(token, bId),
+        getSuperAdminPurchaseHistoryApi(token, bId),
+      ]);
+
+      const pendingData = pendingRes.status === 'fulfilled' && Array.isArray(pendingRes.value) ? pendingRes.value : [];
+      const approvedData = approvedRes.status === 'fulfilled' && Array.isArray(approvedRes.value) ? approvedRes.value : [];
+      const rejectedData = rejectedRes.status === 'fulfilled' && Array.isArray(rejectedRes.value) ? rejectedRes.value : [];
+      const historyData = historyRes.status === 'fulfilled' && Array.isArray(historyRes.value) ? historyRes.value : [];
+
+      setTabCounts({
+        pending: pendingData.length,
+        approved: approvedData.length,
+        rejected: rejectedData.length,
+        history: historyData.length,
+      });
+
       if (tab === 'pending') {
-        data = await getSuperAdminPendingPurchasesApi(token, bId);
+        setPurchases(pendingData);
       } else if (tab === 'approved') {
-        data = await getSuperAdminApprovedPurchasesApi(token, bId);
+        setPurchases(approvedData);
       } else if (tab === 'rejected') {
-        data = await getSuperAdminRejectedPurchasesApi(token, bId);
+        setPurchases(rejectedData);
       } else {
-        data = await getSuperAdminPurchaseHistoryApi(token, bId);
+        setPurchases(historyData);
       }
-      setPurchases(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message || 'Failed to load purchases.');
     } finally {
@@ -121,9 +144,8 @@ const SuperAdminPurchases = () => {
     try {
       await approvePurchaseAsSuperAdminApi(id, token);
       setSuccess(`Purchase #${id} approved successfully.`);
-      setPurchases((prev) =>
-        prev.filter((p) => (p.enrollment_id ?? p.id) !== id)
-      );
+      window.dispatchEvent(new CustomEvent('purchases-updated'));
+      loadPurchases(activeTab, selectedBranchId);
     } catch (err) {
       setError(err.message || 'Failed to approve purchase.');
     } finally {
@@ -142,12 +164,11 @@ const SuperAdminPurchases = () => {
     try {
       await rejectPurchaseAsSuperAdminApi(rejectingPurchaseId, rejectReason, token);
       setSuccess(`Purchase #${rejectingPurchaseId} rejected successfully.`);
-      setPurchases((prev) =>
-        prev.filter((p) => (p.enrollment_id ?? p.id) !== rejectingPurchaseId)
-      );
       setRejectingPurchaseId(null);
       setRejectReason('');
       setSelectedPurchase(null);
+      window.dispatchEvent(new CustomEvent('purchases-updated'));
+      loadPurchases(activeTab, selectedBranchId);
     } catch (err) {
       setError(err.message || 'Failed to reject purchase.');
     } finally {
@@ -240,18 +261,28 @@ const SuperAdminPurchases = () => {
             <div className="flex gap-1">
               {TABS.map(({ id, label, icon: Icon }) => {
                 const isActive = activeTab === id;
+                const count = tabCounts[id] ?? 0;
                 return (
                   <button
                     key={id}
                     onClick={() => setActiveTab(id)}
-                    className="flex items-center gap-2 relative px-4 py-2 text-sm font-semibold rounded-xl transition"
+                    className="flex items-center gap-2 relative px-4 py-2 text-sm font-semibold rounded-xl transition cursor-pointer"
                     style={{
                       background: isActive ? '#9c6b2e' : '#faf8f4',
                       color: isActive ? '#ffffff' : '#7a5220',
                     }}
                   >
                     <Icon className="h-4 w-4" />
-                    {label}
+                    <span>{label}</span>
+                    <span
+                      className="ml-1 px-2 py-0.5 text-xs font-bold rounded-full transition"
+                      style={{
+                        background: isActive ? 'rgba(255,255,255,0.25)' : '#e3ddd0',
+                        color: isActive ? '#ffffff' : '#7a5220',
+                      }}
+                    >
+                      {count}
+                    </span>
                   </button>
                 );
               })}

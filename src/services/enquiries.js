@@ -66,3 +66,29 @@ export async function markBranchAdminEnquiryReadApi(enquiryId, token) {
 
   return resData;
 }
+
+/**
+ * Update contact status for an enquiry (branch admin)
+ * @param {string|number} enquiryId
+ * @param {'contacted' | 'not_contacted'} contactStatus
+ * @param {string} token
+ */
+export async function updateBranchAdminEnquiryContactStatusApi(enquiryId, contactStatus, token) {
+  const response = await fetch(`${API_BASE_URL}/enquiries/branch-admin/${enquiryId}/contact-status`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ contact_status: contactStatus }),
+  });
+
+  const resData = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const errorMsg = resData?.detail || 'Failed to update contact status.';
+    throw new Error(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
+  }
+
+  return resData;
+}

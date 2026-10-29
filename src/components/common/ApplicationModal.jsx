@@ -194,8 +194,15 @@ const ApplicationModal = ({ isOpen, onClose, defaultCourse = '' }) => {
             };
 
             setSuccessReceipt(receiptData);
-            setShowReceiptModal(true);
-            setIsSubmitted(true);
+            setShowReceiptModal(false);
+            setIsSubmitted(false);
+            if (typeof onClose === 'function') onClose();
+            navigate('/student-dashboard', {
+              state: {
+                newPurchaseReceipt: receiptData,
+                paymentSuccess: true,
+              },
+            });
           } catch (err) {
             setSubmitError(err.message || 'Payment verification failed. Please contact support.');
           } finally {
@@ -274,12 +281,15 @@ const ApplicationModal = ({ isOpen, onClose, defaultCourse = '' }) => {
               <div className="text-amber-950 font-semibold">{formData.course}</div>
             </div>
             <Button
-              onClick={handleResetAndClose}
+              onClick={() => {
+                handleResetAndClose();
+                navigate('/student-dashboard');
+              }}
               variant="dark"
               size="md"
               className="mt-6 w-full"
             >
-              Done & Close
+              Go to Dashboard
             </Button>
           </div>
         ) : (
@@ -521,6 +531,7 @@ const ApplicationModal = ({ isOpen, onClose, defaultCourse = '' }) => {
         onClose={() => {
           setShowReceiptModal(false);
           handleResetAndClose();
+          navigate('/student-dashboard');
         }}
         receipt={successReceipt}
         receiptUrl={successReceipt?.receipt_url}

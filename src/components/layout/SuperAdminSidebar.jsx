@@ -25,9 +25,10 @@ import {
   Megaphone,
   Percent,
   Receipt,
+  Star,
   X,
 } from 'lucide-react';
-import { getSuperAdminUnreadMessagesCountApi } from '../../services/superadmin';
+import { getSuperAdminUnreadMessagesCountApi, getSuperAdminPendingPurchasesApi } from '../../services/superadmin';
 import { getSuperAdminStaffUnreadCountApi } from '../../services/staffSuperAdminMessages';
 
 const useDisplayFonts = () => {
@@ -82,6 +83,7 @@ const NAV_GROUPS = [
       { id: 'courses', label: 'Courses', icon: BookOpen, path: '/super-admin/courses' },
       { id: 'enrollments', label: 'Course Enrollments', icon: GraduationCap, path: '/super-admin/enrollments' },
       { id: 'purchases', label: 'Purchase Approval', icon: ShoppingCart, path: '/super-admin/purchases' },
+      { id: 'reviews', label: 'Course Reviews', icon: Star, path: '/super-admin/reviews' },
     ],
   },
   {
@@ -138,6 +140,7 @@ const SuperAdminSidebar = ({
   useDisplayFonts();
   const [unreadCount, setUnreadCount] = useState(0);
   const [staffUnreadCount, setStaffUnreadCount] = useState(0);
+  const [pendingPurchasesCount, setPendingPurchasesCount] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -146,9 +149,10 @@ const SuperAdminSidebar = ({
     const loadUnread = async () => {
       if (!token) return;
       try {
-        const [baData, staffData] = await Promise.allSettled([
+        const [baData, staffData, pendingData] = await Promise.allSettled([
           getSuperAdminUnreadMessagesCountApi(token),
           getSuperAdminStaffUnreadCountApi(token),
+          getSuperAdminPendingPurchasesApi(token),
         ]);
 
         if (isMounted && baData.status === 'fulfilled') {
@@ -183,10 +187,16 @@ const SuperAdminSidebar = ({
               : 0;
           setStaffUnreadCount(Number(sCount) || 0);
         }
+
+        if (isMounted && pendingData.status === 'fulfilled') {
+          const list = Array.isArray(pendingData.value) ? pendingData.value : (pendingData.value?.data || []);
+          setPendingPurchasesCount(list.length);
+        }
       } catch {
         if (isMounted) {
           setUnreadCount(0);
           setStaffUnreadCount(0);
+          setPendingPurchasesCount(0);
         }
       }
     };
@@ -197,12 +207,17 @@ const SuperAdminSidebar = ({
     const onMessagesUpdated = () => {
       loadUnread();
     };
+    const onPurchasesUpdated = () => {
+      loadUnread();
+    };
     window.addEventListener('messages-updated', onMessagesUpdated);
+    window.addEventListener('purchases-updated', onPurchasesUpdated);
 
     return () => {
       isMounted = false;
       clearInterval(timer);
       window.removeEventListener('messages-updated', onMessagesUpdated);
+      window.removeEventListener('purchases-updated', onPurchasesUpdated);
     };
   }, []);
 
@@ -339,6 +354,15 @@ const SuperAdminSidebar = ({
                           style={{ background: '#0284c7' }}
                         >
                           {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                      )}
+                      {id === 'purchases' && pendingPurchasesCount > 0 && (
+                        <span
+                          className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold text-white shadow-xs"
+                          style={{ background: '#e11d48' }}
+                          aria-label={`${pendingPurchasesCount} pending purchase approvals`}
+                        >
+                          {pendingPurchasesCount > 99 ? '99+' : pendingPurchasesCount}
                         </span>
                       )}
                       {id === 'staff-messages' && staffUnreadCount > 0 && (

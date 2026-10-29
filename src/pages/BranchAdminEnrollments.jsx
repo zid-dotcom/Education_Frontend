@@ -37,7 +37,6 @@ import {
   getBranchAdminInstallmentPaymentHistoryApi,
   updateBranchAdminStudentStatusApi,
 } from "../services/branchadminenrollments";
-import { getEnrollmentInstallmentsApi } from "../services/enrollments";
 import { downloadBranchAdminReceiptApi } from "../services/branchadminreceipts";
 import PaymentSuccessReceiptModal from "../components/common/PaymentSuccessReceiptModal";
 
@@ -251,57 +250,30 @@ const RecordPaymentModal = ({
   const [paymentScope, setPaymentScope] = useState("installment"); // 'installment' | 'full_balance'
   const [cashAmount, setCashAmount] = useState("");
   const [upiAmount, setUpiAmount] = useState("");
+  const [upiTransactionId, setUpiTransactionId] = useState("");
   const [singleAmount, setSingleAmount] = useState("");
   const [selectedInstallmentNumber, setSelectedInstallmentNumber] = useState("");
   const [validationError, setValidationError] = useState("");
 
-  const [liveInstallmentsData, setLiveInstallmentsData] = useState(null);
-  const [loadingSchedule, setLoadingSchedule] = useState(false);
-
-  // Fetch live installment schedule & balances from backend whenever modal opens
-  useEffect(() => {
-    const enrId = enrollment?.enrollment_id ?? enrollment?.id;
-    if (!isOpen || !enrId || !token) {
-      setLiveInstallmentsData(null);
-      return;
-    }
-    let isMounted = true;
-    setLoadingSchedule(true);
-    getEnrollmentInstallmentsApi(enrId, token)
-      .then((res) => {
-        if (isMounted) setLiveInstallmentsData(res);
-      })
-      .catch((err) => {
-        console.warn("Could not load live installments for record payment modal:", err);
-      })
-      .finally(() => {
-        if (isMounted) setLoadingSchedule(false);
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, [isOpen, enrollment?.enrollment_id, enrollment?.id, token]);
-
   const installments = useMemo(() => {
-    if (Array.isArray(liveInstallmentsData)) return liveInstallmentsData;
-    if (Array.isArray(liveInstallmentsData?.installments)) return liveInstallmentsData.installments;
-    if (Array.isArray(liveInstallmentsData?.schedule)) return liveInstallmentsData.schedule;
     if (Array.isArray(enrollment?.installments)) return enrollment.installments;
+    if (Array.isArray(enrollment?.installment_schedule)) return enrollment.installment_schedule;
+    if (Array.isArray(enrollment?.schedule)) return enrollment.schedule;
     return [];
-  }, [liveInstallmentsData, enrollment]);
+  }, [enrollment]);
 
   const balance = useMemo(() => {
-    if (liveInstallmentsData?.balance_amount !== undefined && liveInstallmentsData.balance_amount !== null) {
-      return Number(liveInstallmentsData.balance_amount);
+    if (enrollment?.balance_amount !== undefined && enrollment.balance_amount !== null) {
+      return Number(enrollment.balance_amount);
     }
-    if (liveInstallmentsData?.remaining_amount !== undefined && liveInstallmentsData.remaining_amount !== null) {
-      return Number(liveInstallmentsData.remaining_amount);
+    if (enrollment?.remaining_amount !== undefined && enrollment.remaining_amount !== null) {
+      return Number(enrollment.remaining_amount);
     }
-    if (liveInstallmentsData?.remaining_balance !== undefined && liveInstallmentsData.remaining_balance !== null) {
-      return Number(liveInstallmentsData.remaining_balance);
+    if (enrollment?.remaining_balance !== undefined && enrollment.remaining_balance !== null) {
+      return Number(enrollment.remaining_balance);
     }
     return Number(enrollment?.balance_amount ?? enrollment?.remaining_amount ?? 0);
-  }, [liveInstallmentsData, enrollment]);
+  }, [enrollment]);
 
   // Find next unpaid installment to suggest
   const nextUnpaidInstallment = useMemo(() => {
@@ -321,6 +293,7 @@ const RecordPaymentModal = ({
     setValidationError("");
     setPaymentMode("cash");
     setPaymentScope("installment");
+    setUpiTransactionId("");
 
     // Prefill suggested amount from next unpaid installment or remaining balance
     const suggested = nextUnpaidInstallment
@@ -365,26 +338,44 @@ const RecordPaymentModal = ({
     e.preventDefault();
     setValidationError("");
 
+    const effectiveCashAmount =
+      paymentMode === "cash"
+        ? Number(singleAmount) || 0
+        : paymentMode === "split"
+        ? Number(cashAmount) || 0
+        : 0;
+
+    const effectiveUpiAmount =
+      paymentMode === "upi"
+        ? Number(singleAmount) || 0
+        : paymentMode === "split"
+        ? Number(upiAmount) || 0
+        : 0;
+
     if (paymentMode === "split") {
-      const c = Number(cashAmount);
-      const u = Number(upiAmount);
-      if (!c || c <= 0) {
+      if (!effectiveCashAmount || effectiveCashAmount <= 0) {
         setValidationError("Please enter a valid cash amount.");
         return;
       }
-      if (!u || u <= 0) {
+      if (!effectiveUpiAmount || effectiveUpiAmount <= 0) {
         setValidationError("Please enter a valid UPI amount.");
         return;
       }
+      if (!upiTransactionId.trim()) {
+        setValidationError("UPI Transaction ID / Ref is required for the UPI portion.");
+        return;
+      }
     } else if (paymentMode === "upi") {
-      const u = Number(singleAmount);
-      if (!u || u <= 0) {
+      if (!effectiveUpiAmount || effectiveUpiAmount <= 0) {
         setValidationError("Please enter a valid payment amount.");
         return;
       }
+      if (!upiTransactionId.trim()) {
+        setValidationError("UPI Transaction ID / Reference (UTR) is required.");
+        return;
+      }
     } else {
-      const c = Number(singleAmount);
-      if (!c || c <= 0) {
+      if (!effectiveCashAmount || effectiveCashAmount <= 0) {
         setValidationError("Please enter a valid cash amount.");
         return;
       }
@@ -395,18 +386,11 @@ const RecordPaymentModal = ({
     const payload = {
       payment_method: paymentMode,
       amount: computedTotal,
-      cash_amount:
-        paymentMode === "cash"
-          ? computedTotal
-          : paymentMode === "split"
-          ? Number(cashAmount)
-          : 0,
-      upi_amount:
-        paymentMode === "upi"
-          ? computedTotal
-          : paymentMode === "split"
-          ? Number(upiAmount)
-          : 0,
+      cash_amount: effectiveCashAmount,
+      upi_amount: effectiveUpiAmount,
+      ...(effectiveUpiAmount > 0 && upiTransactionId.trim()
+        ? { upi_transaction_id: upiTransactionId.trim() }
+        : {}),
       ...(isFullBalance ? { pay_full_balance: true } : {}),
       ...(selectedInstallmentNumber && !isFullBalance
         ? { installment_number: Number(selectedInstallmentNumber) }
@@ -446,9 +430,6 @@ const RecordPaymentModal = ({
                 <p className="text-xs font-semibold uppercase tracking-wider text-[#9c6b2e]">
                   In-Person Fee Collection
                 </p>
-                {loadingSchedule && (
-                  <Loader2 className="h-3 w-3 animate-spin text-[#9c6b2e]" />
-                )}
               </div>
               <h2 className="text-lg font-bold text-slate-900 leading-tight">
                 Record Installment Payment
@@ -708,6 +689,26 @@ const RecordPaymentModal = ({
                   />
                 </div>
               </div>
+
+              {/* UPI Transaction ID / UTR when payment mode is UPI */}
+              {paymentMode === "upi" && (
+                <div>
+                  <label className="text-xs font-semibold text-slate-800 block mb-1.5">
+                    UPI Transaction ID / Ref (UTR) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={upiTransactionId}
+                    onChange={(e) => setUpiTransactionId(e.target.value)}
+                    placeholder="e.g. 12-digit UTR or Bank Ref ID"
+                    required
+                    className={`w-full rounded-xl border border-[#e3ddd0] bg-white py-2.5 px-3.5 text-sm font-semibold text-slate-900 placeholder:text-stone-400 ${FOCUS_RING}`}
+                  />
+                  <p className="text-[11px] text-stone-500 mt-1">
+                    Enter the 12-digit transaction reference or UPI UTR number from your payment app.
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             /* Split Cash + UPI Fields */
@@ -752,6 +753,24 @@ const RecordPaymentModal = ({
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* UPI Transaction ID / UTR for split payment */}
+              <div>
+                <label className="text-xs font-semibold text-slate-800 block mb-1.5">
+                  UPI Transaction ID / Ref (UTR) <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={upiTransactionId}
+                  onChange={(e) => setUpiTransactionId(e.target.value)}
+                  placeholder="e.g. 12-digit UTR or Bank Ref ID"
+                  required
+                  className={`w-full rounded-xl border border-[#e3ddd0] bg-white py-2.5 px-3.5 text-sm font-semibold text-slate-900 placeholder:text-stone-400 ${FOCUS_RING}`}
+                />
+                <p className="text-[11px] text-stone-500 mt-1">
+                  Enter the transaction reference or UPI UTR number for the UPI portion.
+                </p>
               </div>
 
               <div
@@ -935,9 +954,6 @@ const EnrollmentDetailsModal = ({
   todayPayments = [],
   token,
 }) => {
-  const [apiInstallmentsData, setApiInstallmentsData] = useState(null);
-  const [loadingDetails, setLoadingDetails] = useState(false);
-
   useEffect(() => {
     if (!enrollment) return;
     const onKey = (e) => e.key === "Escape" && onClose();
@@ -950,36 +966,8 @@ const EnrollmentDetailsModal = ({
     };
   }, [enrollment, onClose]);
 
-  useEffect(() => {
-    if (!enrollment?.enrollment_id || !token) {
-      setApiInstallmentsData(null);
-      return;
-    }
-    let isMounted = true;
-    setLoadingDetails(true);
-    getEnrollmentInstallmentsApi(enrollment.enrollment_id, token)
-      .then((res) => {
-        if (isMounted) setApiInstallmentsData(res);
-      })
-      .catch((err) => {
-        console.warn("Could not fetch installments for enrollment:", err);
-      })
-      .finally(() => {
-        if (isMounted) setLoadingDetails(false);
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, [enrollment?.enrollment_id, token]);
-
   const allEnrollmentPayments = useMemo(() => {
     if (!enrollment) return [];
-
-    const apiPayments = Array.isArray(apiInstallmentsData?.payments)
-      ? apiInstallmentsData.payments
-      : Array.isArray(apiInstallmentsData)
-      ? apiInstallmentsData.filter((p) => p.payment_id || p.approval_status || p.status)
-      : [];
 
     const currentEnrollmentId = String(enrollment.enrollment_id || enrollment.id || "");
 
@@ -995,17 +983,23 @@ const EnrollmentDetailsModal = ({
       ? todayPayments.filter((p) => String(p.enrollment_id || "") === currentEnrollmentId)
       : [];
 
-    const enrollmentPayments = Array.isArray(enrollment.payments)
-      ? enrollment.payments
-      : [];
+    const enrollmentPayments = [
+      ...(Array.isArray(enrollment.installment_payments) ? enrollment.installment_payments : []),
+      ...(Array.isArray(enrollment.payments) ? enrollment.payments : []),
+      ...(Array.isArray(enrollment.payment_history) ? enrollment.payment_history : []),
+      ...(Array.isArray(enrollment.recent_payments) ? enrollment.recent_payments : []),
+      ...(Array.isArray(enrollment.history) ? enrollment.history : []),
+      ...(Array.isArray(enrollment.transactions) ? enrollment.transactions : []),
+      ...(Array.isArray(enrollment.records) ? enrollment.records : []),
+      ...(Array.isArray(enrollment.all_payments) ? enrollment.all_payments : []),
+    ];
 
     const seen = new Set();
     const combined = [
-      ...apiPayments,
+      ...enrollmentPayments,
       ...histPayments,
       ...pendingList,
       ...todayList,
-      ...enrollmentPayments,
     ];
 
     return combined.filter((p) => {
@@ -1015,17 +1009,17 @@ const EnrollmentDetailsModal = ({
       seen.add(idKey);
       return true;
     });
-  }, [enrollment, apiInstallmentsData, paymentHistory, pendingPayments, todayPayments]);
+  }, [enrollment, paymentHistory, pendingPayments, todayPayments]);
 
   const enrichedInstallments = useMemo(() => {
     if (!enrollment) return [];
 
-    const rawBase = Array.isArray(apiInstallmentsData)
-      ? apiInstallmentsData
-      : Array.isArray(apiInstallmentsData?.installments)
-      ? apiInstallmentsData.installments
-      : Array.isArray(enrollment.installments)
+    const rawBase = Array.isArray(enrollment.installments)
       ? enrollment.installments
+      : Array.isArray(enrollment.installment_schedule)
+      ? enrollment.installment_schedule
+      : Array.isArray(enrollment.schedule)
+      ? enrollment.schedule
       : [];
 
     const allPayments = allEnrollmentPayments;
@@ -1040,6 +1034,7 @@ const EnrollmentDetailsModal = ({
 
       // Find matching payment attempts
       const matchingPayments = allPayments.filter((p) => {
+        if (!p) return false;
         if (Array.isArray(p.installment_numbers) && p.installment_numbers.map(Number).includes(instNum)) {
           return true;
         }
@@ -1049,6 +1044,16 @@ const EnrollmentDetailsModal = ({
         if (instId && p.installment_id !== undefined && p.installment_id !== null) {
           return String(p.installment_id) === String(instId);
         }
+        // Match payment for Installment 1 if it's Razorpay online payment
+        if (
+          instNum === 1 &&
+          (
+            (enrollment.razorpay_payment_id && (p.payment_reference === enrollment.razorpay_payment_id || p.razorpay_payment_id === enrollment.razorpay_payment_id)) ||
+            (String(p.payment_method).toLowerCase() === 'razorpay' && (p.installment_number === undefined || p.installment_number === null))
+          )
+        ) {
+          return true;
+        }
         return false;
       });
 
@@ -1057,10 +1062,82 @@ const EnrollmentDetailsModal = ({
         const timeA = new Date(a.reviewed_at || a.payment_date || a.created_at || 0).getTime();
         const timeB = new Date(b.reviewed_at || b.payment_date || b.created_at || 0).getTime();
         if (timeB !== timeA) return timeB - timeA;
-        return Number(b.payment_id || 0) - Number(a.payment_id || 0);
+        return Number(b.payment_id || b.id || 0) - Number(a.payment_id || a.id || 0);
       });
 
       const match = matchingPayments[0];
+
+      // Extraction of payment attributes from match, inst, or enrollment
+      const rawMethod = String(
+        match?.payment_method ||
+        inst.payment_method ||
+        (isInstBackendPaid && instNum === 1 && (enrollment.razorpay_payment_id || enrollment.razorpay_order_id) ? 'razorpay' : '') ||
+        ''
+      ).toLowerCase().trim();
+
+      const rawCashAmount = match?.cash_amount !== undefined && match?.cash_amount !== null
+        ? Number(match.cash_amount)
+        : inst.cash_amount !== undefined && inst.cash_amount !== null
+        ? Number(inst.cash_amount)
+        : null;
+
+      const rawUpiAmount = match?.upi_amount !== undefined && match?.upi_amount !== null
+        ? Number(match.upi_amount)
+        : inst.upi_amount !== undefined && inst.upi_amount !== null
+        ? Number(inst.upi_amount)
+        : null;
+
+      const isSplit =
+        rawMethod === 'cash_upi' ||
+        rawMethod === 'split' ||
+        (rawCashAmount !== null && rawUpiAmount !== null && rawCashAmount > 0 && rawUpiAmount > 0);
+
+      const isUpi = !isSplit && (rawMethod === 'upi' || (rawUpiAmount !== null && rawUpiAmount > 0 && (!rawCashAmount || rawCashAmount === 0)));
+      const isCash = !isSplit && !isUpi && (rawMethod === 'cash' || (rawCashAmount !== null && rawCashAmount > 0 && (!rawUpiAmount || rawUpiAmount === 0)));
+      const isRazorpay =
+        rawMethod === 'razorpay' ||
+        rawMethod === 'online' ||
+        Boolean(match?.razorpay_payment_id || inst.razorpay_payment_id || (instNum === 1 && (enrollment.razorpay_payment_id || enrollment.razorpay_order_id)));
+
+      let paymentMethodDisplay = 'Pending';
+      if (isSplit) {
+        paymentMethodDisplay = 'Cash + UPI';
+      } else if (isUpi) {
+        paymentMethodDisplay = 'UPI';
+      } else if (isCash) {
+        paymentMethodDisplay = 'Cash';
+      } else if (isRazorpay) {
+        paymentMethodDisplay = 'Razorpay';
+      } else if (rawMethod) {
+        if (rawMethod === 'cash_upi') paymentMethodDisplay = 'Cash + UPI';
+        else paymentMethodDisplay = rawMethod.charAt(0).toUpperCase() + rawMethod.slice(1);
+      } else if (isInstBackendPaid || (match && (match.status === 'received' || match.status === 'paid'))) {
+        paymentMethodDisplay = 'Verified';
+      }
+
+      const upiTxnId =
+        match?.upi_transaction_id ||
+        inst.upi_transaction_id ||
+        match?.transaction_id ||
+        inst.transaction_id ||
+        '';
+
+      const paymentRef =
+        match?.payment_reference ||
+        inst.payment_reference ||
+        match?.reference ||
+        inst.reference ||
+        '';
+
+      const rzpPaymentId =
+        match?.razorpay_payment_id ||
+        inst.razorpay_payment_id ||
+        (isRazorpay ? (paymentRef || (instNum === 1 ? enrollment.razorpay_payment_id : '')) : '');
+
+      const rzpOrderId =
+        match?.razorpay_order_id ||
+        inst.razorpay_order_id ||
+        (isRazorpay && instNum === 1 ? enrollment.razorpay_order_id : '');
 
       if (!match) {
         const isInstRejected =
@@ -1106,6 +1183,18 @@ const EnrollmentDetailsModal = ({
           is_paid: isActuallyPaid,
           is_partial: isActuallyPartial,
           rejection_reason: inst.rejection_reason || inst.reason || "",
+          payment_method: rawMethod || inst.payment_method,
+          payment_method_display: paymentMethodDisplay,
+          cash_amount: rawCashAmount ?? (isCash ? computedPaid : null),
+          upi_amount: rawUpiAmount ?? (isUpi ? computedPaid : null),
+          upi_transaction_id: upiTxnId,
+          payment_reference: paymentRef,
+          razorpay_payment_id: rzpPaymentId,
+          razorpay_order_id: rzpOrderId,
+          is_split: isSplit,
+          is_upi: isUpi,
+          is_cash: isCash,
+          is_razorpay: isRazorpay,
         };
       }
 
@@ -1194,12 +1283,21 @@ const EnrollmentDetailsModal = ({
         paid_date: isPaid
           ? (inst.paid_date || match.paid_date || match.payment_date)
           : inst.paid_date,
-        payment_method: match.payment_method || inst.payment_method,
-        cash_amount: match.cash_amount ?? inst.cash_amount,
-        upi_amount: match.upi_amount ?? inst.upi_amount,
+        payment_method: match.payment_method || inst.payment_method || rawMethod,
+        payment_method_display: paymentMethodDisplay,
+        cash_amount: rawCashAmount ?? (isCash ? computedPaidAmount : null),
+        upi_amount: rawUpiAmount ?? (isUpi ? computedPaidAmount : null),
+        upi_transaction_id: upiTxnId,
+        payment_reference: paymentRef,
+        razorpay_payment_id: rzpPaymentId,
+        razorpay_order_id: rzpOrderId,
+        is_split: isSplit,
+        is_upi: isUpi,
+        is_cash: isCash,
+        is_razorpay: isRazorpay,
       };
     });
-  }, [enrollment, apiInstallmentsData, paymentHistory, pendingPayments, todayPayments]);
+  }, [enrollment, allEnrollmentPayments]);
 
   if (!enrollment) return null;
 
@@ -1415,17 +1513,14 @@ const EnrollmentDetailsModal = ({
                   onClick={() =>
                     onOpenRecordPayment({
                       ...enrollment,
-                      ...(apiInstallmentsData || {}),
                       installments:
                         enrichedInstallments?.length > 0
                           ? enrichedInstallments
-                          : apiInstallmentsData?.installments || enrollment.installments,
+                          : enrollment.installments,
                       balance_amount:
-                        apiInstallmentsData?.balance_amount ??
                         enrollment.balance_amount ??
                         enrollment.remaining_amount,
                       remaining_amount:
-                        apiInstallmentsData?.remaining_amount ??
                         enrollment.remaining_amount ??
                         enrollment.balance_amount,
                     })
@@ -1447,12 +1542,6 @@ const EnrollmentDetailsModal = ({
                 <Clock className="h-4 w-4 text-[#9c6b2e]" />
                 Installments Breakdown
               </h3>
-              {loadingDetails && (
-                <span className="flex items-center gap-1.5 text-xs text-stone-400">
-                  <Loader2 className="h-3 w-3 animate-spin text-[#9c6b2e]" />
-                  Refreshing...
-                </span>
-              )}
             </div>
 
             {installments.length === 0 ? (
@@ -1561,15 +1650,61 @@ const EnrollmentDetailsModal = ({
                           value={
                             isRejected
                               ? (inst.payment_method ? `${String(inst.payment_method).toUpperCase()} Online (Rejected)` : "Razorpay Online (Rejected)")
-                              : inst.cash_amount > 0 && inst.upi_amount > 0
-                              ? `Split (Cash: ${formatCurrency(inst.cash_amount)} + UPI: ${formatCurrency(inst.upi_amount)})`
-                              : inst.cash_amount > 0
-                              ? `Cash: ${formatCurrency(inst.cash_amount)}`
-                              : inst.upi_amount > 0
-                              ? `UPI: ${formatCurrency(inst.upi_amount)}`
-                              : inst.payment_method || (inst.status === "paid" ? "Online / Verified" : "Pending")
+                              : inst.payment_method_display || (inst.status === "paid" ? "Online / Verified" : "Pending")
                           }
                         />
+
+                        {/* Split (Cash + UPI): Show Cash Amount & UPI Amount as separate fields */}
+                        {inst.is_split && (
+                          <>
+                            <DetailItem
+                              label="Cash Amount"
+                              value={formatCurrency(inst.cash_amount ?? 0)}
+                            />
+                            <DetailItem
+                              label="UPI Amount"
+                              value={formatCurrency(inst.upi_amount ?? 0)}
+                            />
+                          </>
+                        )}
+
+                        {/* UPI Transaction ID for Split or UPI */}
+                        {(inst.is_split || inst.is_upi || Boolean(inst.upi_transaction_id)) && inst.upi_transaction_id ? (
+                          <DetailItem
+                            label="UPI Transaction ID"
+                            value={inst.upi_transaction_id}
+                          />
+                        ) : null}
+
+                        {/* Cash Amount for cash-only */}
+                        {inst.is_cash && !inst.is_split && inst.cash_amount !== null && inst.cash_amount > 0 && (
+                          <DetailItem
+                            label="Cash Amount"
+                            value={formatCurrency(inst.cash_amount)}
+                          />
+                        )}
+
+                        {/* UPI Amount for upi-only */}
+                        {inst.is_upi && !inst.is_split && inst.upi_amount !== null && inst.upi_amount > 0 && (
+                          <DetailItem
+                            label="UPI Amount"
+                            value={formatCurrency(inst.upi_amount)}
+                          />
+                        )}
+
+                        {/* Razorpay Gateway Details directly inside Razorpay installment */}
+                        {inst.is_razorpay && inst.razorpay_payment_id && (
+                          <DetailItem
+                            label="Razorpay Payment ID"
+                            value={inst.razorpay_payment_id}
+                          />
+                        )}
+                        {inst.is_razorpay && inst.razorpay_order_id && (
+                          <DetailItem
+                            label="Razorpay Order ID"
+                            value={inst.razorpay_order_id}
+                          />
+                        )}
                       </dl>
                     </div>
                   );
@@ -1578,8 +1713,8 @@ const EnrollmentDetailsModal = ({
             )}
           </section>
 
-          {/* 5. Gateway Details */}
-          {(enrollment.razorpay_order_id || enrollment.razorpay_payment_id) && (
+          {/* 5. Gateway Details (Shown ONLY if there is no installment schedule breakdown) */}
+          {installments.length === 0 && (enrollment.razorpay_order_id || enrollment.razorpay_payment_id) && (
             <section>
               <SectionTitle icon={Mail}>Payment Gateway Details</SectionTitle>
               <dl className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -1934,6 +2069,7 @@ const BranchAdminEnrollments = () => {
           payment_type: "installment",
           installment_number: payload.installment_number || payload.term_number,
           payment_date: payload.payment_date || new Date().toISOString(),
+          upi_transaction_id: payload.upi_transaction_id || paymentRes?.upi_transaction_id || null,
         };
 
         setInstallmentReceipt(receiptObj);
@@ -2226,9 +2362,12 @@ const BranchAdminEnrollments = () => {
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {/* Total Enrolled */}
             <div
-              className="ba-card rounded-2xl p-4 sm:p-5 bg-white border border-[#e3ddd0]"
+              className={`ba-card rounded-2xl p-4 sm:p-5 bg-white border cursor-pointer transition ${
+                activeTab === "all"
+                  ? "border-[#9c6b2e] ring-2 ring-[#9c6b2e]/30 shadow-sm"
+                  : "border-[#e3ddd0] hover:border-[#9c6b2e]/50"
+              }`}
               onClick={() => setActiveTab("all")}
-              style={{ cursor: "pointer" }}
             >
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider">
@@ -2251,9 +2390,12 @@ const BranchAdminEnrollments = () => {
 
             {/* Installments Due */}
             <div
-              className="ba-card rounded-2xl p-4 sm:p-5 bg-white border border-[#e3ddd0]"
+              className={`ba-card rounded-2xl p-4 sm:p-5 bg-white border cursor-pointer transition ${
+                activeTab === "installment"
+                  ? "border-amber-400 ring-2 ring-amber-300/40 shadow-sm"
+                  : "border-[#e3ddd0] hover:border-amber-400/50"
+              }`}
               onClick={() => setActiveTab("installment")}
-              style={{ cursor: "pointer" }}
             >
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider">
@@ -2278,9 +2420,12 @@ const BranchAdminEnrollments = () => {
 
             {/* Fully Paid */}
             <div
-              className="ba-card rounded-2xl p-4 sm:p-5 bg-white border border-[#e3ddd0]"
+              className={`ba-card rounded-2xl p-4 sm:p-5 bg-white border cursor-pointer transition ${
+                activeTab === "fully_paid"
+                  ? "border-emerald-500 ring-2 ring-emerald-300/40 shadow-sm"
+                  : "border-[#e3ddd0] hover:border-emerald-400/50"
+              }`}
               onClick={() => setActiveTab("fully_paid")}
-              style={{ cursor: "pointer" }}
             >
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">
@@ -2303,10 +2448,12 @@ const BranchAdminEnrollments = () => {
 
             {/* Online Approvals Pending */}
             <div
-              className={`ba-card rounded-2xl p-4 sm:p-5 bg-white border cursor-pointer ${
-                pendingPayments.length > 0
-                  ? "border-rose-300 ring-2 ring-rose-200/70"
-                  : "border-[#e3ddd0]"
+              className={`ba-card rounded-2xl p-4 sm:p-5 bg-white border cursor-pointer transition ${
+                activeTab === "approvals"
+                  ? "border-rose-400 ring-2 ring-rose-200/80 shadow-sm"
+                  : pendingPayments.length > 0
+                  ? "border-rose-300 ring-1 ring-rose-200/70 hover:border-rose-400"
+                  : "border-[#e3ddd0] hover:border-rose-300"
               }`}
               onClick={() => setActiveTab("approvals")}
             >
@@ -2343,27 +2490,78 @@ const BranchAdminEnrollments = () => {
             </div>
           </div>
 
-          {/* Search Header Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#e3ddd0] pb-2">
-            <div className="flex items-center gap-2.5">
-              <h2 className="text-sm font-bold text-slate-900">
-                All Students
-              </h2>
-              <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-[11px] font-extrabold text-stone-600">
-                {enrollments.length}
-              </span>
+          {/* Section Navigation Tabs & Search Toolbar */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b border-[#e3ddd0] pb-3.5">
+            {/* Navigation Tabs */}
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+              <button
+                type="button"
+                onClick={() => setActiveTab("all")}
+                className={`rounded-full px-4 py-2 text-xs font-semibold transition cursor-pointer whitespace-nowrap shrink-0 ${
+                  activeTab === "all"
+                    ? "bg-[#17140f] text-white shadow-xs"
+                    : "bg-white text-[#5b5346] border border-[#e3ddd0] hover:bg-[#f1ede4]"
+                }`}
+              >
+                All Students ({enrollments.length})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("installment")}
+                className={`rounded-full px-4 py-2 text-xs font-semibold transition cursor-pointer whitespace-nowrap shrink-0 ${
+                  activeTab === "installment"
+                    ? "bg-[#17140f] text-white shadow-xs"
+                    : "bg-white text-[#5b5346] border border-[#e3ddd0] hover:bg-[#f1ede4]"
+                }`}
+              >
+                Installments Due ({effectiveInstallmentStudents.length})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("fully_paid")}
+                className={`rounded-full px-4 py-2 text-xs font-semibold transition cursor-pointer whitespace-nowrap shrink-0 ${
+                  activeTab === "fully_paid"
+                    ? "bg-[#17140f] text-white shadow-xs"
+                    : "bg-white text-[#5b5346] border border-[#e3ddd0] hover:bg-[#f1ede4]"
+                }`}
+              >
+                Fully Paid ({effectiveFullyPaidStudents.length})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("approvals")}
+                className={`rounded-full px-4 py-2 text-xs font-semibold transition cursor-pointer whitespace-nowrap shrink-0 ${
+                  activeTab === "approvals"
+                    ? "bg-[#17140f] text-white shadow-xs"
+                    : "bg-white text-[#5b5346] border border-[#e3ddd0] hover:bg-[#f1ede4]"
+                }`}
+              >
+                Online Approvals ({pendingPayments.length})
+              </button>
             </div>
 
             {/* Search Input */}
-            <div className="relative w-full sm:w-64">
+            <div className="relative w-full md:w-64 shrink-0">
               <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-stone-400" />
               <input
                 type="search"
                 value={nameFilter}
                 onChange={(e) => setNameFilter(e.target.value)}
                 placeholder="Search students, course..."
-                className={`w-full rounded-xl border border-[#e3ddd0] bg-white py-2 pl-9 pr-3 text-xs font-medium text-slate-900 placeholder:text-stone-400 ${FOCUS_RING}`}
+                className={`w-full rounded-xl border border-[#e3ddd0] bg-white py-2 pl-9 pr-7 text-xs font-medium text-slate-900 placeholder:text-stone-400 ${FOCUS_RING}`}
               />
+              {nameFilter && (
+                <button
+                  type="button"
+                  onClick={() => setNameFilter("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 cursor-pointer"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -2630,8 +2828,55 @@ const BranchAdminEnrollments = () => {
                               <td className="px-6 py-4 font-bold text-slate-900">
                                 {formatCurrency(hist.amount ?? hist.payment_amount)}
                               </td>
-                              <td className="px-6 py-4 text-xs font-semibold capitalize text-stone-600">
-                                {hist.payment_method || (hist.razorpay_payment_id ? "Razorpay Online" : "In-Person")}
+                              <td className="px-6 py-4 text-xs font-semibold text-stone-600">
+                                {(() => {
+                                  const rawM = String(hist.payment_method || "").toLowerCase();
+                                  if (rawM === "cash_upi" || rawM === "split") {
+                                    return (
+                                      <div>
+                                        <span className="font-bold text-slate-800">Cash + UPI</span>
+                                        {(hist.cash_amount > 0 || hist.upi_amount > 0) && (
+                                          <p className="text-[11px] text-stone-500 font-normal mt-0.5">
+                                            Cash: {formatCurrency(hist.cash_amount || 0)} • UPI: {formatCurrency(hist.upi_amount || 0)}
+                                          </p>
+                                        )}
+                                        {hist.upi_transaction_id && (
+                                          <p className="text-[10px] text-stone-400 font-mono mt-0.5">
+                                            UPI Ref: {hist.upi_transaction_id}
+                                          </p>
+                                        )}
+                                      </div>
+                                    );
+                                  }
+                                  if (rawM === "upi") {
+                                    return (
+                                      <div>
+                                        <span className="font-bold text-slate-800">UPI</span>
+                                        {hist.upi_transaction_id && (
+                                          <p className="text-[10px] text-stone-400 font-mono mt-0.5">
+                                            UPI Ref: {hist.upi_transaction_id}
+                                          </p>
+                                        )}
+                                      </div>
+                                    );
+                                  }
+                                  if (rawM === "cash") {
+                                    return <span className="font-bold text-slate-800">Cash</span>;
+                                  }
+                                  if (rawM === "razorpay" || rawM === "online" || hist.razorpay_payment_id) {
+                                    return (
+                                      <div>
+                                        <span className="font-bold text-slate-800">Razorpay</span>
+                                        {(hist.razorpay_payment_id || hist.payment_reference) && (
+                                          <p className="text-[10px] text-stone-400 font-mono mt-0.5 truncate max-w-[140px]">
+                                            {hist.razorpay_payment_id || hist.payment_reference}
+                                          </p>
+                                        )}
+                                      </div>
+                                    );
+                                  }
+                                  return hist.payment_method || "In-Person";
+                                })()}
                               </td>
                               <td className="px-6 py-4">
                                 <StatusPill status={status} />
@@ -3078,7 +3323,21 @@ const BranchAdminEnrollments = () => {
       <RecordPaymentModal
         isOpen={Boolean(recordingEnrollment)}
         onClose={() => setRecordingEnrollment(null)}
-        enrollment={recordingEnrollment}
+        enrollment={
+          recordingEnrollment
+            ? (enrollments.find(
+                (e) =>
+                  String(e.enrollment_id ?? e.id) ===
+                  String(recordingEnrollment.enrollment_id ?? recordingEnrollment.id)
+              ) ||
+              installmentStudents.find(
+                (e) =>
+                  String(e.enrollment_id ?? e.id) ===
+                  String(recordingEnrollment.enrollment_id ?? recordingEnrollment.id)
+              ) ||
+              recordingEnrollment)
+            : null
+        }
         onSubmit={handleRecordPaymentSubmit}
         isSubmitting={isSubmittingRecord}
         token={token}
@@ -3095,7 +3354,21 @@ const BranchAdminEnrollments = () => {
 
       {/* Enrollment Full Details Modal */}
       <EnrollmentDetailsModal
-        enrollment={selectedEnrollment}
+        enrollment={
+          selectedEnrollment
+            ? (enrollments.find(
+                (e) =>
+                  String(e.enrollment_id ?? e.id) ===
+                  String(selectedEnrollment.enrollment_id ?? selectedEnrollment.id)
+              ) ||
+              installmentStudents.find(
+                (e) =>
+                  String(e.enrollment_id ?? e.id) ===
+                  String(selectedEnrollment.enrollment_id ?? selectedEnrollment.id)
+              ) ||
+              selectedEnrollment)
+            : null
+        }
         token={token}
         paymentHistory={paymentHistory}
         pendingPayments={pendingPayments}

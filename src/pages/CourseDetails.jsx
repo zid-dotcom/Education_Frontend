@@ -221,7 +221,13 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
             };
 
             setSuccessReceipt(receiptData);
-            setShowReceiptModal(true);
+            setShowReceiptModal(false);
+            navigate('/student-dashboard', {
+              state: {
+                newPurchaseReceipt: receiptData,
+                paymentSuccess: true,
+              },
+            });
           } catch (err) {
             setPaymentError(err.message || 'Payment verification failed. Please contact support.');
           } finally {
@@ -610,7 +616,10 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
       {/* PAYMENT SUCCESS & RECEIPT POPUP MODAL */}
       <PaymentSuccessReceiptModal
         isOpen={showReceiptModal}
-        onClose={() => setShowReceiptModal(false)}
+        onClose={() => {
+          setShowReceiptModal(false);
+          navigate('/student-dashboard');
+        }}
         receipt={successReceipt}
         receiptUrl={successReceipt?.receipt_url}
         downloadUrl={successReceipt?.download_url}

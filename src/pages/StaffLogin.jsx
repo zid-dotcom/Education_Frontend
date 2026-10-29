@@ -143,8 +143,12 @@ const StaffLogin = () => {
   return (
     <div className="login-page min-h-[calc(100vh-92px)] flex flex-col lg:flex-row bg-white relative overflow-hidden">
       {/* Left side - Image */}
-      <div className="hidden lg:flex lg:w-[55%] relative bg-white items-center justify-center">
-        <img src={staffHero} alt="Staff Login at AurumFX Academy" className="w-full h-full object-contain object-center lg:pl-8 scale-105" />
+      <div className="flex w-full lg:w-[55%] relative bg-white items-center justify-center pt-6 pb-2 px-4 sm:pt-8 sm:px-6 lg:p-0">
+        <img 
+          src={staffHero} 
+          alt="Staff Login at AurumFX Academy" 
+          className="w-auto max-w-[280px] sm:max-w-md md:max-w-lg lg:max-w-none h-44 sm:h-60 md:h-72 lg:h-full lg:w-full object-contain object-center lg:pl-8 lg:scale-105" 
+        />
       </div>
       
       {/* Right side - Form */}

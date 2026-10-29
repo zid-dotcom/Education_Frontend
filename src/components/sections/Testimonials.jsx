@@ -1,9 +1,47 @@
-import React from 'react';
-import { testimonials } from '../../data/testimonials';
+import React, { useEffect, useState } from 'react';
+import { Star } from 'lucide-react';
+import { testimonials as defaultTestimonials } from '../../data/testimonials';
+import { getPublicReviewsApi } from '../../services/reviews';
 
 const Testimonials = () => {
+  const [reviewsList, setReviewsList] = useState(defaultTestimonials);
+
+  useEffect(() => {
+    let isMounted = true;
+    getPublicReviewsApi(30)
+      .then((data) => {
+        if (!isMounted) return;
+        if (Array.isArray(data) && data.length > 0) {
+          const mapped = data.map((rev, idx) => ({
+            id: rev.id || `rev-${idx}`,
+            name: rev.student_name || 'AurumFX Student',
+            course: rev.course_title || 'Course Graduate',
+            batch: rev.branch_name || 'AurumFX Academy',
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(
+              rev.student_name || 'Student'
+            )}&background=f4b942&color=17140f&bold=true&rounded=true`,
+            rating: rev.rating || 5,
+            quote: rev.review,
+          }));
+          // Combine or display real reviews; if less than 4, pad with defaults
+          if (mapped.length < 4) {
+            setReviewsList([...mapped, ...defaultTestimonials]);
+          } else {
+            setReviewsList(mapped);
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not load live public reviews:', err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // Duplicate the list so the marquee loops seamlessly
-  const track = [...testimonials, ...testimonials];
+  const track = [...reviewsList, ...reviewsList];
 
   return (
     <section className="py-16 sm:py-28 bg-[linear-gradient(115deg,#fffaf0_0%,#ffffff_46%,#fff4c7_100%)] relative overflow-hidden">
@@ -36,7 +74,6 @@ const Testimonials = () => {
       `}</style>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
         {/* Heading */}
         <div className="text-center max-w-2xl mx-auto mb-14">
           <div className="flex items-center justify-center gap-3 mb-5">
@@ -63,10 +100,25 @@ const Testimonials = () => {
               className="w-[300px] sm:w-[340px] shrink-0 bg-white rounded-[1.75rem] p-6 sm:p-8 border border-amber-100 shadow-[0_1px_2px_rgba(28,25,23,0.06)] flex flex-col justify-between"
             >
               <div>
-                <div className="tm-serif text-[#1C1917] text-5xl leading-none mb-3 select-none">
-                  "
+                <div className="flex items-center justify-between mb-3">
+                  <div className="tm-serif text-[#1C1917] text-4xl leading-none select-none">
+                    "
+                  </div>
+                  {/* Rating Stars */}
+                  <div className="flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`h-3.5 w-3.5 ${
+                          star <= (item.rating || 5)
+                            ? 'text-amber-400 fill-amber-400'
+                            : 'text-stone-200'
+                        }`}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <p className="tm-sans text-sm text-stone-700 leading-relaxed">
+                <p className="tm-sans text-sm text-stone-700 leading-relaxed line-clamp-4">
                   {item.quote}
                 </p>
               </div>
@@ -77,11 +129,11 @@ const Testimonials = () => {
                   alt={item.name}
                   className="w-10 h-10 rounded-full object-cover border border-amber-200"
                 />
-                <div>
-                  <div className="tm-sans text-xs font-bold text-[#1C1917]">
+                <div className="min-w-0">
+                  <div className="tm-sans text-xs font-bold text-[#1C1917] truncate">
                     {item.name}
                   </div>
-                  <div className="tm-sans text-[11px] font-semibold text-stone-500">
+                  <div className="tm-sans text-[11px] font-semibold text-stone-500 truncate">
                     {item.course} • {item.batch}
                   </div>
                 </div>
@@ -90,7 +142,6 @@ const Testimonials = () => {
           ))}
         </div>
       </div>
-
     </section>
   );
 };

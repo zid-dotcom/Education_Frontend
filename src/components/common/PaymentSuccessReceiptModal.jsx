@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
+  ArrowRight,
   Check,
   Download,
   Eye,
@@ -381,11 +383,21 @@ export default function PaymentSuccessReceiptModal({
   onViewReceipt = null,
   onViewAll = null,
 }) {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState("celebration"); // "celebration" | "receipt"
   const [activeReceipt, setActiveReceipt] = useState(receipt || null);
   const [downloading, setDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const offscreenPrintRef = useRef(null);
+
+  const handleDashboardNav = () => {
+    onClose();
+    if (isBranchAdmin) {
+      navigate('/branch-admin/enrollments');
+    } else {
+      navigate('/student-dashboard');
+    }
+  };
 
   // When modal opens, always start at celebration step
   useEffect(() => {
@@ -725,11 +737,21 @@ export default function PaymentSuccessReceiptModal({
 
           {/* Action Buttons */}
           <div className="ps-stagger ps-stagger-3 mt-6 space-y-2.5">
-            {/* Primary Action: View Receipt (opens receipt modal) */}
+            {/* Primary Action: Go to Dashboard */}
+            <button
+              type="button"
+              onClick={handleDashboardNav}
+              className="w-full py-3.5 px-6 rounded-[14px] text-sm sm:text-base font-bold text-white shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2 cursor-pointer bg-[#17140f] hover:bg-stone-800"
+            >
+              <span>{isBranchAdmin ? "Back to Enrollments" : "Go to Dashboard"}</span>
+              <ArrowRight className="w-4 h-4 text-[#f4b942]" />
+            </button>
+
+            {/* Secondary Action: View Receipt (opens receipt modal) */}
             <button
               type="button"
               onClick={() => setCurrentStep("receipt")}
-              className="w-full py-3.5 px-6 rounded-[14px] text-sm sm:text-base font-bold text-white shadow-[0_12px_24px_-8px_rgba(16,185,129,0.35)] hover:shadow-[0_16px_30px_-8px_rgba(16,185,129,0.35)] hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3 px-6 rounded-[14px] text-sm sm:text-base font-bold text-white shadow-[0_12px_24px_-8px_rgba(16,185,129,0.35)] hover:shadow-[0_16px_30px_-8px_rgba(16,185,129,0.35)] hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2 cursor-pointer"
               style={{
                 background: "linear-gradient(135deg, #10b981, #06b6d4)",
               }}
@@ -838,10 +860,10 @@ export default function PaymentSuccessReceiptModal({
             <div className="flex items-center gap-2.5 w-full sm:w-auto">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleDashboardNav}
                 className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 rounded-xl border border-transparent bg-slate-100 text-xs font-bold text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
               >
-                Done & Close
+                {isBranchAdmin ? "Back to Enrollments" : "Go to Dashboard"}
               </button>
 
               <button
