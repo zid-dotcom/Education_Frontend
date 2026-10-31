@@ -244,15 +244,22 @@ const StaffDocumentsTab = ({
                 { key: 'aadhaar_back', label: 'Aadhaar (Back)' },
                 { key: 'pan_card', label: 'PAN Card Copy' },
                 { key: 'bank_passbook', label: 'Bank Passbook / Cheque' },
-                { key: 'other_document', label: 'Other Document' },
-              ].map(({ key, label }) => {
+                { key: 'other_document', label: 'Other Document (Optional)', optional: true },
+              ].map(({ key, label, optional }) => {
                 const docUrl = getDocumentUrl(key);
                 const fileUrl = getDocumentFileUrl(docUrl);
 
                 return (
                   <div key={key} className="rounded-2xl border border-[#E3DDD0] p-4 bg-[#FAF8F4] flex flex-col justify-between min-h-[96px]">
                     <div className="flex items-center justify-between gap-2 mb-2">
-                      <label className="block text-xs font-bold text-slate-700">{label}</label>
+                      <label className="block text-xs font-bold text-slate-700">
+                        {label}
+                      </label>
+                      {optional && !isApproved && (
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                          Optional
+                        </span>
+                      )}
                       {isApproved && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
                           <CheckCircle className="h-3 w-3" />
@@ -275,7 +282,7 @@ const StaffDocumentsTab = ({
                           </a>
                         ) : (
                           <span className="text-[11px] text-[#8A8175] font-medium italic">
-                            Document verified on record
+                            {optional ? 'Optional (not provided)' : 'Document verified on record'}
                           </span>
                         )}
                       </div>

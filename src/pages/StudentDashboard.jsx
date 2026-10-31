@@ -111,10 +111,44 @@ export const isInstallmentPaidOrSubmitted = (inst) => {
   );
 };
 
+export const checkIsInstallmentDue = (inst, isPaid) => {
+  if (isPaid || inst?.is_paid) return false;
+
+  const rawDate = inst?.due_date;
+  if (rawDate) {
+    const s = String(rawDate).trim().split("T")[0];
+    const parts = s.replace(/\//g, "-").split("-");
+    if (parts.length === 3) {
+      let isoDate = "";
+      if (parts[0].length === 4) {
+        // YYYY-MM-DD
+        isoDate = `${parts[0]}-${parts[1].padStart(2, "0")}-${parts[2].padStart(2, "0")}`;
+      } else if (parts[2].length === 4) {
+        // DD-MM-YYYY
+        isoDate = `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+      }
+      if (isoDate) {
+        const todayIso = new Date().toISOString().split("T")[0];
+        return isoDate <= todayIso;
+      }
+    }
+    const d = new Date(rawDate);
+    if (!isNaN(d.getTime())) {
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      return d <= today;
+    }
+  }
+
+  return Boolean(inst?.is_due === true || String(inst?.is_due).toLowerCase() === "true");
+};
+
 export const enrichInstallmentsWithPayments = (installments = [], enrollment = {}) => {
   if (!Array.isArray(installments)) return [];
 
-  const paymentSources = [
+  const curEnrollmentId = enrollment?.enrollment_id || enrollment?.id;
+
+  const rawPaymentSources = [
     ...(Array.isArray(enrollment) ? enrollment : []),
     ...(Array.isArray(enrollment?.payments) ? enrollment.payments : []),
     ...(Array.isArray(enrollment?.payment_history) ? enrollment.payment_history : []),
@@ -125,6 +159,15 @@ export const enrichInstallmentsWithPayments = (installments = [], enrollment = {
     ...(Array.isArray(enrollment?.all_payments) ? enrollment.all_payments : []),
   ];
 
+  // Strictly filter out any payments belonging to a different enrollment
+  const paymentSources = rawPaymentSources.filter((p) => {
+    if (!p) return false;
+    if (curEnrollmentId && p.enrollment_id && String(p.enrollment_id) !== String(curEnrollmentId)) {
+      return false;
+    }
+    return true;
+  });
+
   return installments.map((inst, index) => {
     const instNum = Number(inst.installment_number ?? index + 1);
     const instId = inst.installment_id || inst.id;
@@ -132,6 +175,9 @@ export const enrichInstallmentsWithPayments = (installments = [], enrollment = {
     // 1. Try to find explicit matching payments in any payment array
     const matchingPayments = paymentSources.filter((p) => {
       if (!p) return false;
+      if (curEnrollmentId && p.enrollment_id && String(p.enrollment_id) !== String(curEnrollmentId)) {
+        return false;
+      }
       if (Array.isArray(p.installment_numbers) && p.installment_numbers.map(Number).includes(instNum)) {
         return true;
       }
@@ -175,6 +221,12 @@ export const enrichInstallmentsWithPayments = (installments = [], enrollment = {
           amount: inst.amount,
           paid_amount: paidAmt || (cashAmt + upiAmt) || inst.amount,
           payment_reference: inst.payment_reference || enrollment.razorpay_payment_id,
+          payment_method: inst.payment_method,
+          payment_method_label: inst.payment_method_label,
+          cash_amount: inst.cash_amount,
+          upi_amount: inst.upi_amount,
+          upi_transaction_id: inst.upi_transaction_id,
+          razorpay_payment_id: inst.razorpay_payment_id,
         };
       }
     }
@@ -196,12 +248,17 @@ export const enrichInstallmentsWithPayments = (installments = [], enrollment = {
     const isApproved =
       !isRejected &&
       (payApprovalStatus === 'approved' ||
+        payApprovalStatus === 'not_required' ||
+        payStatus === 'received' ||
         (payStatus === 'paid' && matchingPayment.credited_to_balance === true));
 
     const isPaid =
       !isRejected &&
       (payMethodStatus === 'paid' ||
         payStatus === 'paid' ||
+        payStatus === 'received' ||
+        payApprovalStatus === 'approved' ||
+        payApprovalStatus === 'not_required' ||
         payStatus === 'pending_review' ||
         hasRef ||
         Number(matchingPayment.paid_amount || matchingPayment.amount || 0) > 0);
@@ -221,10 +278,45 @@ export const enrichInstallmentsWithPayments = (installments = [], enrollment = {
         ? Number(inst.amount) || Math.round(Number(matchingPayment.amount || 0) / matchingPayment.installment_numbers.length)
         : matchingPayment.paid_amount || matchingPayment.amount || inst.paid_amount || inst.amount;
 
+    const rawCash =
+      matchingPayment?.cash_amount !== undefined && matchingPayment?.cash_amount !== null
+        ? Number(matchingPayment.cash_amount)
+        : inst.cash_amount !== undefined && inst.cash_amount !== null
+        ? Number(inst.cash_amount)
+        : null;
+
+    const rawUpi =
+      matchingPayment?.upi_amount !== undefined && matchingPayment?.upi_amount !== null
+        ? Number(matchingPayment.upi_amount)
+        : inst.upi_amount !== undefined && inst.upi_amount !== null
+        ? Number(inst.upi_amount)
+        : null;
+
+    const pMethod = matchingPayment?.payment_method || inst.payment_method || null;
+    const pMethodLabel = matchingPayment?.payment_method_label || inst.payment_method_label || null;
+    const upiTxnId = matchingPayment?.upi_transaction_id || inst.upi_transaction_id || null;
+    const rzPaymentId =
+      matchingPayment?.razorpay_payment_id ||
+      inst.razorpay_payment_id ||
+      (matchingPayment?.payment_reference && String(matchingPayment.payment_reference).startsWith('pay_')
+        ? matchingPayment.payment_reference
+        : null) ||
+      (inst.payment_reference && String(inst.payment_reference).startsWith('pay_')
+        ? inst.payment_reference
+        : null);
+
     return {
       ...inst,
       ...matchingPayment,
       installment_number: instNum,
+      is_due: inst.is_due,
+      due_date: inst.due_date || matchingPayment.due_date,
+      cash_amount: rawCash,
+      upi_amount: rawUpi,
+      payment_method: pMethod,
+      payment_method_label: pMethodLabel,
+      upi_transaction_id: upiTxnId,
+      razorpay_payment_id: rzPaymentId,
       status: isRejected ? 'rejected' : isPendingReview ? 'pending_review' : isPaid ? 'paid' : matchingPayment.status || inst.status,
       payment_status: matchingPayment.payment_status || (isPaid ? 'paid' : inst.payment_status),
       approval_status: isRejected ? 'rejected' : matchingPayment.approval_status || (isPendingReview ? 'pending' : 'approved'),
@@ -253,6 +345,12 @@ export const getInstallmentPaymentDetails = (inst) => {
       paymentDate: null,
       amount: 0,
       paidAmount: 0,
+      paymentMethod: '',
+      paymentMethodLabel: '',
+      cashAmount: null,
+      upiAmount: null,
+      upiTransactionId: '',
+      razorpayPaymentId: '',
     };
   }
 
@@ -276,6 +374,12 @@ export const getInstallmentPaymentDetails = (inst) => {
       paymentDate: inst.payment_date || inst.paid_date || null,
       amount: Number(inst.amount || 0),
       paidAmount: 0,
+      paymentMethod: inst.payment_method || '',
+      paymentMethodLabel: inst.payment_method_label || '',
+      cashAmount: inst.cash_amount ?? null,
+      upiAmount: inst.upi_amount ?? null,
+      upiTransactionId: inst.upi_transaction_id || '',
+      razorpayPaymentId: inst.razorpay_payment_id || '',
     };
   }
 
@@ -291,6 +395,12 @@ export const getInstallmentPaymentDetails = (inst) => {
       paymentDate: inst.payment_date || inst.paid_date || null,
       amount: Number(inst.amount || 0),
       paidAmount: Number(inst.paid_amount || inst.amount || 0),
+      paymentMethod: inst.payment_method || '',
+      paymentMethodLabel: inst.payment_method_label || '',
+      cashAmount: inst.cash_amount ?? null,
+      upiAmount: inst.upi_amount ?? null,
+      upiTransactionId: inst.upi_transaction_id || '',
+      razorpayPaymentId: inst.razorpay_payment_id || '',
     };
   }
 
@@ -302,6 +412,9 @@ export const getInstallmentPaymentDetails = (inst) => {
   const isPaid =
     paymentStatusStr === 'paid' ||
     statusStr === 'paid' ||
+    statusStr === 'received' ||
+    approvalStatusStr === 'approved' ||
+    approvalStatusStr === 'not_required' ||
     statusStr === 'pending_review' ||
     hasRef;
 
@@ -335,6 +448,12 @@ export const getInstallmentPaymentDetails = (inst) => {
     paymentDate: inst.payment_date || inst.paid_date || null,
     amount,
     paidAmount,
+    paymentMethod: inst.payment_method || '',
+    paymentMethodLabel: inst.payment_method_label || '',
+    cashAmount: inst.cash_amount ?? null,
+    upiAmount: inst.upi_amount ?? null,
+    upiTransactionId: inst.upi_transaction_id || '',
+    razorpayPaymentId: inst.razorpay_payment_id || '',
   };
 };
 
@@ -958,13 +1077,16 @@ const StudentDashboard = () => {
       if (details) {
         setSelectedPaymentEnrollment((prev) => {
           if (!prev) return details;
+          const targetEnrollmentId = enrollmentId;
           const detailsArray = Array.isArray(details) ? details : [];
           const detailsObj = Array.isArray(details) ? {} : (details || {});
 
           const rawInstList =
             detailsObj.installments ||
             detailsObj.schedule ||
-            (detailsArray.length > 0 && detailsArray[0]?.due_date ? detailsArray : prev.installments) ||
+            (Array.isArray(prev?.installments) && prev.installments.length > 0 ? prev.installments : null) ||
+            (detailsArray.length > 0 && detailsArray[0]?.due_date ? detailsArray : null) ||
+            (detailsArray.length > 0 ? detailsArray : []) ||
             [];
 
           const combinedPayments = [
@@ -977,11 +1099,17 @@ const StudentDashboard = () => {
             ...(Array.isArray(detailsObj.records) ? detailsObj.records : []),
             ...(Array.isArray(prev?.payments) ? prev.payments : []),
             ...(Array.isArray(prev?.payment_history) ? prev.payment_history : []),
-          ];
+          ].filter((p) => {
+            if (!p) return false;
+            if (p.enrollment_id && targetEnrollmentId && String(p.enrollment_id) !== String(targetEnrollmentId)) {
+              return false;
+            }
+            return true;
+          });
 
           const enrichedList = enrichInstallmentsWithPayments(
             rawInstList,
-            { ...prev, ...detailsObj, payments: combinedPayments }
+            { ...prev, ...detailsObj, enrollment_id: targetEnrollmentId, id: targetEnrollmentId, payments: combinedPayments }
           );
 
           const paidCount = enrichedList.filter(isInstallmentPaidOrSubmitted).length;
@@ -1037,13 +1165,16 @@ const StudentDashboard = () => {
       if (details) {
         setSelectedPaymentEnrollment((prev) => {
           if (!prev) return details;
+          const targetEnrollmentId = enrollmentId;
           const detailsArray = Array.isArray(details) ? details : [];
           const detailsObj = Array.isArray(details) ? {} : (details || {});
 
           const rawInstList =
             detailsObj.installments ||
             detailsObj.schedule ||
-            (detailsArray.length > 0 && detailsArray[0]?.due_date ? detailsArray : prev.installments) ||
+            (Array.isArray(prev?.installments) && prev.installments.length > 0 ? prev.installments : null) ||
+            (detailsArray.length > 0 && detailsArray[0]?.due_date ? detailsArray : null) ||
+            (detailsArray.length > 0 ? detailsArray : []) ||
             [];
 
           const combinedPayments = [
@@ -1056,11 +1187,17 @@ const StudentDashboard = () => {
             ...(Array.isArray(detailsObj.records) ? detailsObj.records : []),
             ...(Array.isArray(prev?.payments) ? prev.payments : []),
             ...(Array.isArray(prev?.payment_history) ? prev.payment_history : []),
-          ];
+          ].filter((p) => {
+            if (!p) return false;
+            if (p.enrollment_id && targetEnrollmentId && String(p.enrollment_id) !== String(targetEnrollmentId)) {
+              return false;
+            }
+            return true;
+          });
 
           const enrichedList = enrichInstallmentsWithPayments(
             rawInstList,
-            { ...prev, ...detailsObj, payments: combinedPayments }
+            { ...prev, ...detailsObj, enrollment_id: targetEnrollmentId, id: targetEnrollmentId, payments: combinedPayments }
           );
 
           const paidCount = enrichedList.filter(isInstallmentPaidOrSubmitted).length;
@@ -2145,48 +2282,57 @@ const StudentDashboard = () => {
               </div>
             </div>
 
-            {/* Centered Search Bar */}
-            <div className="relative flex-1 max-w-sm sm:max-w-md mx-2">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9C6B2E]" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search courses..."
-                className="w-full rounded-full bg-[#FAF8F4] border border-[#E3DDD0] py-2.5 pl-10 pr-4 text-xs text-slate-800 placeholder:text-[#8A8175] focus:bg-white focus:border-[#9C6B2E] focus:outline-none focus:ring-2 focus:ring-[#9C6B2E]/20 transition"
-              />
-            </div>
-
-            {/* Next Installment Due Detail (Red Text Alert for immediate catch) */}
-            {nextDueInstallment && (
+            {/* Next Installment Due Detail (Adjusted Width with Course Name on the Right) */}
+            {nextDueInstallment ? (
               <button
                 type="button"
                 onClick={() => handleOpenPaymentModal(nextDueInstallment.enrollment)}
-                className="group hidden sm:flex items-center gap-2.5 rounded-2xl bg-red-50 hover:bg-red-100/90 border border-red-200/90 px-3.5 py-1.5 sm:py-2 text-left shadow-xs transition-all duration-200 cursor-pointer shrink-0"
+                className="group hidden sm:flex items-center justify-between gap-3 sm:gap-4 rounded-2xl bg-red-50/95 hover:bg-red-100 border border-red-200 px-3.5 sm:px-4 py-2 text-left shadow-xs transition-all duration-200 cursor-pointer flex-1 max-w-xl mx-2 sm:mx-4"
                 title="Click to view & pay next installment"
               >
-                <span className="relative flex h-2.5 w-2.5 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
-                </span>
-                <div className="leading-tight">
-                  <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-red-600 flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3 text-red-600 shrink-0" />
-                    Installment #{nextDueInstallment.installmentNumber} Due
-                  </p>
-                  <p className="text-xs sm:text-sm font-extrabold text-red-600 tracking-tight">
-                    Amount Due: {formatCurrency(nextDueInstallment.amount)}
-                    {nextDueInstallment.dueDate && (
-                      <span className="text-[11px] font-bold text-red-500 ml-1.5 font-sans">
-                        | Due: {formatDate(nextDueInstallment.dueDate)}
-                      </span>
-                    )}
-                  </p>
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                  <span className="relative flex h-2.5 w-2.5 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
+                  </span>
+                  <div className="leading-tight min-w-0">
+                    <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-red-600 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3 text-red-600 shrink-0" />
+                      Next Installment #{nextDueInstallment.installmentNumber}
+                    </p>
+                    <p className="text-xs sm:text-sm font-extrabold text-red-600 tracking-tight whitespace-nowrap">
+                      Amount: {formatCurrency(nextDueInstallment.amount)}
+                      {nextDueInstallment.dueDate && (
+                        <span className="text-[11px] font-bold text-red-500 ml-1.5 font-sans">
+                          | Due: {formatDate(nextDueInstallment.dueDate)}
+                        </span>
+                      )}
+                    </p>
+                  </div>
                 </div>
-                <span className="hidden md:inline-flex items-center rounded-lg bg-red-600 px-2 py-0.5 text-[10px] font-extrabold uppercase text-white shadow-xs group-hover:bg-red-700 transition ml-0.5">
-                  Pay
-                </span>
+
+                {/* Right side: Course Name & Pay Button */}
+                <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+                  {nextDueInstallment.courseTitle && (
+                    <div className="text-right border-l border-red-200/90 pl-2.5 sm:pl-3 min-w-0">
+                      <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 block leading-tight">
+                        Course
+                      </span>
+                      <span
+                        className="text-[11px] sm:text-xs font-extrabold text-slate-900 truncate max-w-[130px] sm:max-w-[170px] md:max-w-[210px] block leading-tight"
+                        title={nextDueInstallment.courseTitle}
+                      >
+                        {nextDueInstallment.courseTitle}
+                      </span>
+                    </div>
+                  )}
+                  <span className="inline-flex items-center rounded-lg bg-red-600 px-3 py-1.5 text-[11px] font-extrabold uppercase text-white shadow-xs group-hover:bg-red-700 transition shrink-0">
+                    Pay
+                  </span>
+                </div>
               </button>
+            ) : (
+              <div className="flex-1" />
             )}
 
             {/* Profile & Notification Widget */}
@@ -2246,11 +2392,18 @@ const StudentDashboard = () => {
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
                   </span>
                   <div className="min-w-0 truncate">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-red-600">
-                      Installment #{nextDueInstallment.installmentNumber} Due
-                    </p>
+                    <div className="flex items-center gap-1.5 truncate">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-red-600 shrink-0">
+                        Next Installment #{nextDueInstallment.installmentNumber}
+                      </p>
+                      {nextDueInstallment.courseTitle && (
+                        <span className="text-[10px] font-bold text-slate-800 truncate" title={nextDueInstallment.courseTitle}>
+                          • {nextDueInstallment.courseTitle}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs font-black text-red-600 truncate">
-                      Amount Due: {formatCurrency(nextDueInstallment.amount)}
+                      Amount: {formatCurrency(nextDueInstallment.amount)}
                       {nextDueInstallment.dueDate && ` | Due: ${formatDate(nextDueInstallment.dueDate)}`}
                     </p>
                   </div>
@@ -3222,6 +3375,11 @@ const StudentDashboard = () => {
                                 <span className="text-xs font-bold text-slate-800">
                                   Installment #{nextUnpaidInstallment.installment_number || 1}
                                 </span>
+                                {checkIsInstallmentDue(nextUnpaidInstallment, false) && (
+                                  <span className="inline-flex items-center rounded-md bg-rose-600 text-white px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider">
+                                    Due
+                                  </span>
+                                )}
                               </div>
                               <p className="text-sm font-extrabold text-slate-900">
                                 Amount Due: {formatCurrency(nextUnpaidInstallment.amount)}
@@ -3313,6 +3471,108 @@ const StudentDashboard = () => {
                                 inst === firstUnpaidInstallment
                               );
 
+                            const instNum = Number(inst.installment_number ?? index + 1);
+
+                            const cashAmount =
+                              inst.cash_amount !== undefined && inst.cash_amount !== null
+                                ? Number(inst.cash_amount)
+                                : statusInfo.cashAmount !== undefined && statusInfo.cashAmount !== null
+                                ? Number(statusInfo.cashAmount)
+                                : null;
+
+                            const upiAmount =
+                              inst.upi_amount !== undefined && inst.upi_amount !== null
+                                ? Number(inst.upi_amount)
+                                : statusInfo.upiAmount !== undefined && statusInfo.upiAmount !== null
+                                ? Number(statusInfo.upiAmount)
+                                : null;
+
+                            const razorpayId = (() => {
+                              if (inst.razorpay_payment_id) return inst.razorpay_payment_id;
+                              if (inst.payment_reference && String(inst.payment_reference).startsWith('pay_')) {
+                                return inst.payment_reference;
+                              }
+                              if (statusInfo.paymentReference && String(statusInfo.paymentReference).startsWith('pay_')) {
+                                return statusInfo.paymentReference;
+                              }
+                              if (statusInfo.razorpayPaymentId) {
+                                return statusInfo.razorpayPaymentId;
+                              }
+                              if (inst.transaction_id && String(inst.transaction_id).startsWith('pay_')) {
+                                return inst.transaction_id;
+                              }
+                              if (selectedPaymentEnrollment?.razorpay_payment_id && (installmentsList.length === 1 || instNum === 1)) {
+                                return selectedPaymentEnrollment.razorpay_payment_id;
+                              }
+                              if (selectedPaymentEnrollment?.payment_reference && String(selectedPaymentEnrollment.payment_reference).startsWith('pay_') && (installmentsList.length === 1 || instNum === 1)) {
+                                return selectedPaymentEnrollment.payment_reference;
+                              }
+                              return '';
+                            })();
+
+                            const rawMethod = String(
+                              inst.payment_method ||
+                              inst.method ||
+                              statusInfo.paymentMethod ||
+                              (razorpayId ? 'razorpay' : '') ||
+                              ''
+                            ).toLowerCase().trim();
+
+                            const rawMethodLabel = inst.payment_method_label || statusInfo.paymentMethodLabel;
+
+                            const isSplit =
+                              rawMethod === 'cash_upi' ||
+                              rawMethod === 'split' ||
+                              rawMethod.includes('cash+upi') ||
+                              rawMethod.includes('cash + upi') ||
+                              (cashAmount !== null && upiAmount !== null && cashAmount > 0 && upiAmount > 0);
+
+                            const isCash =
+                              !isSplit &&
+                              (rawMethod === 'cash' || (cashAmount !== null && cashAmount > 0 && (!upiAmount || upiAmount === 0)));
+
+                            const isUpi =
+                              !isSplit &&
+                              !isCash &&
+                              (rawMethod === 'upi' || (upiAmount !== null && upiAmount > 0 && (!cashAmount || cashAmount === 0)));
+
+                            const isRazorpay =
+                              !isSplit &&
+                              !isCash &&
+                              !isUpi &&
+                              (rawMethod === 'razorpay' ||
+                                rawMethod === 'online' ||
+                                rawMethod.includes('razorpay') ||
+                                Boolean(razorpayId));
+
+                            let methodDisplay = '';
+                            if (rawMethodLabel) {
+                              methodDisplay = rawMethodLabel;
+                            } else if (isSplit) {
+                              methodDisplay = 'Cash + UPI';
+                            } else if (isUpi) {
+                              methodDisplay = 'UPI';
+                            } else if (isCash) {
+                              methodDisplay = 'Cash';
+                            } else if (isRazorpay) {
+                              methodDisplay = 'Razorpay';
+                            } else if (rawMethod) {
+                              if (rawMethod === 'cash_upi') methodDisplay = 'Cash + UPI';
+                              else methodDisplay = rawMethod.charAt(0).toUpperCase() + rawMethod.slice(1);
+                            } else if (isPaid) {
+                              methodDisplay = 'Razorpay';
+                            }
+
+                            const paymentRef =
+                              inst.upi_transaction_id ||
+                              statusInfo.upiTransactionId ||
+                              inst.payment_reference ||
+                              statusInfo.paymentReference ||
+                              inst.transaction_id ||
+                              '';
+
+                            const isDue = !isPaid && !isPendingReview && !isRejected && checkIsInstallmentDue(inst, isPaid);
+
                             return (
                               <div
                                 key={inst.installment_id || index}
@@ -3324,7 +3584,11 @@ const StudentDashboard = () => {
                                     : isPaid
                                     ? 'border-emerald-100 bg-emerald-50/25 hover:border-emerald-300'
                                     : isNextUnpaid
-                                    ? 'border-[#9C6B2E] ring-2 ring-[#9C6B2E]/20 bg-gradient-to-br from-[#FFFDF9] via-white to-[#FDF8EF] shadow-2xs'
+                                    ? isDue
+                                      ? 'border-[#f0d9b5] ring-2 ring-[#9C6B2E]/25 bg-[#fef8f0] shadow-2xs'
+                                      : 'border-[#9C6B2E] ring-2 ring-[#9C6B2E]/20 bg-gradient-to-br from-[#FFFDF9] via-white to-[#FDF8EF] shadow-2xs'
+                                    : isDue
+                                    ? 'border-[#f0d9b5] bg-[#fef8f0] hover:border-[#e2c49b]'
                                     : 'border-slate-200 bg-white hover:border-slate-300'
                                 }`}
                               >
@@ -3334,6 +3598,12 @@ const StudentDashboard = () => {
                                       <span className="font-bold text-slate-900">
                                         Installment #{inst.installment_number || index + 1}
                                       </span>
+                                      {/* Due badge */}
+                                      {isDue && (
+                                        <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                          Due
+                                        </span>
+                                      )}
                                       {/* Main status badge */}
                                       {isRejected ? (
                                         <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
@@ -3348,7 +3618,7 @@ const StudentDashboard = () => {
                                       ) : isNextUnpaid ? (
                                         <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300/80">
                                           <span className="h-1.5 w-1.5 rounded-full bg-amber-600" />
-                                          Due Next
+                                          Next Installment
                                         </span>
                                       ) : (
                                         <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-700">
@@ -3367,7 +3637,9 @@ const StudentDashboard = () => {
                                     </div>
 
                                     <div className="space-y-0.5 text-[11px] text-slate-500">
-                                      <p>Due: {formatDate(inst.due_date)}</p>
+                                      <p className={isDue ? "text-rose-600 font-semibold" : ""}>
+                                        Due: {formatDate(inst.due_date)} {isDue && <span className="text-[10px] font-bold text-rose-700 ml-1">(Overdue)</span>}
+                                      </p>
                                       {(statusInfo.paymentDate || inst.paid_date || inst.payment_date) && (
                                         <p className={isRejected ? "text-rose-600 font-medium" : "text-emerald-700 font-semibold"}>
                                           • {isRejected ? "Attempted on: " : "Paid on: "}
@@ -3398,6 +3670,90 @@ const StudentDashboard = () => {
                                     )}
                                   </div>
                                 </div>
+
+                                {/* Payment Method & Amount Breakdown (Cash / UPI / Razorpay) */}
+                                {(isPaid || isPendingReview) && (methodDisplay || isSplit || isCash || isUpi || isRazorpay) && (
+                                  <div className="mt-2.5 pt-2 border-t border-slate-100 space-y-1.5">
+                                    <div className="flex items-center justify-between text-[11px]">
+                                      <span className="text-slate-500 font-medium">Payment Method:</span>
+                                      <span className="font-bold text-[#9C6B2E] bg-[#FAF8F4] border border-[#E3DDD0] px-2 py-0.5 rounded-md">
+                                        {methodDisplay || 'Paid'}
+                                      </span>
+                                    </div>
+
+                                    {/* Cash + UPI Breakdown Box */}
+                                    {isSplit && (
+                                      <div className="p-2.5 rounded-lg bg-amber-50/80 border border-amber-200/90 text-[11px] space-y-1">
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-amber-900 font-medium">Cash Amount:</span>
+                                          <span className="font-bold text-amber-950">{formatCurrency(cashAmount ?? 0)}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-amber-900 font-medium">UPI Amount:</span>
+                                          <span className="font-bold text-amber-950">{formatCurrency(upiAmount ?? 0)}</span>
+                                        </div>
+                                        {paymentRef && (
+                                          <div className="flex justify-between items-center pt-1 border-t border-amber-200/60 font-mono text-[10px]">
+                                            <span className="text-amber-800">Ref / Txn ID:</span>
+                                            <span className="text-amber-950 font-bold select-all truncate max-w-[160px]" title={paymentRef}>
+                                              {paymentRef}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {/* Pure Cash Breakdown */}
+                                    {isCash && (
+                                      <div className="p-2 rounded-lg bg-slate-50 border border-slate-200 text-[11px] space-y-1">
+                                        {cashAmount !== null && (
+                                          <div className="flex justify-between items-center">
+                                            <span className="text-slate-600 font-medium">Cash Amount:</span>
+                                            <span className="font-bold text-slate-900">{formatCurrency(cashAmount)}</span>
+                                          </div>
+                                        )}
+                                        {paymentRef && (
+                                          <div className="flex justify-between items-center font-mono text-[10px] text-slate-500">
+                                            <span>Receipt Ref:</span>
+                                            <span className="text-slate-800 font-bold select-all truncate max-w-[160px]" title={paymentRef}>
+                                              {paymentRef}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {/* Pure UPI Breakdown */}
+                                    {isUpi && (
+                                      <div className="p-2 rounded-lg bg-slate-50 border border-slate-200 text-[11px] space-y-1">
+                                        {upiAmount !== null && (
+                                          <div className="flex justify-between items-center">
+                                            <span className="text-slate-600 font-medium">UPI Amount:</span>
+                                            <span className="font-bold text-slate-900">{formatCurrency(upiAmount)}</span>
+                                          </div>
+                                        )}
+                                        {paymentRef && (
+                                          <div className="flex justify-between items-center font-mono text-[10px] text-slate-500">
+                                            <span>UPI Ref:</span>
+                                            <span className="text-slate-800 font-bold select-all truncate max-w-[160px]" title={paymentRef}>
+                                              {paymentRef}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {/* Razorpay ID */}
+                                    {isRazorpay && razorpayId && (
+                                      <div className="flex items-center justify-between text-[11px] bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200">
+                                        <span className="text-slate-500 font-medium">Razorpay ID:</span>
+                                        <span className="font-mono font-bold text-slate-800 select-all truncate max-w-[160px]" title={razorpayId}>
+                                          {razorpayId}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
 
                                 {/* Rejection Notice Box */}
                                 {isRejected && (
@@ -3458,9 +3814,11 @@ const StudentDashboard = () => {
 
                                 {!isPaid && !isNextUnpaid && (
                                   <div className="mt-2 text-right">
-                                    <span className="text-[10px] text-slate-400 font-medium">
+                                    <span className={`text-[10px] font-medium ${isDue ? 'text-rose-600 font-semibold' : 'text-slate-400'}`}>
                                       {pendingReviewInstallment
                                         ? `Upcoming (Verification of #${pendingReviewInstallment.installment_number || 3} in progress)`
+                                        : isDue
+                                        ? `Overdue (Pay #${firstUnpaidInstallment?.installment_number || 1} first)`
                                         : `Upcoming (Pay #${firstUnpaidInstallment?.installment_number || 1} first)`}
                                     </span>
                                   </div>

@@ -9,6 +9,7 @@ import { createPaymentOrderApi, loadRazorpayScript, verifyPaymentApi } from '../
 import { getPublicBranchesWithCoursesApi } from '../services/branches';
 import { useAuth } from '../context/AuthContext';
 import PaymentSuccessReceiptModal from '../components/common/PaymentSuccessReceiptModal';
+import { calculateGstBreakdown } from '../services/gst';
 
 const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
   const { courseId } = useParams();
@@ -431,22 +432,37 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
                       Incl. {course.total_gst_percent !== undefined && course.total_gst_percent !== null ? `${course.total_gst_percent}% ` : ''}GST
                     </span>
                   </div>
-                  {course.base_price && (
-                    <div className="mt-2.5 rounded-xl bg-stone-50/90 p-2.5 border border-[#e3ddd0] text-xs space-y-1">
-                      <div className="flex justify-between text-slate-600">
-                        <span>Base Tuition:</span>
-                        <span className="font-semibold text-slate-800">₹{(Number(course.base_price) || 0).toLocaleString('en-IN')}</span>
+                  {(() => {
+                    const priceNum = Number(course.price || course.fee || 0);
+                    if (priceNum <= 0) return null;
+                    const cgstRate = course.cgst_percent !== undefined && course.cgst_percent !== null ? Number(course.cgst_percent) : 9;
+                    const sgstRate = course.sgst_percent !== undefined && course.sgst_percent !== null ? Number(course.sgst_percent) : 9;
+                    const bd = calculateGstBreakdown(priceNum, cgstRate, sgstRate);
+                    return (
+                      <div className="mt-2.5 rounded-xl bg-stone-50/90 p-2.5 border border-[#e3ddd0] text-xs space-y-1">
+                        <div className="flex justify-between text-slate-600">
+                          <span>Course fee (excl. GST):</span>
+                          <span className="font-semibold text-slate-800">₹{bd.basePrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex justify-between text-slate-600">
+                          <span>CGST ({bd.cgstPercent}%):</span>
+                          <span className="font-medium text-slate-700">+ ₹{bd.cgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex justify-between text-slate-600">
+                          <span>SGST ({bd.sgstPercent}%):</span>
+                          <span className="font-medium text-slate-700">+ ₹{bd.sgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex justify-between text-slate-600 font-medium">
+                          <span>Total GST ({bd.totalGstPercent}%):</span>
+                          <span className="font-semibold text-amber-800">+ ₹{bd.totalGstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex justify-between pt-1 border-t border-[#e3ddd0] font-bold text-slate-900">
+                          <span>Final Fee:</span>
+                          <span className="text-emerald-700">₹{bd.totalAmount.toLocaleString('en-IN')}</span>
+                        </div>
                       </div>
-                      <div className="flex justify-between text-slate-600">
-                        <span>CGST{course.cgst_percent !== undefined && course.cgst_percent !== null ? ` (${course.cgst_percent}%)` : ''}:</span>
-                        <span className="font-medium text-slate-700">+ ₹{(Number(course.cgst_amount) || 0).toLocaleString('en-IN')}</span>
-                      </div>
-                      <div className="flex justify-between text-slate-600">
-                        <span>SGST{course.sgst_percent !== undefined && course.sgst_percent !== null ? ` (${course.sgst_percent}%)` : ''}:</span>
-                        <span className="font-medium text-slate-700">+ ₹{(Number(course.sgst_amount) || 0).toLocaleString('en-IN')}</span>
-                      </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
 
                 <div className="space-y-3 pt-4 border-t border-slate-100 text-xs font-medium text-slate-700">

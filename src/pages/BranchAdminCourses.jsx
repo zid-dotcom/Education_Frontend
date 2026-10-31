@@ -82,11 +82,12 @@ const inputStyle = {
 
 const inputClass = `mt-1 w-full rounded-lg px-3.5 py-2.5 text-sm outline-none ${FOCUS_RING}`;
 
-const formatPrice = (value) =>
+const formatPrice = (value, decimals = 0) =>
   new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
-    maximumFractionDigits: 0,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   }).format(Number(value || 0));
 
 const formatCourseDate = (value) => {
@@ -143,9 +144,9 @@ const BranchAdminCourses = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [gstSettings, setGstSettings] = useState({
-    cgst_percent: 0,
-    sgst_percent: 0,
-    total_gst_percent: 0,
+    cgst_percent: 9,
+    sgst_percent: 9,
+    total_gst_percent: 18,
   });
   const [loadingGst, setLoadingGst] = useState(false);
 
@@ -154,13 +155,13 @@ const BranchAdminCourses = () => {
     try {
       setLoadingGst(true);
       const res = await getBranchAdminGstSettingsApi(token);
-      if (res && (res.cgst_percent !== undefined || res.total_gst_percent !== undefined)) {
+      if (res && (Number(res.cgst_percent) > 0 || Number(res.total_gst_percent) > 0)) {
+        const c = Number(res.cgst_percent) || 9;
+        const s = Number(res.sgst_percent) || 9;
         setGstSettings({
-          cgst_percent: Number(res.cgst_percent ?? 0),
-          sgst_percent: Number(res.sgst_percent ?? 0),
-          total_gst_percent: Number(
-            res.total_gst_percent ?? (Number(res.cgst_percent ?? 0) + Number(res.sgst_percent ?? 0))
-          ),
+          cgst_percent: c,
+          sgst_percent: s,
+          total_gst_percent: Number(res.total_gst_percent) || (c + s),
         });
       }
     } catch (err) {
@@ -266,7 +267,7 @@ const BranchAdminCourses = () => {
       setForm({
         title: details.title || "",
         description: details.description || "",
-        price: details.base_price ?? details.price ?? "",
+        price: details.price ?? details.total_fee ?? details.base_price ?? "",
         duration: details.duration || "",
         category: details.category || "",
         level: details.level || "",
@@ -436,8 +437,18 @@ const BranchAdminCourses = () => {
 
   /* Derived GST & installment price validation */
   const gstBreakdown = useMemo(() => {
-    const cgst = editingCourse?.cgst_percent ?? gstSettings.cgst_percent;
-    const sgst = editingCourse?.sgst_percent ?? gstSettings.sgst_percent;
+    const cgst =
+      Number(editingCourse?.cgst_percent) > 0
+        ? Number(editingCourse.cgst_percent)
+        : Number(gstSettings?.cgst_percent) > 0
+        ? Number(gstSettings.cgst_percent)
+        : 9;
+    const sgst =
+      Number(editingCourse?.sgst_percent) > 0
+        ? Number(editingCourse.sgst_percent)
+        : Number(gstSettings?.sgst_percent) > 0
+        ? Number(gstSettings.sgst_percent)
+        : 9;
     return calculateGstBreakdown(form.price, cgst, sgst);
   }, [form.price, editingCourse, gstSettings]);
 
@@ -781,22 +792,17 @@ const BranchAdminCourses = () => {
                         {course.duration || "Flexible"}
                       </span>
                       <div className="text-right">
-                        <span
-                          className="text-xl tabular-nums block"
-                          style={{ ...serif, fontWeight: 500, color: "#5c7a5a" }}
-                        >
-                          {formatPrice(course.price)}
-                        </span>
-                        <span
-                          className="block text-[10px] font-medium"
-                          style={{ color: "#8a8175" }}
-                        >
-                          {course.base_price ? (
-                            <>Base: {formatPrice(course.base_price)} + GST: {formatPrice(course.total_gst_amount)}</>
-                          ) : (
-                            <>Incl. all taxes</>
-                          )}
-                        </span>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <span
+                            className="text-xl tabular-nums"
+                            style={{ ...serif, fontWeight: 500, color: "#5c7a5a" }}
+                          >
+                            {formatPrice(course.price)}
+                          </span>
+                          <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                            Incl. GST
+                          </span>
+                        </div>
                       </div>
                     </div>
 
@@ -937,9 +943,9 @@ const BranchAdminCourses = () => {
                 </label>
                 <div className="block text-sm" style={{ color: "#5b5346" }}>
                   <div className="flex items-center justify-between mb-1">
-                    <span>Course Base Price (Pre-GST)</span>
+                    <span>Course Total Fee (₹)</span>
                     <span className="text-xs font-semibold" style={{ color: "#9c6b2e" }}>
-                      + {gstBreakdown.totalGstPercent}% GST
+                      Includes {gstBreakdown.totalGstPercent}% GST
                     </span>
                   </div>
                   <input
@@ -952,7 +958,7 @@ const BranchAdminCourses = () => {
                     onChange={updateField}
                     className={inputClass}
                     style={inputStyle}
-                    placeholder="25000"
+                    placeholder="20000"
                   />
                   {Number(form.price) > 0 && (
                     <div
@@ -960,26 +966,30 @@ const BranchAdminCourses = () => {
                       style={{ background: "#fcfbf7", border: "1px solid #e3ddd0" }}
                     >
                       <div className="flex justify-between" style={{ color: "#8a8175" }}>
-                        <span>Pre-GST Base Price:</span>
-                        <span className="font-semibold text-slate-800">{formatPrice(gstBreakdown.basePrice)}</span>
+                        <span>Course fee (excluding GST):</span>
+                        <span className="font-semibold text-slate-800">{formatPrice(gstBreakdown.basePrice, 2)}</span>
                       </div>
                       <div className="flex justify-between" style={{ color: "#8a8175" }}>
                         <span>CGST ({gstBreakdown.cgstPercent}%):</span>
-                        <span className="font-semibold text-slate-800">+{formatPrice(gstBreakdown.cgstAmount)}</span>
+                        <span className="font-semibold text-slate-800">+{formatPrice(gstBreakdown.cgstAmount, 2)}</span>
                       </div>
                       <div className="flex justify-between" style={{ color: "#8a8175" }}>
                         <span>SGST ({gstBreakdown.sgstPercent}%):</span>
-                        <span className="font-semibold text-slate-800">+{formatPrice(gstBreakdown.sgstAmount)}</span>
+                        <span className="font-semibold text-slate-800">+{formatPrice(gstBreakdown.sgstAmount, 2)}</span>
+                      </div>
+                      <div className="flex justify-between font-medium" style={{ color: "#8a8175" }}>
+                        <span>Total GST ({gstBreakdown.totalGstPercent}%):</span>
+                        <span className="font-semibold" style={{ color: "#9c6b2e" }}>+{formatPrice(gstBreakdown.totalGstAmount, 2)}</span>
                       </div>
                       <div
                         className="flex justify-between pt-1.5 font-bold"
                         style={{ borderTop: "1px solid #efe9dd", color: "#5c7a5a" }}
                       >
-                        <span>Total Payable (with GST):</span>
+                        <span>Final fee (GST-inclusive):</span>
                         <span className="text-sm">{formatPrice(gstBreakdown.totalAmount)}</span>
                       </div>
                       <p className="text-[11px] pt-0.5" style={{ color: "#9c6b2e" }}>
-                        ⚡ Installments will be validated against this GST-inclusive total ({formatPrice(gstBreakdown.totalAmount)}).
+                        ⚡ Installments will be validated against this final fee ({formatPrice(gstBreakdown.totalAmount)}).
                       </p>
                     </div>
                   )}
@@ -1211,10 +1221,10 @@ const BranchAdminCourses = () => {
                           </div>
                           <div>
                             <p className="text-[11px] text-slate-500">
-                              Base Price (Pre-GST)
+                              Course fee (Excl. GST)
                             </p>
                             <p className="font-semibold text-slate-700">
-                              {formatPrice(gstBreakdown.basePrice)}
+                              {formatPrice(gstBreakdown.basePrice, 2)}
                             </p>
                           </div>
                           <div>
@@ -1222,12 +1232,12 @@ const BranchAdminCourses = () => {
                               GST ({gstBreakdown.totalGstPercent}%)
                             </p>
                             <p className="font-semibold text-amber-700">
-                              +{formatPrice(gstBreakdown.totalGstAmount)}
+                              +{formatPrice(gstBreakdown.totalGstAmount, 2)}
                             </p>
                           </div>
                           <div>
                             <p className="text-[11px] text-slate-500">
-                              Target (With GST)
+                              Target (Final fee)
                             </p>
                             <p className="font-bold text-[#9c6b2e]">
                               {formatPrice(targetTotal)}

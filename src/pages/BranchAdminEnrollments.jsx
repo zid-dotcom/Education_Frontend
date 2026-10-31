@@ -39,6 +39,7 @@ import {
 } from "../services/branchadminenrollments";
 import { downloadBranchAdminReceiptApi } from "../services/branchadminreceipts";
 import PaymentSuccessReceiptModal from "../components/common/PaymentSuccessReceiptModal";
+import Toast from "../components/common/Toast";
 
 /* Typography and fonts */
 const useDisplayFonts = () => {
@@ -1487,7 +1488,7 @@ const EnrollmentDetailsModal = ({
               </div>
               <div className="text-center">
                 <p className="text-xs" style={{ color: "#a39a8c" }}>
-                  Balance Due
+                  Installment Balance
                 </p>
                 <p
                   className="mt-1 text-xl tabular-nums font-bold"
@@ -1833,6 +1834,7 @@ const BranchAdminEnrollments = () => {
   const [recordingEnrollment, setRecordingEnrollment] = useState(null);
   const [rejectingPayment, setRejectingPayment] = useState(null);
   const [installmentReceipt, setInstallmentReceipt] = useState(null);
+  const [toast, setToast] = useState(null);
   const [isDownloadingReceipt, setIsDownloadingReceipt] = useState(false);
   const [nameFilter, setNameFilter] = useState("");
 
@@ -2081,6 +2083,11 @@ const BranchAdminEnrollments = () => {
         }`
       );
       setTimeout(() => setSuccess(""), 5000);
+      setToast({
+        type: "success",
+        title: "Payment Recorded",
+        message: `Payment of ${formatCurrency(payload.amount)} recorded successfully! ${receiptObj ? "Official receipt generated." : "Installment balance updated."}`,
+      });
 
       // Close the record modal immediately so it does not linger behind the receipt
       setRecordingEnrollment(null);
@@ -2142,6 +2149,11 @@ const BranchAdminEnrollments = () => {
       console.error("Error recording installment payment:", err);
       setError(err?.message || "Failed to record installment payment.");
       setTimeout(() => setError(""), 6000);
+      setToast({
+        type: "error",
+        title: "Payment Failed",
+        message: err?.message || "Failed to record installment payment.",
+      });
     } finally {
       setIsSubmittingRecord(false);
     }
@@ -2163,12 +2175,22 @@ const BranchAdminEnrollments = () => {
         payment.student_name || payment.name || payment.student?.name || "Student";
       setSuccess(`Payment of ${amountStr} for ${studentName} approved successfully.`);
       setTimeout(() => setSuccess(""), 5000);
+      setToast({
+        type: "success",
+        title: "Payment Approved",
+        message: `Online payment of ${amountStr} for ${studentName} was approved and credited successfully.`,
+      });
 
       // Re-fetch approvals and students data silently
       loadAllData(true);
     } catch (err) {
       setError(err?.message || "Failed to approve payment.");
       setTimeout(() => setError(""), 6000);
+      setToast({
+        type: "error",
+        title: "Approval Failed",
+        message: err?.message || "Failed to approve payment.",
+      });
     } finally {
       setProcessingPaymentId(null);
     }
@@ -2187,11 +2209,21 @@ const BranchAdminEnrollments = () => {
       setSuccess("Payment has been rejected.");
       setTimeout(() => setSuccess(""), 5000);
       setRejectingPayment(null);
+      setToast({
+        type: "warning",
+        title: "Payment Rejected",
+        message: `Online payment was rejected.${reason ? ` Reason: ${reason}` : ""}`,
+      });
 
       loadAllData(true);
     } catch (err) {
       setError(err?.message || "Failed to reject payment.");
       setTimeout(() => setError(""), 6000);
+      setToast({
+        type: "error",
+        title: "Rejection Failed",
+        message: err?.message || "Failed to reject payment.",
+      });
     } finally {
       setProcessingPaymentId(null);
     }
@@ -2399,7 +2431,7 @@ const BranchAdminEnrollments = () => {
             >
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider">
-                  Installments Due
+                  Installments Balance
                 </p>
                 <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-[#9c6b2e]">
                   <Clock className="h-4 w-4" />
@@ -2515,7 +2547,7 @@ const BranchAdminEnrollments = () => {
                     : "bg-white text-[#5b5346] border border-[#e3ddd0] hover:bg-[#f1ede4]"
                 }`}
               >
-                Installments Due ({effectiveInstallmentStudents.length})
+                Installments Balance ({effectiveInstallmentStudents.length})
               </button>
 
               <button
@@ -2958,7 +2990,7 @@ const BranchAdminEnrollments = () => {
 
                             <div>
                               <span className="text-[10px] uppercase font-bold text-rose-500 block tracking-wider">
-                                Balance Due
+                                Installment Balance
                               </span>
                               <span
                                 className="text-lg font-extrabold text-rose-600"
@@ -3270,7 +3302,7 @@ const BranchAdminEnrollments = () => {
 
                           <div className="grid grid-cols-2 gap-3 text-xs pt-2 border-t border-[#efe9dd]">
                             <div>
-                              <span className="text-stone-400 block">Balance Due:</span>
+                              <span className="text-stone-400 block">Installment Balance:</span>
                               <span
                                 className={`font-bold ${
                                   balance > 0 ? "text-rose-600" : "text-emerald-700"
@@ -3381,6 +3413,9 @@ const BranchAdminEnrollments = () => {
           setRecordingEnrollment(enrollment);
         }}
       />
+
+      {/* Toast Notification */}
+      <Toast toast={toast} onClose={() => setToast(null)} />
 
       {/* Payment Success & Receipt Modal */}
       <PaymentSuccessReceiptModal

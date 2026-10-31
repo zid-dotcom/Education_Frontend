@@ -285,6 +285,36 @@ export default function OfficialReceiptVoucherCard({ receipt, user }) {
   const hasTotalPaid = totalCoursePaid !== null && !isNaN(totalCoursePaid);
   const hasBalance = balanceAmount !== null && !isNaN(balanceAmount);
 
+  const cashAmount =
+    receipt.cash_amount !== undefined && receipt.cash_amount !== null
+      ? Number(receipt.cash_amount)
+      : null;
+
+  const upiAmount =
+    receipt.upi_amount !== undefined && receipt.upi_amount !== null
+      ? Number(receipt.upi_amount)
+      : null;
+
+  const rawMethod = String(
+    receipt.payment_method || receipt.payment_mode || receipt.method || ""
+  ).toLowerCase().trim();
+
+  const isSplit =
+    rawMethod === "split" ||
+    rawMethod === "cash_upi" ||
+    rawMethod.includes("cash+upi") ||
+    rawMethod.includes("cash + upi") ||
+    (cashAmount !== null && upiAmount !== null && cashAmount > 0 && upiAmount > 0);
+
+  const isCash =
+    !isSplit &&
+    (rawMethod === "cash" || (cashAmount !== null && cashAmount > 0 && (!upiAmount || upiAmount === 0)));
+
+  const isUpi =
+    !isSplit &&
+    !isCash &&
+    (rawMethod === "upi" || (upiAmount !== null && upiAmount > 0 && (!cashAmount || cashAmount === 0)));
+
   return (
     <div
       id="receipt-voucher-card"
@@ -420,6 +450,23 @@ export default function OfficialReceiptVoucherCard({ receipt, user }) {
                 >
                   {methodBadge.label}
                 </span>
+                {isSplit && (
+                  <div className="mt-1 text-[11px] font-semibold text-slate-700">
+                    <span>Cash: <strong className="font-extrabold text-slate-900">{formatCurrency(cashAmount ?? 0)}</strong></span>
+                    <span className="mx-1 text-slate-400">|</span>
+                    <span>UPI: <strong className="font-extrabold text-slate-900">{formatCurrency(upiAmount ?? 0)}</strong></span>
+                  </div>
+                )}
+                {isCash && cashAmount !== null && (
+                  <div className="mt-1 text-[11px] font-semibold text-slate-700">
+                    <span>Cash: <strong className="font-extrabold text-slate-900">{formatCurrency(cashAmount)}</strong></span>
+                  </div>
+                )}
+                {isUpi && upiAmount !== null && (
+                  <div className="mt-1 text-[11px] font-semibold text-slate-700">
+                    <span>UPI: <strong className="font-extrabold text-slate-900">{formatCurrency(upiAmount)}</strong></span>
+                  </div>
+                )}
               </td>
               <td className="px-4 py-3.5 text-right font-bold text-slate-900 tabular-nums text-sm">
                 {formatCurrency(amountPaid)}
@@ -444,6 +491,25 @@ export default function OfficialReceiptVoucherCard({ receipt, user }) {
             </tr>
           </tbody>
         </table>
+        {isSplit && (
+          <div
+            className="px-4 py-2.5 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-1.5"
+            style={{ color: "#7a531f", background: "#fefdfa", borderTop: "1px dashed #e3ddd0" }}
+          >
+            <span className="font-bold text-[#8a8175] text-[10px] uppercase tracking-wider">
+              Payment Method Breakdown:
+            </span>
+            <div className="flex items-center gap-3 font-semibold text-slate-800 text-xs">
+              <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200/80 px-2 py-0.5 text-amber-950 font-bold">
+                Cash: {formatCurrency(cashAmount ?? 0)}
+              </span>
+              <span className="text-slate-400">+</span>
+              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 text-emerald-950 font-bold">
+                UPI: {formatCurrency(upiAmount ?? 0)}
+              </span>
+            </div>
+          </div>
+        )}
         {amountPaid > 0 && (
           <div
             className="px-4 py-2 text-[11px] flex flex-col sm:flex-row sm:items-center justify-between gap-1"
@@ -457,8 +523,8 @@ export default function OfficialReceiptVoucherCard({ receipt, user }) {
         )}
       </div>
 
-      {/* 4. Course Fee Clearance Breakdown (if fee/balance data available) */}
-      {(hasCourseFee || hasTotalPaid || hasBalance) && (
+      {/* 4. Course Fee Clearance Breakdown (Cumulative Paid removed as requested) */}
+      {(hasCourseFee || hasBalance) && (
         <div
           className="rounded-2xl p-4 space-y-2"
           style={{ background: "#faf8f4", border: "1px solid #e3ddd0" }}
@@ -478,7 +544,7 @@ export default function OfficialReceiptVoucherCard({ receipt, user }) {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
             {hasCourseFee && (
               <div
                 className="p-2.5 rounded-xl"
@@ -489,19 +555,6 @@ export default function OfficialReceiptVoucherCard({ receipt, user }) {
                 </p>
                 <p className="text-sm font-extrabold text-slate-900 mt-0.5 tabular-nums">
                   {formatCurrency(courseFee)}
-                </p>
-              </div>
-            )}
-            {hasTotalPaid && (
-              <div
-                className="p-2.5 rounded-xl"
-                style={{ background: "#ffffff", border: "1px solid #e8e2d5" }}
-              >
-                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#8a8175" }}>
-                  Cumulative Paid
-                </p>
-                <p className="text-sm font-extrabold text-emerald-700 mt-0.5 tabular-nums">
-                  {formatCurrency(totalCoursePaid)}
                 </p>
               </div>
             )}
@@ -531,7 +584,8 @@ export default function OfficialReceiptVoucherCard({ receipt, user }) {
         receipt.razorpay_payment_id ||
         receipt.transaction_reference ||
         receipt.payment_reference ||
-        receipt.upi_transaction_id) && (
+        receipt.upi_transaction_id ||
+        isSplit) && (
         <div
           className="rounded-2xl p-4 space-y-2"
           style={{ background: "#faf8f4", border: "1px solid #e3ddd0" }}
@@ -552,6 +606,32 @@ export default function OfficialReceiptVoucherCard({ receipt, user }) {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            {isSplit && (
+              <>
+                <div
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 py-1.5 px-3 rounded-xl"
+                  style={{ background: "#ffffff", border: "1px solid #e8e2d5" }}
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#8a8175" }}>
+                    Cash Component:
+                  </span>
+                  <span className="text-xs font-extrabold text-slate-900 tabular-nums">
+                    {formatCurrency(cashAmount ?? 0)}
+                  </span>
+                </div>
+                <div
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 py-1.5 px-3 rounded-xl"
+                  style={{ background: "#ffffff", border: "1px solid #e8e2d5" }}
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#8a8175" }}>
+                    UPI Component:
+                  </span>
+                  <span className="text-xs font-extrabold text-slate-900 tabular-nums">
+                    {formatCurrency(upiAmount ?? 0)}
+                  </span>
+                </div>
+              </>
+            )}
             {(receipt.transaction_reference || receipt.payment_reference) && (
               <div
                 className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 py-1.5 px-3 rounded-xl"

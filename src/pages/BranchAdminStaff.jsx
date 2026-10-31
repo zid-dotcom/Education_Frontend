@@ -16,12 +16,15 @@ import {
   UserCheck,
   UserPlus,
   Activity,
+  Eye,
+  EyeOff,
   Menu,
   X,
 } from "lucide-react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import BranchAdminSidebar from "../components/layout/BranchAdminSidebar";
+import Toast from "../components/common/Toast";
 import { getMyCoursesApi } from "../services/branchadmincourses";
 import {
   createBranchStaffApi,
@@ -118,8 +121,10 @@ const BranchAdminStaff = () => {
   const [editingStaff, setEditingStaff] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [toast, setToast] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [activeTab, setActiveTab] = useState("attendance");
@@ -249,6 +254,7 @@ const BranchAdminStaff = () => {
   const resetForm = () => {
     setForm(EMPTY_FORM);
     setEditingStaff(null);
+    setShowPassword(false);
   };
 
   const openCreate = () => {
@@ -287,6 +293,11 @@ const BranchAdminStaff = () => {
       setSuccess("");
       if (!editingStaff && !form.password.trim()) {
         setError("A password is required when creating staff.");
+        setToast({
+          type: "warning",
+          title: "Password Required",
+          message: "A password is required when creating staff.",
+        });
         return;
       }
       if (form.salary === "" || Number(form.salary) < 0) {
@@ -316,9 +327,19 @@ const BranchAdminStaff = () => {
       setSuccess(
         `${saved.name} ${editingStaff ? "updated" : "created"} successfully.`,
       );
+      setToast({
+        type: "success",
+        title: editingStaff ? "Staff Account Updated" : "Staff Registered Successfully",
+        message: `${saved.name} was successfully ${editingStaff ? "updated" : "registered with active branch access"}.`,
+      });
       resetForm();
     } catch (err) {
       setError(err.message || "Failed to save staff member.");
+      setToast({
+        type: "error",
+        title: editingStaff ? "Update Failed" : "Registration Failed",
+        message: err.message || "Failed to save staff member.",
+      });
     } finally {
       setSaving(false);
     }
@@ -996,15 +1017,31 @@ const BranchAdminStaff = () => {
                   ))}
                   <label className="block text-sm" style={{ color: "#5b5346" }}>
                     Password {editingStaff ? "(optional)" : ""}
-                    <input
-                      required={!editingStaff}
-                      name="password"
-                      type="password"
-                      value={form.password}
-                      onChange={updateField}
-                      className={`mt-1 w-full rounded-lg px-3.5 py-2.5 text-sm outline-none ${FOCUS_RING}`}
-                      style={inputStyle}
-                    />
+                    <div className="relative mt-1">
+                      <input
+                        required={!editingStaff}
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        value={form.password}
+                        onChange={updateField}
+                        className={`w-full rounded-lg pl-3.5 pr-10 py-2.5 text-sm outline-none ${FOCUS_RING}`}
+                        style={inputStyle}
+                        placeholder={editingStaff ? "Leave blank to keep current password" : "Enter staff password"}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        className={`absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 transition-colors hover:bg-[#f1ede4] cursor-pointer ${FOCUS_RING}`}
+                        style={{ color: "#8a8175" }}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                   </label>
                   <label className="block text-sm" style={{ color: "#5b5346" }}>
                     Assigned course
@@ -1070,6 +1107,9 @@ const BranchAdminStaff = () => {
           )}
         </div>
       </main>
+
+      {/* Toast Notification */}
+      <Toast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 };

@@ -54,7 +54,7 @@ const StaffStudentModal = ({
         className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative flex w-full max-w-2xl flex-col max-h-[92vh] sm:max-h-[90vh] overflow-hidden rounded-3xl bg-white shadow-2xl border border-[#E3DDD0] sa-rise">
+      <div className="relative flex w-full max-w-4xl lg:max-w-5xl flex-col max-h-[92vh] sm:max-h-[90vh] overflow-hidden rounded-3xl bg-white shadow-2xl border border-[#E3DDD0] sa-rise">
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-[#E3DDD0] px-4 sm:px-6 py-3.5 sm:py-4 bg-[#FAF8F4]">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
@@ -446,16 +446,17 @@ const StaffStudentModal = ({
                       Installment Breakdown
                     </h4>
                     <div className="rounded-2xl border border-[#E3DDD0] overflow-hidden shadow-xs">
-                      <table className="w-full text-left text-xs">
-                        <thead className="border-b border-[#E3DDD0] bg-[#FAF8F4] text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                          <tr>
-                            <th className="px-3 sm:px-4 py-2.5">Term</th>
-                            <th className="px-3 sm:px-4 py-2.5 text-right">Amount</th>
-                            <th className="px-3 sm:px-4 py-2.5 text-right">Paid</th>
-                            <th className="px-3 sm:px-4 py-2.5">Due Date</th>
-                            <th className="px-3 sm:px-4 py-2.5 text-right">Status</th>
-                          </tr>
-                        </thead>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs min-w-[500px]">
+                          <thead className="border-b border-[#E3DDD0] bg-[#FAF8F4] text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                            <tr>
+                              <th className="px-3 sm:px-4 py-2.5 whitespace-nowrap">Term</th>
+                              <th className="px-3 sm:px-4 py-2.5 text-right whitespace-nowrap">Amount</th>
+                              <th className="px-3 sm:px-4 py-2.5 text-right whitespace-nowrap">Paid</th>
+                              <th className="px-3 sm:px-4 py-2.5 whitespace-nowrap">Due Date</th>
+                              <th className="px-3 sm:px-4 py-2.5 text-right whitespace-nowrap">Status</th>
+                            </tr>
+                          </thead>
                         <tbody className="divide-y divide-[#E3DDD0]">
                           {rawInstallments.map((inst, idx) => {
                             const isPaid = String(inst.status || '').toLowerCase() === 'paid';
@@ -495,7 +496,8 @@ const StaffStudentModal = ({
                             );
                           })}
                         </tbody>
-                      </table>
+                        </table>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -510,17 +512,18 @@ const StaffStudentModal = ({
                       Payment History & Transactions
                     </h4>
                     <div className="rounded-2xl border border-[#E3DDD0] overflow-hidden shadow-xs">
-                      <table className="w-full text-left text-xs">
-                        <thead className="border-b border-[#E3DDD0] bg-[#FAF8F4] text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                          <tr>
-                            <th className="px-3 sm:px-4 py-2.5">Ref</th>
-                            <th className="px-3 sm:px-4 py-2.5">Installment(s)</th>
-                            <th className="px-3 sm:px-4 py-2.5">Method</th>
-                            <th className="px-3 sm:px-4 py-2.5">Date</th>
-                            <th className="px-3 sm:px-4 py-2.5 text-right">Amount</th>
-                            <th className="px-3 sm:px-4 py-2.5 text-right">Status</th>
-                          </tr>
-                        </thead>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs min-w-[620px]">
+                          <thead className="border-b border-[#E3DDD0] bg-[#FAF8F4] text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                            <tr>
+                              <th className="px-3 sm:px-4 py-2.5 whitespace-nowrap">Ref</th>
+                              <th className="px-3 sm:px-4 py-2.5 whitespace-nowrap">Installment(s)</th>
+                              <th className="px-3 sm:px-4 py-2.5 whitespace-nowrap">Method</th>
+                              <th className="px-3 sm:px-4 py-2.5 whitespace-nowrap">Date</th>
+                              <th className="px-3 sm:px-4 py-2.5 text-right whitespace-nowrap">Amount</th>
+                              <th className="px-3 sm:px-4 py-2.5 text-right whitespace-nowrap">Status</th>
+                            </tr>
+                          </thead>
                         <tbody className="divide-y divide-[#E3DDD0]">
                           {rawPayments.map((p, pIdx) => {
                             const payId = p.id || p.payment_id || pIdx + 1;
@@ -544,22 +547,22 @@ const StaffStudentModal = ({
 
                             return (
                               <tr key={payId} className="hover:bg-[#FAF8F4]/50">
-                                <td className="px-3 sm:px-4 py-2.5 font-mono text-[11px] text-slate-700">
+                                <td className="px-3 sm:px-4 py-2.5 font-mono text-[11px] text-slate-700 whitespace-nowrap">
                                   #{p.receipt_number || p.payment_reference || payId}
                                 </td>
-                                <td className="px-3 sm:px-4 py-2.5 font-bold text-slate-800">
+                                <td className="px-3 sm:px-4 py-2.5 font-bold text-slate-800 whitespace-nowrap">
                                   {installmentsLabel}
                                 </td>
-                                <td className="px-3 sm:px-4 py-2.5 text-slate-600">
+                                <td className="px-3 sm:px-4 py-2.5 text-slate-600 whitespace-nowrap">
                                   {method}
                                 </td>
-                                <td className="px-3 sm:px-4 py-2.5 text-slate-600 text-[11px]">
+                                <td className="px-3 sm:px-4 py-2.5 text-slate-600 text-[11px] whitespace-nowrap">
                                   {formatDate(p.payment_date || p.created_at)}
                                 </td>
-                                <td className="px-3 sm:px-4 py-2.5 text-right font-extrabold text-slate-900">
+                                <td className="px-3 sm:px-4 py-2.5 text-right font-extrabold text-slate-900 whitespace-nowrap">
                                   {formatCurrency(p.amount)}
                                 </td>
-                                <td className="px-3 sm:px-4 py-2.5 text-right">
+                                <td className="px-3 sm:px-4 py-2.5 text-right whitespace-nowrap">
                                   <span
                                     className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
                                       isApproved
@@ -574,7 +577,8 @@ const StaffStudentModal = ({
                             );
                           })}
                         </tbody>
-                      </table>
+                        </table>
+                      </div>
                     </div>
                   </div>
                 )}

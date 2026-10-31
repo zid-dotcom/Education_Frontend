@@ -378,7 +378,7 @@ const StaffProfileTab = ({
                   { label: 'Aadhaar Back', url: profileData?.documents?.aadhaar_back_url },
                   { label: 'PAN Card', url: profileData?.documents?.pan_card_url },
                   { label: 'Bank Passbook', url: profileData?.documents?.bank_passbook_url },
-                  { label: profileData?.documents?.other_document_name || 'Other Document', url: profileData?.documents?.other_document_url },
+                  { label: profileData?.documents?.other_document_name || 'Other Document (Optional)', url: profileData?.documents?.other_document_url, optional: true },
                 ].map((d, i) => (
                   <div
                     key={i}
@@ -396,7 +396,9 @@ const StaffProfileTab = ({
                           <ExternalLink className="h-3 w-3" /> View File
                         </a>
                       ) : (
-                        <span className="text-[10px] text-slate-400 font-medium">Not uploaded</span>
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          {d.optional ? 'Not provided (optional)' : 'Not uploaded'}
+                        </span>
                       )}
                     </div>
                   </div>

@@ -81,7 +81,7 @@ const SuperAdminGstSettings = () => {
   const [sgstInput, setSgstInput] = useState('9');
 
   // Interactive calculator sample base price
-  const [sampleBasePrice, setSampleBasePrice] = useState('30000');
+  const [sampleBasePrice, setSampleBasePrice] = useState('20000');
 
   const loadSettings = async () => {
     if (!token) return;
@@ -469,15 +469,15 @@ const SuperAdminGstSettings = () => {
                 <ul className="space-y-2 text-xs text-slate-600 leading-relaxed">
                   <li className="flex items-start gap-2">
                     <span className="font-bold text-[#9c6b2e]">•</span>
-                    <span><strong>Pre-GST Base Pricing:</strong> When creating or editing courses in Super Admin or Branch Admin, the <code>price</code> field represents the pre-tax base fee.</span>
+                    <span><strong>Tax-Inclusive Course Pricing:</strong> When creating or editing courses in Super Admin or Branch Admin, the <code>price</code> field represents the final GST-inclusive fee (e.g. ₹20,000).</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="font-bold text-[#9c6b2e]">•</span>
-                    <span><strong>Automated Tax Calculation:</strong> The backend computes CGST and SGST amounts using these configured rates and stores the final GST-inclusive total.</span>
+                    <span><strong>Automated Tax Breakdown:</strong> Base tuition (excluding tax) and GST (CGST + SGST) are automatically computed from the total fee (e.g. ₹20,000 includes ₹16,949.15 base + ₹3,050.85 GST).</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="font-bold text-[#9c6b2e]">•</span>
-                    <span><strong>Installment Schedules:</strong> When a course has installment terms, all term amounts combined must match the <strong>GST-inclusive total</strong>.</span>
+                    <span><strong>Installment Schedules:</strong> When a course has installment terms, all term amounts combined must match the <strong>final course fee (₹20,000)</strong>.</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="font-bold text-[#9c6b2e]">•</span>
@@ -511,7 +511,7 @@ const SuperAdminGstSettings = () => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-600 mb-1">
-                      Sample Base Course Price (₹)
+                      Sample Course Fee (Incl. GST) (₹)
                     </label>
                     <div className="relative">
                       <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">
@@ -533,7 +533,7 @@ const SuperAdminGstSettings = () => {
                   <div className="rounded-xl border border-[#efe9dd] overflow-hidden">
                     <dl className="divide-y divide-[#efe9dd] text-xs">
                       <div className="flex justify-between p-3 bg-white">
-                        <dt className="text-slate-600 font-medium">Pre-GST Base Fee</dt>
+                        <dt className="text-slate-600 font-medium">Course Fee (Excl. GST)</dt>
                         <dd className="font-semibold text-slate-900">
                           {formatCurrency(sampleBreakdown.basePrice)}
                         </dd>
@@ -564,7 +564,7 @@ const SuperAdminGstSettings = () => {
                       </div>
                       <div className="flex justify-between p-3.5 bg-[#fcfaf6] border-t-2 border-[#ead9bc]">
                         <dt className="text-sm font-extrabold text-slate-900">
-                          Total Course Fee (Payable)
+                          Final Fee (GST-inclusive)
                         </dt>
                         <dd className="text-base font-extrabold text-[#7a531f]">
                           {formatCurrency(sampleBreakdown.totalAmount)}

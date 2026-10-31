@@ -142,17 +142,8 @@ const StaffLogin = () => {
 
   return (
     <div className="login-page min-h-[calc(100vh-92px)] flex flex-col lg:flex-row bg-white relative overflow-hidden">
-      {/* Left side - Image */}
-      <div className="flex w-full lg:w-[55%] relative bg-white items-center justify-center pt-6 pb-2 px-4 sm:pt-8 sm:px-6 lg:p-0">
-        <img 
-          src={staffHero} 
-          alt="Staff Login at AurumFX Academy" 
-          className="w-auto max-w-[280px] sm:max-w-md md:max-w-lg lg:max-w-none h-44 sm:h-60 md:h-72 lg:h-full lg:w-full object-contain object-center lg:pl-8 lg:scale-105" 
-        />
-      </div>
-      
-      {/* Right side - Form */}
-      <div className="w-full lg:w-[45%] flex items-center justify-center p-4 sm:p-8 lg:p-12 relative z-10">
+      {/* Form: on mobile on top (order-1), on desktop on right (lg:order-2) */}
+      <div className="order-1 lg:order-2 w-full lg:w-[45%] flex items-center justify-center p-4 sm:p-8 lg:p-12 relative z-10">
       
       <div className="max-w-md w-full lg:max-w-lg">
         
@@ -415,6 +406,15 @@ const StaffLogin = () => {
 
 
       </div>
+      </div>
+
+      {/* Image: on mobile on down side (order-2) with increased size; on desktop on left (lg:order-1) */}
+      <div className="order-2 lg:order-1 flex w-full lg:w-[55%] relative bg-white items-center justify-center pt-2 pb-8 px-4 sm:px-6 lg:p-0">
+        <img 
+          src={staffHero} 
+          alt="Staff Login at AurumFX Academy" 
+          className="w-full max-w-[360px] sm:max-w-md md:max-w-lg lg:max-w-none h-60 sm:h-72 md:h-80 lg:h-full lg:w-full object-contain object-center lg:pl-8 lg:scale-105" 
+        />
       </div>
     </div>
   );

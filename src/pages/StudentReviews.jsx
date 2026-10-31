@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import {
   Star,
-  Sparkles,
   MessageSquare,
   BookOpen,
   Calendar,
@@ -50,6 +49,7 @@ const formatDate = (dateStr) => {
 };
 
 const RATING_LABELS = {
+  0: 'Select Rating',
   1: 'Needs Improvement',
   2: 'Fair',
   3: 'Good',
@@ -81,7 +81,6 @@ const StudentReviews = () => {
     rating: 5,
     review: '',
   });
-  const [hoverRating, setHoverRating] = useState(0);
 
   // Fetch reviews & enrollments
   const fetchData = async (isSilent = false) => {
@@ -192,6 +191,11 @@ const StudentReviews = () => {
       return;
     }
 
+    if (!formData.rating || Number(formData.rating) < 1) {
+      setFormError('Please select a star rating (1 to 5 stars).');
+      return;
+    }
+
     if (!formData.review || formData.review.trim().length < 3) {
       setFormError('Please share at least a few words about your experience.');
       return;
@@ -202,7 +206,7 @@ const StudentReviews = () => {
       const payload = {
         course_id: Number(formData.course_id),
         review: formData.review.trim(),
-        rating: Number(formData.rating) || 5,
+        rating: Number(formData.rating),
       };
 
       const createdReview = await createStudentReviewApi(payload, token);
@@ -229,8 +233,7 @@ const StudentReviews = () => {
       <header className="rounded-2xl border border-[#E3DDD0] bg-white p-6 sm:p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-1.5 max-w-2xl">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FAF4EA] px-3 py-1 text-[11px] font-bold text-[#9C6B2E] border border-[#E3DDD0]">
-              <Sparkles className="h-3 w-3 text-[#9C6B2E]" />
+            <span className="inline-flex items-center rounded-full bg-[#FAF4EA] px-3 py-1 text-[11px] font-bold text-[#9C6B2E] border border-[#E3DDD0]">
               <span>Student Experience & Feedback</span>
             </span>
             <h1
@@ -551,17 +554,19 @@ const StudentReviews = () => {
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1">
                     {[1, 2, 3, 4, 5].map((star) => {
-                      const isFilled = star <= (hoverRating || formData.rating);
+                      const isFilled = star <= formData.rating;
                       return (
                         <button
                           key={star}
                           type="button"
-                          onMouseEnter={() => setHoverRating(star)}
-                          onMouseLeave={() => setHoverRating(0)}
                           onClick={() =>
-                            setFormData((prev) => ({ ...prev, rating: star }))
+                            setFormData((prev) => ({
+                              ...prev,
+                              rating: prev.rating === star ? star - 1 : star,
+                            }))
                           }
-                          className="p-1 hover:scale-110 transition cursor-pointer"
+                          className="p-1 cursor-pointer focus:outline-none"
+                          aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
                         >
                           <Star
                             className={`h-6 w-6 transition-colors ${
@@ -575,7 +580,7 @@ const StudentReviews = () => {
                     })}
                   </div>
                   <span className="text-xs font-bold text-[#9C6B2E] ml-2">
-                    {RATING_LABELS[hoverRating || formData.rating] || 'Good'}
+                    {RATING_LABELS[formData.rating] || 'Select Rating'}
                   </span>
                 </div>
               </div>

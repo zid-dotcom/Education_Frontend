@@ -317,6 +317,36 @@ function StudentReceiptVoucherCard({ receipt, user }) {
       receipt.upi_transaction_id
   );
 
+  const cashAmount =
+    receipt.cash_amount !== undefined && receipt.cash_amount !== null
+      ? Number(receipt.cash_amount)
+      : null;
+
+  const upiAmount =
+    receipt.upi_amount !== undefined && receipt.upi_amount !== null
+      ? Number(receipt.upi_amount)
+      : null;
+
+  const rawMethod = String(
+    receipt.payment_method || receipt.payment_mode || receipt.method || ""
+  ).toLowerCase().trim();
+
+  const isSplit =
+    rawMethod === "split" ||
+    rawMethod === "cash_upi" ||
+    rawMethod.includes("cash+upi") ||
+    rawMethod.includes("cash + upi") ||
+    (cashAmount !== null && upiAmount !== null && cashAmount > 0 && upiAmount > 0);
+
+  const isCash =
+    !isSplit &&
+    (rawMethod === "cash" || (cashAmount !== null && cashAmount > 0 && (!upiAmount || upiAmount === 0)));
+
+  const isUpi =
+    !isSplit &&
+    !isCash &&
+    (rawMethod === "upi" || (upiAmount !== null && upiAmount > 0 && (!cashAmount || cashAmount === 0)));
+
   return (
     <div
       id="student-receipt-voucher-card"
@@ -447,6 +477,23 @@ function StudentReceiptVoucherCard({ receipt, user }) {
                 >
                   {methodBadge.label}
                 </span>
+                {isSplit && (
+                  <div className="mt-1 text-[11px] font-semibold text-slate-700">
+                    <span>Cash: <strong className="font-extrabold text-slate-900">{formatCurrency(cashAmount ?? 0)}</strong></span>
+                    <span className="mx-1 text-slate-400">|</span>
+                    <span>UPI: <strong className="font-extrabold text-slate-900">{formatCurrency(upiAmount ?? 0)}</strong></span>
+                  </div>
+                )}
+                {isCash && cashAmount !== null && (
+                  <div className="mt-1 text-[11px] font-semibold text-slate-700">
+                    <span>Cash: <strong className="font-extrabold text-slate-900">{formatCurrency(cashAmount)}</strong></span>
+                  </div>
+                )}
+                {isUpi && upiAmount !== null && (
+                  <div className="mt-1 text-[11px] font-semibold text-slate-700">
+                    <span>UPI: <strong className="font-extrabold text-slate-900">{formatCurrency(upiAmount)}</strong></span>
+                  </div>
+                )}
               </td>
               <td className="px-4 py-3.5 text-right font-bold text-slate-900 tabular-nums text-sm">
                 {formatCurrency(amountPaid)}
@@ -494,7 +541,7 @@ function StudentReceiptVoucherCard({ receipt, user }) {
             </span>
           </div>
 
-          <div className="grid grid-cols-3 gap-3 text-center pt-1">
+          <div className="grid grid-cols-2 gap-3 text-center pt-1">
             {hasCourseFee && (
               <div
                 className="p-2.5 rounded-xl"
@@ -505,19 +552,6 @@ function StudentReceiptVoucherCard({ receipt, user }) {
                 </span>
                 <span className="text-xs sm:text-sm font-bold text-slate-900 tabular-nums">
                   {formatCurrency(receipt.course_fee)}
-                </span>
-              </div>
-            )}
-            {hasTotalPaid && (
-              <div
-                className="p-2.5 rounded-xl"
-                style={{ background: "#ffffff", border: "1px solid #e8e2d5" }}
-              >
-                <span className="text-[10px] font-bold uppercase tracking-wider block" style={{ color: "#8a8175" }}>
-                  Total Paid To Date
-                </span>
-                <span className="text-xs sm:text-sm font-bold tabular-nums" style={{ color: "#047857" }}>
-                  {formatCurrency(receipt.total_paid)}
                 </span>
               </div>
             )}

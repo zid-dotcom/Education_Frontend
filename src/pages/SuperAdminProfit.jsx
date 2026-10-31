@@ -65,6 +65,56 @@ const getPaymentDate = (enr, fromDateStr, toDateStr) => {
   return fromDateStr;
 };
 
+// Strict enrollment-first matching helper for payment records
+const getEnrollmentPayments = (enrollment, rootProfit) => {
+  if (!enrollment) return [];
+  const enrollmentId = enrollment.enrollment_id ?? enrollment.id;
+  const courseId = enrollment.course_id ?? enrollment.course?.id;
+  const studentId = enrollment.student_id ?? enrollment.student?.id;
+
+  const allSources = [
+    ...(Array.isArray(enrollment.payments) ? enrollment.payments : []),
+    ...(Array.isArray(enrollment.payment_history) ? enrollment.payment_history : []),
+    ...(Array.isArray(enrollment.transactions) ? enrollment.transactions : []),
+    ...(Array.isArray(enrollment.installment_payments) ? enrollment.installment_payments : []),
+    ...(Array.isArray(enrollment.recent_payments) ? enrollment.recent_payments : []),
+    ...(Array.isArray(rootProfit?.payments) ? rootProfit.payments : []),
+    ...(Array.isArray(rootProfit?.all_payments) ? rootProfit.all_payments : []),
+    ...(Array.isArray(rootProfit?.transactions) ? rootProfit.transactions : []),
+    ...(Array.isArray(rootProfit?.recent_payments) ? rootProfit.recent_payments : []),
+    ...(Array.isArray(rootProfit) ? rootProfit : []),
+  ];
+
+  const uniqueMap = new Map();
+  allSources.forEach((p, idx) => {
+    if (!p) return;
+    const pEnrId = p.enrollment_id ?? p.enrollmentId;
+    const pCourseId = p.course_id ?? p.courseId;
+    const pStdId = p.student_id ?? p.studentId;
+    const pStdName = p.student_name ?? p.studentName ?? p.name;
+
+    // Strict enrollment-first matching:
+    if (enrollmentId && pEnrId !== undefined && pEnrId !== null) {
+      if (Number(pEnrId) !== Number(enrollmentId)) return;
+    } else if (courseId && pCourseId !== undefined && pCourseId !== null) {
+      if (Number(pCourseId) !== Number(courseId)) return;
+      if (studentId && pStdId !== undefined && pStdId !== null && Number(pStdId) !== Number(studentId)) return;
+    } else {
+      const studentMatch =
+        (studentId && pStdId !== undefined && pStdId !== null && Number(pStdId) === Number(studentId)) ||
+        (enrollment.name && pStdName && String(pStdName).trim().toLowerCase() === String(enrollment.name).trim().toLowerCase());
+      if (!studentMatch) return;
+    }
+
+    const key = p.payment_id || p.id || `${p.installment_number}_${p.amount}_${p.payment_date || idx}`;
+    if (!uniqueMap.has(key)) {
+      uniqueMap.set(key, p);
+    }
+  });
+
+  return Array.from(uniqueMap.values());
+};
+
 const SuperAdminProfit = () => {
   const { user, token, logout } = useAuth();
   const navigate = useNavigate();
@@ -159,6 +209,85 @@ const SuperAdminProfit = () => {
     todayProfit?.outstanding_due ??
     todayProfit?.total_due ??
     0;
+
+  const modalPayments = selectedEnrollment ? getEnrollmentPayments(selectedEnrollment, todayProfit) : [];
+
+  // Enrollment-level Cash & UPI totals for Payment Summary
+  const enrollmentCashTotal = (() => {
+    if (!selectedEnrollment) return 0;
+    let total = 0;
+    let hasVal = false;
+    if (modalPayments.length > 0) {
+      modalPayments.forEach((p) => {
+        const m = String(p.payment_method || '').toLowerCase();
+        if (p.cash_amount !== undefined && p.cash_amount !== null) {
+          total += Number(p.cash_amount);
+          hasVal = true;
+        } else if (m === 'cash') {
+          total += Number(p.amount || 0);
+          hasVal = true;
+        }
+      });
+    }
+    if (hasVal) return total;
+
+    if (Array.isArray(selectedEnrollment.installments)) {
+      selectedEnrollment.installments.forEach((inst) => {
+        const m = String(inst.payment_method || '').toLowerCase();
+        if (inst.cash_amount !== undefined && inst.cash_amount !== null) {
+          total += Number(inst.cash_amount);
+          hasVal = true;
+        } else if (m === 'cash') {
+          total += Number(inst.amount || inst.paid_amount || 0);
+          hasVal = true;
+        }
+      });
+    }
+    if (hasVal) return total;
+
+    if (selectedEnrollment.cash_amount !== undefined && selectedEnrollment.cash_amount !== null) {
+      return Number(selectedEnrollment.cash_amount);
+    }
+    return 0;
+  })();
+
+  const enrollmentUpiTotal = (() => {
+    if (!selectedEnrollment) return 0;
+    let total = 0;
+    let hasVal = false;
+    if (modalPayments.length > 0) {
+      modalPayments.forEach((p) => {
+        const m = String(p.payment_method || '').toLowerCase();
+        if (p.upi_amount !== undefined && p.upi_amount !== null) {
+          total += Number(p.upi_amount);
+          hasVal = true;
+        } else if (m === 'upi') {
+          total += Number(p.amount || 0);
+          hasVal = true;
+        }
+      });
+    }
+    if (hasVal) return total;
+
+    if (Array.isArray(selectedEnrollment.installments)) {
+      selectedEnrollment.installments.forEach((inst) => {
+        const m = String(inst.payment_method || '').toLowerCase();
+        if (inst.upi_amount !== undefined && inst.upi_amount !== null) {
+          total += Number(inst.upi_amount);
+          hasVal = true;
+        } else if (m === 'upi') {
+          total += Number(inst.amount || inst.paid_amount || 0);
+          hasVal = true;
+        }
+      });
+    }
+    if (hasVal) return total;
+
+    if (selectedEnrollment.upi_amount !== undefined && selectedEnrollment.upi_amount !== null) {
+      return Number(selectedEnrollment.upi_amount);
+    }
+    return 0;
+  })();
 
   return (
     <div className="min-h-screen md:flex" style={{ fontFamily: "'Inter', system-ui, sans-serif", background: '#faf8f4', color: '#17140f' }}>
@@ -439,6 +568,14 @@ const SuperAdminProfit = () => {
                       <span className="font-medium">Balance:</span>
                       <span className="font-bold text-base">{fmt(selectedEnrollment.balance_amount)}</span>
                     </div>
+                    <div className="flex justify-between items-center p-2 bg-amber-50/80 text-amber-950 rounded-lg border border-amber-200/60">
+                      <span className="font-medium text-amber-900">Cash:</span>
+                      <span className="font-bold text-base">{fmt(enrollmentCashTotal)}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 bg-sky-50/80 text-sky-950 rounded-lg border border-sky-200/60">
+                      <span className="font-medium text-sky-900">UPI:</span>
+                      <span className="font-bold text-base">{fmt(enrollmentUpiTotal)}</span>
+                    </div>
                     <div className="flex justify-between items-center pt-2">
                       <span className="text-slate-500">Payment Status:</span>
                       {getStatusBadge(selectedEnrollment.status)}
@@ -483,20 +620,148 @@ const SuperAdminProfit = () => {
                           <th className="px-5 py-3 font-semibold">Due Date</th>
                           <th className="px-5 py-3 font-semibold">Paid Date</th>
                           <th className="px-5 py-3 font-semibold">Status</th>
+                          <th className="px-5 py-3 font-semibold">Payment Details</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {selectedEnrollment.installments.map((inst, i) => (
-                          <tr key={inst.installment_id ?? i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                            <td className="px-5 py-3 font-medium text-slate-700">#{inst.installment_number}</td>
-                            <td className="px-5 py-3 font-medium text-slate-800">{fmt(inst.amount)}</td>
-                            <td className="px-5 py-3 text-emerald-600 font-semibold">{fmt(inst.paid_amount)}</td>
-                            <td className="px-5 py-3 text-slate-600">{fmt(inst.remaining_amount)}</td>
-                            <td className="px-5 py-3 text-slate-500">{formatDate(inst.due_date)}</td>
-                            <td className="px-5 py-3 text-slate-500">{formatDate(inst.paid_date)}</td>
-                            <td className="px-5 py-3">{getStatusBadge(inst.status)}</td>
-                          </tr>
-                        ))}
+                        {selectedEnrollment.installments.map((inst, i) => {
+                          const instNum = Number(inst.installment_number ?? i + 1);
+
+                          const matchedPayment =
+                            modalPayments.find((p) => {
+                              if (!p) return false;
+                              if (Array.isArray(p.installment_numbers) && p.installment_numbers.map(Number).includes(instNum)) {
+                                return true;
+                              }
+                              if (p.installment_number !== undefined && p.installment_number !== null) {
+                                return Number(p.installment_number) === instNum;
+                              }
+                              if (inst.payment_id && (p.payment_id === inst.payment_id || p.id === inst.payment_id)) {
+                                return true;
+                              }
+                              return false;
+                            }) || null;
+
+                          const isInstPaid = String(inst.status || '').toLowerCase() === 'paid';
+
+                          const razorpayId = (() => {
+                            if (matchedPayment?.razorpay_payment_id) return matchedPayment.razorpay_payment_id;
+                            if (matchedPayment?.payment_reference && String(matchedPayment.payment_reference).startsWith('pay_')) {
+                              return matchedPayment.payment_reference;
+                            }
+                            if (matchedPayment?.transaction_id && String(matchedPayment.transaction_id).startsWith('pay_')) {
+                              return matchedPayment.transaction_id;
+                            }
+                            if (inst?.razorpay_payment_id) return inst.razorpay_payment_id;
+                            if (inst?.payment_reference && String(inst.payment_reference).startsWith('pay_')) {
+                              return inst.payment_reference;
+                            }
+                            if (inst?.transaction_id && String(inst.transaction_id).startsWith('pay_')) {
+                              return inst.transaction_id;
+                            }
+                            if (selectedEnrollment?.razorpay_payment_id) {
+                              return selectedEnrollment.razorpay_payment_id;
+                            }
+                            return '';
+                          })();
+
+                          const rawMethod = String(
+                            matchedPayment?.payment_method ||
+                            matchedPayment?.method ||
+                            inst.payment_method ||
+                            inst.method ||
+                            (razorpayId ? 'razorpay' : '') ||
+                            ''
+                          ).toLowerCase().trim();
+
+                          const rawMethodLabel = matchedPayment?.payment_method_label || inst.payment_method_label;
+
+                          const cashAmount =
+                            matchedPayment?.cash_amount !== undefined && matchedPayment?.cash_amount !== null
+                              ? Number(matchedPayment.cash_amount)
+                              : inst.cash_amount !== undefined && inst.cash_amount !== null
+                              ? Number(inst.cash_amount)
+                              : null;
+
+                          const upiAmount =
+                            matchedPayment?.upi_amount !== undefined && matchedPayment?.upi_amount !== null
+                              ? Number(matchedPayment.upi_amount)
+                              : inst.upi_amount !== undefined && inst.upi_amount !== null
+                              ? Number(inst.upi_amount)
+                              : null;
+
+                          const isSplit =
+                            rawMethod === 'cash_upi' ||
+                            rawMethod === 'split' ||
+                            rawMethod.includes('cash+upi') ||
+                            rawMethod.includes('cash + upi') ||
+                            (cashAmount !== null && upiAmount !== null && cashAmount > 0 && upiAmount > 0);
+
+                          const isCash =
+                            !isSplit &&
+                            (rawMethod === 'cash' || (cashAmount !== null && cashAmount > 0 && (!upiAmount || upiAmount === 0)));
+
+                          const isUpi =
+                            !isSplit &&
+                            !isCash &&
+                            (rawMethod === 'upi' || (upiAmount !== null && upiAmount > 0 && (!cashAmount || cashAmount === 0)));
+
+                          const isRazorpay =
+                            !isSplit &&
+                            !isCash &&
+                            !isUpi &&
+                            (rawMethod === 'razorpay' ||
+                              rawMethod === 'online' ||
+                              rawMethod.includes('razorpay') ||
+                              Boolean(razorpayId));
+
+                          const paymentRef =
+                            matchedPayment?.payment_reference ||
+                            inst.payment_reference ||
+                            matchedPayment?.upi_transaction_id ||
+                            inst.upi_transaction_id ||
+                            '';
+
+                          return (
+                            <tr key={inst.installment_id ?? i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                              <td className="px-5 py-3 font-medium text-slate-700">#{inst.installment_number}</td>
+                              <td className="px-5 py-3 font-medium text-slate-800">{fmt(inst.amount)}</td>
+                              <td className="px-5 py-3 text-emerald-600 font-semibold">{fmt(inst.paid_amount)}</td>
+                              <td className="px-5 py-3 text-slate-600">{fmt(inst.remaining_amount)}</td>
+                              <td className="px-5 py-3 text-slate-500">{formatDate(inst.due_date)}</td>
+                              <td className="px-5 py-3 text-slate-500">{formatDate(inst.paid_date)}</td>
+                              <td className="px-5 py-3">{getStatusBadge(inst.status)}</td>
+                              <td className="px-5 py-3 text-xs">
+                                {!isInstPaid ? (
+                                  <span className="text-slate-400 font-medium">Pending payment</span>
+                                ) : isSplit ? (
+                                  <div className="space-y-0.5">
+                                    <span className="font-bold text-[#9c6b2e]">Cash + UPI:</span>{' '}
+                                    <span className="text-slate-700">Cash {fmt(cashAmount ?? 0)} + UPI {fmt(upiAmount ?? 0)}</span>
+                                    {paymentRef && <div className="font-mono text-[10px] text-slate-500">Ref: {paymentRef}</div>}
+                                  </div>
+                                ) : isCash ? (
+                                  <div className="space-y-0.5">
+                                    <span className="font-bold text-[#9c6b2e]">Cash</span>
+                                    {paymentRef && <div className="font-mono text-[10px] text-slate-500">Ref: {paymentRef}</div>}
+                                  </div>
+                                ) : isUpi ? (
+                                  <div className="space-y-0.5">
+                                    <span className="font-bold text-[#9c6b2e]">UPI</span>
+                                    {paymentRef && <div className="font-mono text-[10px] text-slate-500">Txn: {paymentRef}</div>}
+                                  </div>
+                                ) : isRazorpay ? (
+                                  <div className="space-y-0.5">
+                                    <span className="font-bold text-[#9c6b2e]">Razorpay</span>
+                                    {razorpayId && <div className="font-mono text-[10px] text-slate-600 font-bold select-all">{razorpayId}</div>}
+                                  </div>
+                                ) : (
+                                  <span className="text-slate-600">{rawMethodLabel || 'Online'}</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

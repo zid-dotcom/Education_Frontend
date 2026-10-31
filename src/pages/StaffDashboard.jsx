@@ -22,6 +22,7 @@ import StaffGradingModal from '../components/staff/modals/StaffGradingModal';
 import StaffAnnouncementModal from '../components/staff/modals/StaffAnnouncementModal';
 import StaffStudentModal from '../components/staff/modals/StaffStudentModal';
 import StaffStudyMaterialModal from '../components/staff/modals/StaffStudyMaterialModal';
+import StaffKycPromptModal, { getKycStatusInfo } from '../components/staff/modals/StaffKycPromptModal';
 
 // API Services
 import {
@@ -277,6 +278,27 @@ const StaffDashboard = ({ defaultTab }) => {
   const [docSubmitting, setDocSubmitting] = useState(false);
   const [docMsg, setDocMsg] = useState({ type: '', text: '' });
 
+  // KYC Account Setup Prompt Modal State
+  const [isKycModalDismissed, setIsKycModalDismissed] = useState(false);
+  const [forceShowKycModal, setForceShowKycModal] = useState(false);
+
+  // Derived KYC status & display conditions based on GET /staff/me (profileData)
+  const kycStatusInfo = useMemo(() => {
+    return getKycStatusInfo(profileData, user);
+  }, [profileData, user]);
+
+  const isKycModalOpen = Boolean(
+    !loading &&
+    profileData &&
+    (forceShowKycModal || (kycStatusInfo.shouldPromptKyc && !isKycModalDismissed && activeTab !== 'documents'))
+  );
+
+  const handleKycModalUpload = () => {
+    setIsKycModalDismissed(true);
+    setForceShowKycModal(false);
+    setActiveTab('documents');
+  };
+
   // Attendance State
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
@@ -323,16 +345,26 @@ const StaffDashboard = ({ defaultTab }) => {
     loadInitialData();
   }, [token]);
 
-  // Derived: Assigned Courses list
+  // Derived: Assigned Courses list (prioritizing non-empty sources, especially profileData from /staff/me)
   const assignedCourses = useMemo(() => {
-    const rawCourses =
-      dashboardData?.courses ||
-      dashboardData?.assigned_courses ||
-      profileData?.courses ||
-      profileData?.assigned_courses ||
-      user?.courses ||
-      user?.assigned_courses ||
-      [];
+    const candidates = [
+      profileData?.courses,
+      profileData?.assigned_courses,
+      profileData?.data?.courses,
+      dashboardData?.courses,
+      dashboardData?.assigned_courses,
+      dashboardData?.data?.courses,
+      user?.courses,
+      user?.assigned_courses,
+    ];
+
+    let rawCourses = [];
+    for (const cand of candidates) {
+      if (Array.isArray(cand) && cand.length > 0) {
+        rawCourses = cand;
+        break;
+      }
+    }
 
     return rawCourses.map((item) => {
       const id = typeof item === 'object' ? item.id ?? item.course_id : item;
@@ -364,19 +396,47 @@ const StaffDashboard = ({ defaultTab }) => {
     });
   }, [dashboardData, profileData, user, coursesCatalog]);
 
-  // If no course was selected but courses arrived, pick the first
-  useEffect(() => {
-    if (!selectedCourseId && assignedCourses.length > 0) {
-      setSelectedCourseId(assignedCourses[0].id || assignedCourses[0].course_id);
-    }
-    if ((!selectedAnnouncementCourseId || selectedAnnouncementCourseId === 'ALL') && assignedCourses.length > 0) {
-      setSelectedAnnouncementCourseId(assignedCourses[0].id || assignedCourses[0].course_id);
-    }
-  }, [assignedCourses, selectedCourseId, selectedAnnouncementCourseId]);
+  // Helper: check if a given courseId is actually assigned to this staff member
+  const isCourseAssignedToStaff = (courseId) => {
+    if (!courseId || assignedCourses.length === 0) return false;
+    return assignedCourses.some(
+      (c) => String(c.id ?? c.course_id) === String(courseId)
+    );
+  };
 
-  // 2. Fetch Course Students when selected course changes or tab is active
+  // Keep selectedCourseId and selectedAnnouncementCourseId strictly synchronized with valid assigned courses
+  useEffect(() => {
+    if (loading) return;
+    if (assignedCourses.length > 0) {
+      const isSelectedValid = assignedCourses.some(
+        (c) => String(c.id ?? c.course_id) === String(selectedCourseId)
+      );
+      if (!isSelectedValid) {
+        const firstValidId = assignedCourses[0].id ?? assignedCourses[0].course_id;
+        setSelectedCourseId(firstValidId);
+      }
+
+      const isAnnouncementValid = assignedCourses.some(
+        (c) => String(c.id ?? c.course_id) === String(selectedAnnouncementCourseId)
+      );
+      if (!isAnnouncementValid) {
+        const firstValidId = assignedCourses[0].id ?? assignedCourses[0].course_id;
+        setSelectedAnnouncementCourseId(firstValidId);
+      }
+    } else {
+      setSelectedCourseIdState(null);
+      setSelectedAnnouncementCourseIdState('');
+    }
+  }, [assignedCourses, loading, selectedCourseId, selectedAnnouncementCourseId]);
+
+  // 2. Fetch Course Students when selected course changes or tab is active (Guarded against unassigned course calls)
   useEffect(() => {
     if (!token || !selectedCourseId || (activeTab !== 'courses' && activeTab !== 'dashboard')) return;
+    if (loading || assignedCourses.length === 0) return;
+    if (!isCourseAssignedToStaff(selectedCourseId)) {
+      setCourseStudents([]);
+      return;
+    }
 
     let isMounted = true;
     setStudentsLoading(true);
@@ -399,11 +459,15 @@ const StaffDashboard = ({ defaultTab }) => {
     return () => {
       isMounted = false;
     };
-  }, [token, selectedCourseId, activeTab]);
+  }, [token, selectedCourseId, activeTab, assignedCourses, loading]);
 
   // 3. Fetch Course Assignments when selected course changes or assignments tab is active
   const loadCourseAssignments = async (courseId = selectedCourseId, filterType = assignmentFilterTab) => {
     if (!token || !courseId) return;
+    if (!isCourseAssignedToStaff(courseId)) {
+      setAssignments([]);
+      return;
+    }
     try {
       setAssignmentsLoading(true);
       const data =
@@ -428,12 +492,18 @@ const StaffDashboard = ({ defaultTab }) => {
 
   useEffect(() => {
     if (!token || !selectedCourseId || (activeTab !== 'assignments' && activeTab !== 'dashboard')) return;
+    if (loading || assignedCourses.length === 0) return;
+    if (!isCourseAssignedToStaff(selectedCourseId)) return;
     loadCourseAssignments(selectedCourseId, assignmentFilterTab);
-  }, [token, selectedCourseId, activeTab, assignmentFilterTab]);
+  }, [token, selectedCourseId, activeTab, assignmentFilterTab, assignedCourses, loading]);
 
   // Fetch Course Study Materials: GET /staff/courses/{course_id}/study-materials
   const loadCourseStudyMaterials = async (courseId) => {
     if (!token || !courseId) return;
+    if (!isCourseAssignedToStaff(courseId)) {
+      setStudyMaterials([]);
+      return;
+    }
     try {
       setStudyMaterialsLoading(true);
       const data = await getStaffCourseStudyMaterialsApi(courseId, token);
@@ -455,8 +525,10 @@ const StaffDashboard = ({ defaultTab }) => {
 
   useEffect(() => {
     if (!token || !selectedCourseId || (activeTab !== 'study_materials' && activeTab !== 'dashboard')) return;
+    if (loading || assignedCourses.length === 0) return;
+    if (!isCourseAssignedToStaff(selectedCourseId)) return;
     loadCourseStudyMaterials(selectedCourseId);
-  }, [token, selectedCourseId, activeTab]);
+  }, [token, selectedCourseId, activeTab, assignedCourses, loading]);
 
   // 4. Fetch Attendance Records when attendance tab is active
   useEffect(() => {
@@ -488,16 +560,17 @@ const StaffDashboard = ({ defaultTab }) => {
   // 5. Fetch Staff Announcements (Course Specific): GET /staff/courses/{course_id}/announcements
   const loadStaffAnnouncements = async (filterId = selectedAnnouncementCourseId) => {
     if (!token) return;
+    let targetId = filterId;
+    if (!targetId || targetId === 'BRANCH' || targetId === 'ALL') {
+      targetId = assignedCourses[0]?.id || assignedCourses[0]?.course_id || '';
+    }
+    if (!targetId || !isCourseAssignedToStaff(targetId)) {
+      setStaffAnnouncements([]);
+      return;
+    }
     try {
       setAnnouncementsLoading(true);
-      let targetId = filterId;
-      if (!targetId || targetId === 'BRANCH' || targetId === 'ALL') {
-        targetId = assignedCourses[0]?.id || assignedCourses[0]?.course_id || '';
-      }
-      let data = [];
-      if (targetId) {
-        data = await getStaffCourseAnnouncementsApi(targetId, token);
-      }
+      const data = await getStaffCourseAnnouncementsApi(targetId, token);
       const list = Array.isArray(data)
         ? data
         : Array.isArray(data?.announcements)
@@ -517,8 +590,10 @@ const StaffDashboard = ({ defaultTab }) => {
 
   useEffect(() => {
     if (!token || (activeTab !== 'announcements' && activeTab !== 'dashboard')) return;
+    if (loading || assignedCourses.length === 0) return;
+    if (!isCourseAssignedToStaff(selectedAnnouncementCourseId)) return;
     loadStaffAnnouncements(selectedAnnouncementCourseId);
-  }, [token, selectedAnnouncementCourseId, activeTab]);
+  }, [token, selectedAnnouncementCourseId, activeTab, assignedCourses, loading]);
 
   // 6. Fetch All Combined Dashboard Announcements (Course + Institution)
   const loadAllDashboardAnnouncements = async () => {
@@ -526,10 +601,14 @@ const StaffDashboard = ({ defaultTab }) => {
     try {
       setDashboardAnnouncementsLoading(true);
 
-      // Fetch Course Announcements across all courses assigned to this staff member
-      const coursePromises = (assignedCourses || []).map(async (course) => {
-        const cId = course.id || course.course_id;
-        if (!cId) return [];
+      // Fetch Course Announcements only across courses assigned to this staff member
+      const validCourses = (assignedCourses || []).filter((course) => {
+        const cId = course.id ?? course.course_id;
+        return isCourseAssignedToStaff(cId);
+      });
+
+      const coursePromises = validCourses.map(async (course) => {
+        const cId = course.id ?? course.course_id;
         try {
           const res = await getStaffCourseAnnouncementsApi(cId, token);
           const list = Array.isArray(res) ? res : res?.announcements || [];
@@ -581,8 +660,9 @@ const StaffDashboard = ({ defaultTab }) => {
 
   useEffect(() => {
     if (!token) return;
+    if (loading) return;
     loadAllDashboardAnnouncements();
-  }, [token, assignedCourses.length]);
+  }, [token, assignedCourses.length, loading]);
 
   // Open Create Announcement Modal
   const handleOpenCreateAnnouncement = () => {
@@ -1019,9 +1099,12 @@ const StaffDashboard = ({ defaultTab }) => {
       case 'assignments': return 'Course Assignments';
       case 'messages': return 'Student Messages & Queries';
       case 'announcements': return 'Course Announcements';
+      case 'study_materials': return 'Study Materials';
+      case 'institution_announcements': return 'Institution Announcements';
+      case 'attendance': return 'Daily Attendance Log';
       case 'documents': return 'Staff KYC & Documents';
       case 'profile': return 'My Staff Profile';
-      default: return 'Staff Dashboard';
+      default: return 'Dashboard';
     }
   };
 
@@ -1065,16 +1148,22 @@ const StaffDashboard = ({ defaultTab }) => {
                     loadAllDashboardAnnouncements(),
                   ]);
                   if (activeTab === 'announcements') {
-                    await loadStaffAnnouncements(selectedAnnouncementCourseId);
+                    if (isCourseAssignedToStaff(selectedAnnouncementCourseId)) {
+                      await loadStaffAnnouncements(selectedAnnouncementCourseId);
+                    }
                   } else if (activeTab === 'assignments') {
-                    await loadCourseAssignments(selectedCourseId, assignmentFilterTab);
+                    if (isCourseAssignedToStaff(selectedCourseId)) {
+                      await loadCourseAssignments(selectedCourseId, assignmentFilterTab);
+                    }
                   } else if (activeTab === 'courses' && selectedCourseId) {
-                    setStudentsLoading(true);
-                    try {
-                      const s = await getMyCourseStudentsApi(selectedCourseId, token);
-                      setCourseStudents(Array.isArray(s) ? s : s?.students || []);
-                    } finally {
-                      setStudentsLoading(false);
+                    if (isCourseAssignedToStaff(selectedCourseId)) {
+                      setStudentsLoading(true);
+                      try {
+                        const s = await getMyCourseStudentsApi(selectedCourseId, token);
+                        setCourseStudents(Array.isArray(s) ? s : s?.students || []);
+                      } finally {
+                        setStudentsLoading(false);
+                      }
                     }
                   }
                 } finally {
@@ -1083,7 +1172,12 @@ const StaffDashboard = ({ defaultTab }) => {
               }}
               user={user}
               profileData={profileData}
+              branchName={branchName}
+              branchLocation={branchLocation}
               onOpenSidebar={() => setSidebarOpen(true)}
+              onNavigateDocuments={() => setActiveTab('documents')}
+              onNavigateProfile={() => setActiveTab('profile')}
+              onOpenKycModal={() => setForceShowKycModal(true)}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
             />
@@ -1311,6 +1405,18 @@ const StaffDashboard = ({ defaultTab }) => {
         setMaterialMsg={setStudyMaterialMsg}
         materialSubmitting={studyMaterialSubmitting}
         handleUploadMaterial={handleUploadStudyMaterial}
+      />
+
+      {/* MODAL 6: KYC ACCOUNT SETUP PROMPT (With full background blur) */}
+      <StaffKycPromptModal
+        isOpen={isKycModalOpen}
+        onClose={() => {
+          setIsKycModalDismissed(true);
+          setForceShowKycModal(false);
+        }}
+        onNavigateDocuments={handleKycModalUpload}
+        profileData={profileData}
+        user={user}
       />
     </div>
   );

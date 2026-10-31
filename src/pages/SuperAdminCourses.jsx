@@ -22,6 +22,7 @@ import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
 import {
   getSuperAdminCourseBranchesApi,
   getSuperAdminBranchCoursesApi,
+  getSuperAdminBranchCourseApi,
   createSuperAdminBranchCourseApi,
   createBulkSuperAdminBranchCourseApi,
   updateSuperAdminBranchCourseApi,
@@ -62,9 +63,9 @@ const SuperAdminCourses = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [branches, setBranches] = useState([]);
   const [gstSettings, setGstSettings] = useState({
-    cgst_percent: 0,
-    sgst_percent: 0,
-    total_gst_percent: 0,
+    cgst_percent: 9,
+    sgst_percent: 9,
+    total_gst_percent: 18,
   });
   const [loadingGst, setLoadingGst] = useState(false);
   const [selectedBranchId, setSelectedBranchId] = useState('all');
@@ -89,13 +90,13 @@ const SuperAdminCourses = () => {
     try {
       setLoadingGst(true);
       const res = await getSuperAdminGstSettingsApi(token);
-      if (res && (res.cgst_percent !== undefined || res.total_gst_percent !== undefined)) {
+      if (res && (Number(res.cgst_percent) > 0 || Number(res.total_gst_percent) > 0)) {
+        const c = Number(res.cgst_percent) || 9;
+        const s = Number(res.sgst_percent) || 9;
         setGstSettings({
-          cgst_percent: Number(res.cgst_percent ?? 0),
-          sgst_percent: Number(res.sgst_percent ?? 0),
-          total_gst_percent: Number(
-            res.total_gst_percent ?? (Number(res.cgst_percent ?? 0) + Number(res.sgst_percent ?? 0))
-          ),
+          cgst_percent: c,
+          sgst_percent: s,
+          total_gst_percent: Number(res.total_gst_percent) || (c + s),
         });
       }
     } catch (err) {
@@ -110,8 +111,18 @@ const SuperAdminCourses = () => {
   }, [token]);
 
   const gstBreakdown = React.useMemo(() => {
-    const activeCgst = editingCourse?.cgst_percent ?? gstSettings.cgst_percent;
-    const activeSgst = editingCourse?.sgst_percent ?? gstSettings.sgst_percent;
+    const activeCgst =
+      Number(editingCourse?.cgst_percent) > 0
+        ? Number(editingCourse.cgst_percent)
+        : Number(gstSettings?.cgst_percent) > 0
+        ? Number(gstSettings.cgst_percent)
+        : 9;
+    const activeSgst =
+      Number(editingCourse?.sgst_percent) > 0
+        ? Number(editingCourse.sgst_percent)
+        : Number(gstSettings?.sgst_percent) > 0
+        ? Number(gstSettings.sgst_percent)
+        : 9;
     return calculateGstBreakdown(form.price, activeCgst, activeSgst);
   }, [form.price, editingCourse, gstSettings]);
 
@@ -221,10 +232,27 @@ const SuperAdminCourses = () => {
     setSuccess('');
   };
 
-  const openEdit = (course) => {
-    setEditingCourse(course);
+  const openEdit = async (course) => {
+    setError('');
+    setSuccess('');
+    let details = { ...course };
+    const branchId = course.branch_id || (selectedBranchId !== 'all' ? selectedBranchId : null);
+    const courseId = course.id ?? course.course_id;
+
+    if (branchId && courseId) {
+      try {
+        const fullCourse = await getSuperAdminBranchCourseApi(branchId, courseId, token);
+        if (fullCourse) {
+          details = { ...details, ...fullCourse };
+        }
+      } catch (e) {
+        console.warn('Could not load detailed course info, using card data:', e);
+      }
+    }
+
+    setEditingCourse(details);
     
-    let parsedCurriculum = course.curriculum;
+    let parsedCurriculum = details.curriculum;
     if (typeof parsedCurriculum === 'string') {
       try { parsedCurriculum = JSON.parse(parsedCurriculum); } 
       catch (e) { parsedCurriculum = [{ title: 'Module 1', topics: [parsedCurriculum] }]; }
@@ -234,37 +262,41 @@ const SuperAdminCourses = () => {
     } else {
       parsedCurriculum = parsedCurriculum.map(c => ({
         title: c.title || c.module_title || '',
-        topics: c.topics || ['']
+        topics: Array.isArray(c.topics) && c.topics.length > 0 ? c.topics : ['']
       }));
     }
 
-    let parsedTerms = course.installment_terms;
+    let parsedTerms = details.installment_terms;
     if (typeof parsedTerms === 'string') {
       try { parsedTerms = JSON.parse(parsedTerms); } catch (e) { parsedTerms = []; }
     }
     if (!Array.isArray(parsedTerms)) parsedTerms = [];
+    parsedTerms = parsedTerms.map((t, idx) => ({
+      ...t,
+      term_number: t.term_number ?? idx + 1,
+      amount: String(t.amount ?? ''),
+      due_date: t.due_date ? String(t.due_date).slice(0, 10) : '',
+    }));
 
     setForm({
-      branch_id: course.branch_id || selectedBranchId,
-      title: course.title || '',
-      description: course.description || '',
-      price: course.base_price ?? course.price ?? '',
-      duration: course.duration || '',
-      category: course.category || '',
-      level: course.level || '',
-      start_date: course.start_date || '',
-      end_date: course.end_date || '',
+      branch_id: details.branch_id || selectedBranchId,
+      title: details.title || '',
+      description: details.description || '',
+      price: details.price ?? details.total_fee ?? details.base_price ?? '',
+      duration: details.duration || '',
+      category: details.category || '',
+      level: details.level || '',
+      start_date: details.start_date ? String(details.start_date).slice(0, 10) : '',
+      end_date: details.end_date ? String(details.end_date).slice(0, 10) : '',
       curriculum: parsedCurriculum,
-      installment_schedule: course.installment_schedule || 'monthly',
-      installment_count: course.installment_count || '',
+      installment_schedule: details.installment_schedule || 'monthly',
+      installment_count: details.installment_count || (parsedTerms.length > 0 ? String(parsedTerms.length) : ''),
       installment_terms: parsedTerms,
-      is_active: course.is_active !== undefined ? course.is_active : true,
+      is_active: details.is_active !== undefined ? details.is_active : true,
     });
     setImageFile(null);
     setFormErrors({});
     setShowModal(true);
-    setError('');
-    setSuccess('');
   };
 
   const closeModal = () => {
@@ -425,7 +457,7 @@ const SuperAdminCourses = () => {
     );
     if (form.installment_count && Number(form.installment_count) > 0) {
       if (Math.abs(installmentTotal - gstBreakdown.totalAmount) > 0.01) {
-        validationErrors.installment_total = `Installments total (₹${installmentTotal.toLocaleString('en-IN')}) must equal the GST-inclusive course fee (₹${gstBreakdown.totalAmount.toLocaleString('en-IN')}). Difference: ₹${Math.abs(gstBreakdown.totalAmount - installmentTotal).toLocaleString('en-IN')}.`;
+        validationErrors.installment_total = `Installments total (₹${installmentTotal.toLocaleString('en-IN')}) must equal the final course fee (₹${gstBreakdown.totalAmount.toLocaleString('en-IN')}). Difference: ₹${Math.abs(gstBreakdown.totalAmount - installmentTotal).toLocaleString('en-IN')}.`;
       }
     }
 
@@ -824,16 +856,9 @@ const SuperAdminCourses = () => {
                               >
                                 <IndianRupee className="h-3.5 w-3.5" />
                                 {(Number(course.price) || 0).toLocaleString('en-IN')}
-                                <span className="ml-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                                <span className="ml-1.5 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
                                   Incl. GST
                                 </span>
-                              </span>
-                              <span className="text-[10px] text-slate-500 font-medium block mt-0.5">
-                                {course.base_price ? (
-                                  <>Base: ₹{(Number(course.base_price) || 0).toLocaleString('en-IN')} + GST ({course.total_gst_percent !== undefined && course.total_gst_percent !== null ? `${course.total_gst_percent}%` : 'Calculated'}): ₹{(Number(course.total_gst_amount) || 0).toLocaleString('en-IN')}</>
-                                ) : (
-                                  <>Inclusive of GST</>
-                                )}
                               </span>
                             </div>
                           </div>
@@ -1045,10 +1070,10 @@ const SuperAdminCourses = () => {
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                      Course Base Price (Pre-GST) (₹) *
+                      Course Total Fee (₹) *
                     </label>
                     <span className="text-[11px] text-amber-800 font-medium">
-                      + {gstBreakdown.totalGstPercent}% GST calculated
+                      Includes {gstBreakdown.totalGstPercent}% GST
                     </span>
                   </div>
                   <input
@@ -1058,7 +1083,7 @@ const SuperAdminCourses = () => {
                     min="0"
                     value={form.price}
                     onChange={handleFormChange}
-                    placeholder="e.g. 25000"
+                    placeholder="e.g. 20000"
                     className="w-full rounded-xl border border-[#e3ddd0] bg-white px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#9c6b2e]"
                   />
                   {formErrors.price && (
@@ -1067,23 +1092,27 @@ const SuperAdminCourses = () => {
                   {Number(form.price) > 0 && (
                     <div className="mt-2.5 rounded-xl bg-amber-50/80 border border-amber-200/90 p-3 text-xs space-y-1.5">
                       <div className="flex justify-between text-slate-600">
-                        <span>Pre-GST Base Price:</span>
-                        <span className="font-semibold text-slate-800">₹{gstBreakdown.basePrice.toLocaleString('en-IN')}</span>
+                        <span>Course fee (excluding GST):</span>
+                        <span className="font-semibold text-slate-800">₹{gstBreakdown.basePrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                       <div className="flex justify-between text-slate-600">
                         <span>CGST ({gstBreakdown.cgstPercent}%):</span>
-                        <span className="font-semibold text-slate-800">+ ₹{gstBreakdown.cgstAmount.toLocaleString('en-IN')}</span>
+                        <span className="font-semibold text-slate-800">+ ₹{gstBreakdown.cgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                       <div className="flex justify-between text-slate-600">
                         <span>SGST ({gstBreakdown.sgstPercent}%):</span>
-                        <span className="font-semibold text-slate-800">+ ₹{gstBreakdown.sgstAmount.toLocaleString('en-IN')}</span>
+                        <span className="font-semibold text-slate-800">+ ₹{gstBreakdown.sgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-600 font-medium">
+                        <span>Total GST ({gstBreakdown.totalGstPercent}%):</span>
+                        <span className="font-semibold text-amber-800">+ ₹{gstBreakdown.totalGstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                       <div className="border-t border-amber-200 pt-1.5 flex justify-between font-bold text-[#9c6b2e]">
-                        <span>Total Payable (GST-inclusive):</span>
+                        <span>Final fee (GST-inclusive):</span>
                         <span className="text-sm">₹{gstBreakdown.totalAmount.toLocaleString('en-IN')}</span>
                       </div>
                       <p className="text-[11px] text-amber-800 pt-0.5">
-                        ⚡ Installment schedules must total this GST-inclusive amount (₹{gstBreakdown.totalAmount.toLocaleString('en-IN')}).
+                        ⚡ Installment schedules must total this final fee (₹{gstBreakdown.totalAmount.toLocaleString('en-IN')}).
                       </p>
                     </div>
                   )}
@@ -1298,15 +1327,15 @@ const SuperAdminCourses = () => {
                               </div>
                             </div>
                             <div>
-                              <p className="text-[11px] text-slate-500">Base Price (Pre-GST)</p>
-                              <p className="font-semibold text-slate-700">₹{gstBreakdown.basePrice.toLocaleString('en-IN')}</p>
+                              <p className="text-[11px] text-slate-500">Course fee (Excl. GST)</p>
+                              <p className="font-semibold text-slate-700">₹{gstBreakdown.basePrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                             </div>
                             <div>
                               <p className="text-[11px] text-slate-500">GST ({gstBreakdown.totalGstPercent}%)</p>
-                              <p className="font-semibold text-amber-700">+₹{gstBreakdown.totalGstAmount.toLocaleString('en-IN')}</p>
+                              <p className="font-semibold text-amber-700">+₹{gstBreakdown.totalGstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                             </div>
                             <div>
-                              <p className="text-[11px] text-slate-500">Target (With GST)</p>
+                              <p className="text-[11px] text-slate-500">Target (Final fee)</p>
                               <p className="font-bold text-[#9c6b2e]">₹{targetTotal.toLocaleString('en-IN')}</p>
                             </div>
                             <div>

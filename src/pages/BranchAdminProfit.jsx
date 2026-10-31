@@ -1,447 +1,401 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  CalendarDays,
-  Circle,
+  ChevronDown,
   IndianRupee,
   Loader2,
-  Mail,
-  Menu,
-  Phone,
+  RefreshCw,
   TrendingUp,
-  UserRound,
   Users,
-  Receipt,
+  AlertCircle,
   X,
-} from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import BranchAdminSidebar from "../components/layout/BranchAdminSidebar";
-import { getBranchAdminProfitApi } from "../services/branchadminprofit";
+  CreditCard,
+  Calendar,
+  GraduationCap,
+  MapPin,
+  Mail,
+  Phone,
+  BookOpen,
+  Receipt,
+  Banknote,
+  Smartphone,
+  Menu,
+} from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import BranchAdminSidebar from '../components/layout/BranchAdminSidebar';
+import { getBranchAdminProfitApi } from '../services/branchadminprofit';
 
-/* Same display-font pairing used on the staff, attendance and purchases
-   pages (Fraunces headings, Inter body). No-op if already injected. */
-const useDisplayFonts = () => {
-  useEffect(() => {
-    if (document.getElementById("ba-attendance-fonts")) return;
-    const link = document.createElement("link");
-    link.id = "ba-attendance-fonts";
-    link.rel = "stylesheet";
-    link.href =
-      "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap";
-    document.head.appendChild(link);
-  }, []);
-};
-
-/* Page-scoped keyframes. Motion is disabled for users who prefer reduced motion. */
 const PAGE_CSS = `
-@keyframes ba-rise {
-  from { opacity: 0; transform: translateY(14px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes ba-fade {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-@keyframes ba-pop {
-  from { opacity: 0; transform: translateY(16px) scale(.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes ba-shimmer {
-  0%   { background-position: -400px 0; }
-  100% { background-position: 400px 0; }
-}
-@keyframes ba-toast {
-  from { opacity: 0; transform: translateY(-6px) scale(.98); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-.ba-rise  { opacity: 0; animation: ba-rise .55s cubic-bezier(.2,.7,.2,1) forwards; }
-.ba-fade  { animation: ba-fade .4s ease both; }
-.ba-pop   { animation: ba-pop .35s cubic-bezier(.2,.7,.2,1) both; }
-.ba-toast { animation: ba-toast .3s cubic-bezier(.2,.7,.2,1) both; }
-.ba-skeleton {
-  background: linear-gradient(90deg, #f1ede4 25%, #f8f5ee 37%, #f1ede4 63%);
-  background-size: 800px 100%;
-  animation: ba-shimmer 1.4s linear infinite;
-}
-.ba-card { transition: box-shadow .25s ease, border-color .25s ease, transform .25s ease; }
-.ba-card:hover {
-  border-color: #d9cdb5;
-  box-shadow: 0 10px 30px -18px rgba(23,20,15,.28);
-  transform: translateY(-2px);
-}
-.ba-press { transition: transform .15s ease, opacity .2s ease, background-color .2s ease; }
-.ba-press:hover:not(:disabled) { transform: translateY(-1px); }
-.ba-press:active:not(:disabled) { transform: translateY(0) scale(.97); }
-@media (prefers-reduced-motion: reduce) {
-  .ba-rise, .ba-fade, .ba-pop, .ba-toast, .ba-skeleton { animation: none !important; opacity: 1 !important; }
-  .ba-card, .ba-press { transition: none !important; }
-  .ba-card:hover { transform: none; }
-}
+@keyframes sa-rise { from { opacity:0; transform:translateY(16px) scale(.97); } to { opacity:1; transform:translateY(0) scale(1); } }
+.sa-rise { animation: sa-rise .35s ease both; }
+.sa-modal-enter { animation: sa-rise .3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 `;
 
-const FOCUS_RING =
-  "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#9c6b2e]/40";
-
-const serif = { fontFamily: "'Fraunces', ui-serif, Georgia, serif" };
-const sans = { fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" };
-
-const getToday = () => {
-  const now = new Date();
-  const offset = now.getTimezoneOffset() * 60000;
-  return new Date(now.getTime() - offset).toISOString().slice(0, 10);
-};
-
-const formatDate = (date) =>
-  date
-    ? new Intl.DateTimeFormat("en-IN", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }).format(new Date(`${date}T00:00:00`))
-    : "Selected date";
-
-const formatCurrency = (value) =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
+const fmt = (v) =>
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
     maximumFractionDigits: 0,
-  }).format(Number(value || 0));
+  }).format(Number(v) || 0);
 
-const formatOptionalCurrency = (value) =>
-  value == null || value === "" ? "Not provided" : formatCurrency(value);
+const StatCard = ({ label, value, icon: Icon, accent, delay = 0 }) => (
+  <div
+    className="sa-rise rounded-2xl p-5 flex flex-col gap-3"
+    style={{
+      animationDelay: `${delay}ms`,
+      background: '#ffffff',
+      border: '1px solid #e3ddd0',
+      boxShadow: '0 2px 12px rgba(14,26,43,.06)',
+    }}
+  >
+    <div className="flex items-center justify-between">
+      <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#a39a8c' }}>
+        {label}
+      </p>
+      <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: accent + '15' }}>
+        <Icon className="h-4 w-4" style={{ color: accent }} />
+      </div>
+    </div>
+    <p className="text-2xl font-bold" style={{ color: '#17140f' }}>{value}</p>
+  </div>
+);
 
-const valueFor = (enrollment, keys) => {
-  const key = keys.find(
-    (candidate) => enrollment?.[candidate] != null && enrollment[candidate] !== "",
-  );
-  return key ? enrollment[key] : "Not provided";
-};
+const getStatusBadge = (status) => {
+  const s = String(status || '').toLowerCase();
+  let colors = 'text-slate-600 bg-slate-50 border-slate-200';
+  if (s === 'paid' || s === 'approved' || s === 'active') colors = 'text-emerald-700 bg-emerald-50 border-emerald-200';
+  else if (s === 'due' || s === 'overdue') colors = 'text-rose-700 bg-rose-50 border-rose-200';
+  else if (s === 'partial' || s === 'pending') colors = 'text-amber-700 bg-amber-50 border-amber-200';
 
-const STATUS_META = {
-  paid: { dot: "#5c7a5a", text: "#39533a", bg: "#eef2ea" },
-  approved: { dot: "#5c7a5a", text: "#39533a", bg: "#eef2ea" },
-  success: { dot: "#5c7a5a", text: "#39533a", bg: "#eef2ea" },
-  captured: { dot: "#5c7a5a", text: "#39533a", bg: "#eef2ea" },
-  pending: { dot: "#b0803a", text: "#7a531f", bg: "#f7efe0" },
-  failed: { dot: "#a24a3a", text: "#7c3324", bg: "#f8eae5" },
-  rejected: { dot: "#a24a3a", text: "#7c3324", bg: "#f8eae5" },
-};
-const statusMeta = (status) =>
-  STATUS_META[String(status || "").toLowerCase()] || {
-    dot: "#a39a8c",
-    text: "#8a8175",
-    bg: "#f1ede4",
-  };
-
-const StatusPill = ({ status }) => {
-  const meta = statusMeta(status);
-  const label = String(status || "Unknown");
   return (
-    <span
-      className="inline-flex shrink-0 items-center gap-2 rounded-full px-3 py-1 text-xs font-medium"
-      style={{ background: meta.bg, color: meta.text }}
-    >
-      <Circle className="h-2 w-2" fill={meta.dot} stroke="none" />
-      {label.charAt(0).toUpperCase() + label.slice(1)}
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold border capitalize ${colors}`}>
+      {status || 'Unknown'}
     </span>
   );
 };
 
-const DetailItem = ({ label, value }) => (
-  <div className="min-w-0">
-    <dt className="text-xs" style={{ color: "#a39a8c" }}>
-      {label}
-    </dt>
-    <dd className="mt-1 break-words text-sm font-medium" style={{ color: "#17140f" }}>
-      {value || "Not provided"}
-    </dd>
-  </div>
-);
-
-const SectionTitle = ({ icon: Icon, children }) => (
-  <h3
-    className="flex items-center gap-2 pb-3 text-sm font-medium"
-    style={{ color: "#17140f", borderBottom: "1px solid #e3ddd0" }}
-  >
-    {Icon && <Icon className="h-4 w-4" style={{ color: "#9c6b2e" }} />}
-    {children}
-  </h3>
-);
-
-const EnrollmentDetailsModal = ({ enrollment, onClose }) => {
-  // Close on Escape + lock background scroll while open
-  useEffect(() => {
-    if (!enrollment) return;
-    const onKey = (e) => e.key === "Escape" && onClose();
-    document.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
-  }, [enrollment, onClose]);
-
-  if (!enrollment) return null;
-  const name = valueFor(enrollment, ["name", "student_name", "full_name"]);
-
-  return (
-    <div
-      className="ba-fade fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-      style={{ background: "rgba(23,20,15,.55)" }}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="profit-enrollment-details-title"
-      onClick={onClose}
-    >
-      <div
-        className="ba-pop relative max-h-[calc(100dvh-2rem)] w-full max-w-2xl overflow-y-auto rounded-2xl p-6 sm:p-8"
-        style={{
-          background: "#ffffff",
-          border: "1px solid #e3ddd0",
-          boxShadow: "0 30px 80px -30px rgba(23,20,15,.5)",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          type="button"
-          onClick={onClose}
-          className={`absolute right-4 top-4 rounded-lg p-1.5 transition-colors hover:bg-[#f1ede4] ${FOCUS_RING}`}
-          style={{ color: "#a39a8c" }}
-          aria-label="Close enrollment details"
-        >
-          <X className="h-4 w-4" />
-        </button>
-
-        <div className="flex items-start gap-4 pr-10">
-          <span
-            aria-hidden="true"
-            className="mt-1 h-12 w-1 shrink-0 rounded-full"
-            style={{ background: "#9c6b2e" }}
-          />
-          <div className="min-w-0">
-            <p className="text-xs" style={{ color: "#a39a8c" }}>
-              Enrollment details
-            </p>
-            <h2
-              id="profit-enrollment-details-title"
-              className="mt-1 break-words text-2xl leading-tight"
-              style={{ ...serif, fontWeight: 500, color: "#17140f" }}
-            >
-              {name}
-            </h2>
-            <p className="mt-1 text-sm" style={{ color: "#8a8175" }}>
-              {valueFor(enrollment, ["course_title", "course_name"])}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-7 grid gap-7 sm:grid-cols-2">
-          <section>
-            <SectionTitle icon={UserRound}>Student</SectionTitle>
-            <dl className="mt-4 grid gap-4">
-              <DetailItem label="Full name" value={name} />
-              <DetailItem label="Qualification" value={enrollment.highest_qualification} />
-              <DetailItem label="Parent / guardian" value={enrollment.parent_name} />
-              <DetailItem label="Parent phone" value={enrollment.parent_phone} />
-            </dl>
-          </section>
-          <section>
-            <SectionTitle icon={Phone}>Contact</SectionTitle>
-            <dl className="mt-4 grid gap-4">
-              <DetailItem label="Email" value={valueFor(enrollment, ["email", "student_email"])} />
-              <DetailItem label="Phone" value={valueFor(enrollment, ["phone", "student_phone"])} />
-              <DetailItem label="Address" value={enrollment.address} />
-            </dl>
-          </section>
-        </div>
-
-        <section className="mt-7">
-          <SectionTitle icon={IndianRupee}>Course and payment</SectionTitle>
-          <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-            <DetailItem label="Course" value={valueFor(enrollment, ["course_title", "course_name"])} />
-            <DetailItem label="Duration" value={enrollment.course_duration} />
-            <DetailItem
-              label="Amount / fees"
-              value={formatOptionalCurrency(enrollment.amount ?? enrollment.profit ?? enrollment.total_fee)}
-            />
-            <DetailItem label="Status" value={valueFor(enrollment, ["status", "payment_status"])} />
-            <DetailItem label="Enrollment ID" value={enrollment.enrollment_id} />
-            <DetailItem label="Payment ID" value={enrollment.razorpay_payment_id} />
-          </dl>
-        </section>
-
-        <div className="mt-8 flex justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            className={`ba-press rounded-lg px-5 py-2.5 text-sm font-medium text-white ${FOCUS_RING}`}
-            style={{ background: "#17140f" }}
-          >
-            Close details
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+const formatDate = (dateString) => {
+  if (!dateString) return '—';
+  try {
+    return new Date(dateString).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch {
+    return String(dateString);
+  }
 };
 
-const EnrollmentCard = ({ enrollment, index, onViewDetails }) => {
-  const name = valueFor(enrollment, ["name", "student_name", "full_name"]);
-  return (
-    <article
-      className="ba-card ba-rise overflow-hidden rounded-2xl"
-      style={{
-        background: "#ffffff",
-        border: "1px solid #e3ddd0",
-        animationDelay: `${Math.min(index, 8) * 60}ms`,
-      }}
-    >
-      <div
-        className="flex items-start justify-between gap-4 p-5 sm:p-6"
-        style={{ borderBottom: "1px solid #efe9dd" }}
-      >
-        <div className="flex min-w-0 items-center gap-3">
-          <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-medium"
-            style={{ background: "#f1ede4", color: "#7a531f" }}
-          >
-            {String(name).charAt(0).toUpperCase()}
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs" style={{ color: "#a39a8c" }}>
-              Enrollment {enrollment.enrollment_id ? `#${enrollment.enrollment_id}` : `#${index + 1}`}
-            </p>
-            <h3
-              className="mt-0.5 truncate text-lg"
-              style={{ ...serif, fontWeight: 500, color: "#17140f" }}
-            >
-              {name}
-            </h3>
-          </div>
-        </div>
-        <StatusPill status={valueFor(enrollment, ["status", "payment_status"])} />
-      </div>
-
-      <dl className="grid gap-5 p-5 sm:grid-cols-2 sm:p-6 lg:grid-cols-4">
-        <DetailItem label="Course" value={valueFor(enrollment, ["course_title", "course_name"])} />
-        <div className="min-w-0">
-          <dt className="text-xs" style={{ color: "#a39a8c" }}>Amount</dt>
-          <dd
-            className="mt-1 text-sm font-medium tabular-nums"
-            style={{ color: "#17140f" }}
-          >
-            {formatOptionalCurrency(enrollment.amount ?? enrollment.profit ?? enrollment.total_fee)}
-          </dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-xs" style={{ color: "#a39a8c" }}>Email</dt>
-          <dd className="mt-1 flex items-start gap-2 break-all text-sm font-medium" style={{ color: "#17140f" }}>
-            <Mail className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "#9c6b2e" }} />
-            {valueFor(enrollment, ["email", "student_email"])}
-          </dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-xs" style={{ color: "#a39a8c" }}>Phone</dt>
-          <dd className="mt-1 flex items-start gap-2 text-sm font-medium" style={{ color: "#17140f" }}>
-            <Phone className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "#9c6b2e" }} />
-            {valueFor(enrollment, ["phone", "student_phone"])}
-          </dd>
-        </div>
-      </dl>
-
-      <div
-        className="px-5 py-3 sm:px-6"
-        style={{ borderTop: "1px solid #efe9dd", background: "#faf8f4" }}
-      >
-        <button
-          type="button"
-          onClick={() => onViewDetails(enrollment)}
-          className={`ba-press rounded-lg px-2 py-1 text-xs font-medium ${FOCUS_RING}`}
-          style={{ color: "#9c6b2e" }}
-        >
-          View full details
-        </button>
-      </div>
-    </article>
-  );
+const getPaymentDate = (enr, fromDateStr, toDateStr) => {
+  if (Array.isArray(enr.installments)) {
+    const matchingInst = enr.installments.find(
+      (i) =>
+        (i.paid_date && i.paid_date >= fromDateStr && i.paid_date <= toDateStr) ||
+        i.paid_date === fromDateStr
+    );
+    if (matchingInst) return matchingInst.paid_date;
+  }
+  if (enr.payment_date) return enr.payment_date;
+  if (enr.paid_at) return enr.paid_at;
+  if (enr.created_at) return enr.created_at;
+  return fromDateStr || toDateStr;
 };
 
-const SkeletonView = () => (
-  <div className="space-y-6" aria-busy="true" aria-label="Loading student fees">
-    <div className="grid gap-4 sm:grid-cols-2">
-      {[0, 1].map((i) => (
-        <div
-          key={i}
-          className="rounded-2xl p-6"
-          style={{ background: "#ffffff", border: "1px solid #e3ddd0" }}
-        >
-          <div className="ba-skeleton h-3 w-24 rounded" />
-          <div className="ba-skeleton mt-4 h-9 w-40 rounded" />
-        </div>
-      ))}
-    </div>
-    {[0, 1].map((i) => (
-      <div
-        key={i}
-        className="rounded-2xl p-6"
-        style={{ background: "#ffffff", border: "1px solid #e3ddd0" }}
-      >
-        <div className="ba-skeleton h-3 w-24 rounded" />
-        <div className="ba-skeleton mt-3 h-6 w-1/2 rounded" />
-        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {[0, 1, 2, 3].map((j) => (
-            <div key={j}>
-              <div className="ba-skeleton h-3 w-16 rounded" />
-              <div className="ba-skeleton mt-2 h-4 w-24 rounded" />
-            </div>
-          ))}
-        </div>
-      </div>
-    ))}
-  </div>
-);
+// Robust helper to gather all matching payment objects for an enrollment from all possible sources
+const getEnrollmentPayments = (enrollment, rootProfit) => {
+  if (!enrollment) return [];
+  const enrollmentId = enrollment.enrollment_id ?? enrollment.id;
+  const courseId = enrollment.course_id ?? enrollment.course?.id;
+  const studentId = enrollment.student_id ?? enrollment.student?.id;
+
+  const allSources = [
+    ...(Array.isArray(enrollment.payments) ? enrollment.payments : []),
+    ...(Array.isArray(enrollment.payment_history) ? enrollment.payment_history : []),
+    ...(Array.isArray(enrollment.transactions) ? enrollment.transactions : []),
+    ...(Array.isArray(enrollment.installment_payments) ? enrollment.installment_payments : []),
+    ...(Array.isArray(enrollment.recent_payments) ? enrollment.recent_payments : []),
+    ...(Array.isArray(rootProfit?.payments) ? rootProfit.payments : []),
+    ...(Array.isArray(rootProfit?.all_payments) ? rootProfit.all_payments : []),
+    ...(Array.isArray(rootProfit?.transactions) ? rootProfit.transactions : []),
+    ...(Array.isArray(rootProfit?.recent_payments) ? rootProfit.recent_payments : []),
+    ...(Array.isArray(rootProfit) ? rootProfit : []),
+  ];
+
+  const uniqueMap = new Map();
+  allSources.forEach((p, idx) => {
+    if (!p) return;
+    const pEnrId = p.enrollment_id ?? p.enrollmentId;
+    const pCourseId = p.course_id ?? p.courseId;
+    const pStdId = p.student_id ?? p.studentId;
+    const pStdName = p.student_name ?? p.studentName ?? p.name;
+
+    // Strict enrollment-first matching:
+    // 1. If enrollmentId is present on both, it MUST match!
+    if (enrollmentId && pEnrId !== undefined && pEnrId !== null) {
+      if (Number(pEnrId) !== Number(enrollmentId)) {
+        return; // Belongs to a different enrollment, reject!
+      }
+    } else if (courseId && pCourseId !== undefined && pCourseId !== null) {
+      // 2. If no enrollmentId but courseId is present on payment, it must match the course
+      if (Number(pCourseId) !== Number(courseId)) {
+        return; // Belongs to a different course, reject!
+      }
+      if (studentId && pStdId !== undefined && pStdId !== null && Number(pStdId) !== Number(studentId)) {
+        return;
+      }
+    } else {
+      // 3. Fallback only if neither enrollmentId nor courseId is present on payment record
+      const studentMatch =
+        (studentId && pStdId !== undefined && pStdId !== null && Number(pStdId) === Number(studentId)) ||
+        (enrollment.name && pStdName && String(pStdName).trim().toLowerCase() === String(enrollment.name).trim().toLowerCase());
+      if (!studentMatch) return;
+    }
+
+    const key = p.payment_id || p.id || `${p.installment_number}_${p.amount}_${p.payment_date || idx}`;
+    if (!uniqueMap.has(key)) {
+      uniqueMap.set(key, p);
+    }
+  });
+
+  return Array.from(uniqueMap.values());
+};
 
 export default function BranchAdminProfit() {
-  useDisplayFonts();
   const { user, token, logout } = useAuth();
   const navigate = useNavigate();
-  const [selectedDate, setSelectedDate] = useState(getToday);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [fromDate, setFromDate] = useState(todayStr);
+  const [toDate, setToDate] = useState(todayStr);
+  const [dateError, setDateError] = useState('');
+  const [error, setError] = useState('');
+
   const [profit, setProfit] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profitLoading, setProfitLoading] = useState(false);
+
   const [selectedEnrollment, setSelectedEnrollment] = useState(null);
 
-  useEffect(() => {
-    let isMounted = true;
-    const loadProfit = async () => {
-      if (!token || !selectedDate) return;
-      setLoading(true);
-      setError("");
-      try {
-        const data = await getBranchAdminProfitApi(token, selectedDate);
-        if (isMounted) setProfit(data);
-      } catch (err) {
-        if (isMounted) setError(err.message || "Failed to load branch profit.");
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-    loadProfit();
-    return () => {
-      isMounted = false;
-    };
-  }, [token, selectedDate]);
+  const loadProfit = async (from, to) => {
+    if (!token) return;
+    if (from && to && from > to) {
+      setDateError('From Date cannot be later than To Date.');
+      return;
+    }
+    setDateError('');
+    setProfitLoading(true);
+    setError('');
 
-  const enrollments = Array.isArray(profit?.enrollments) ? profit.enrollments : [];
-  const totalProfit = profit?.total_profit ?? profit?.today_profit;
-  const totalEnrollments = profit?.total_enrollments ?? enrollments.length;
+    try {
+      const data = await getBranchAdminProfitApi(token, { fromDate: from, toDate: to });
+      setProfit(data);
+    } catch (err) {
+      setError(err.message || 'Failed to load branch revenue.');
+    } finally {
+      setProfitLoading(false);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (fromDate && toDate && fromDate > toDate) {
+      setDateError('From Date cannot be later than To Date.');
+      return;
+    }
+    setDateError('');
+    loadProfit(fromDate, toDate);
+  }, [fromDate, toDate, token]);
+
+  const enrollments = Array.isArray(profit?.enrollments)
+    ? profit.enrollments
+    : Array.isArray(profit?.payments)
+    ? profit.payments
+    : Array.isArray(profit?.recent_payments)
+    ? profit.recent_payments
+    : [];
+
+  const totalReceived =
+    profit?.total_received ??
+    profit?.total_profit ??
+    profit?.today_profit ??
+    profit?.total_collected ??
+    enrollments.reduce(
+      (acc, e) =>
+        acc +
+        Number(
+          e.amount_paid_on_date ??
+            e.amount ??
+            e.total_paid ??
+            e.total_fee ??
+            0
+        ),
+      0
+    );
+
+  const totalEnrolledStudents =
+    profit?.total_enrolled_students ??
+    profit?.total_enrollments ??
+    enrollments.length;
+
+  const cashReceived =
+    profit?.cash_received ??
+    enrollments
+      .filter((e) => {
+        const m = String(e.payment_method || '').toLowerCase();
+        return m.includes('cash');
+      })
+      .reduce(
+        (acc, e) =>
+          acc +
+          Number(
+            e.cash_amount ??
+              e.amount_paid_on_date ??
+              e.amount ??
+              e.total_paid ??
+              e.total_fee ??
+              0
+          ),
+        0
+      );
+
+  const razorpayReceived =
+    profit?.razorpay_received ??
+    profit?.online_received ??
+    enrollments
+      .filter((e) => {
+        const m = String(e.payment_method || '').toLowerCase();
+        return (
+          m.includes('razorpay') ||
+          m === 'online' ||
+          Boolean(e.razorpay_payment_id)
+        );
+      })
+      .reduce(
+        (acc, e) =>
+          acc +
+          Number(
+            e.amount_paid_on_date ??
+              e.amount ??
+              e.total_paid ??
+              e.total_fee ??
+              0
+          ),
+        0
+      );
+
+  const upiReceived =
+    profit?.upi_received ??
+    enrollments
+      .filter((e) => {
+        const m = String(e.payment_method || '').toLowerCase();
+        return m.includes('upi') && !m.includes('razorpay');
+      })
+      .reduce(
+        (acc, e) =>
+          acc +
+          Number(
+            e.upi_amount ??
+              e.amount_paid_on_date ??
+              e.amount ??
+              e.total_paid ??
+              e.total_fee ??
+              0
+          ),
+        0
+      );
+
+  const dueStudentAmount =
+    profit?.due_student_amount ??
+    profit?.outstanding_due ??
+    profit?.total_due ??
+    enrollments.reduce((acc, e) => acc + Number(e.balance_amount ?? 0), 0);
+
+  // Derived matching payments for the currently opened modal enrollment
+  const modalPayments = selectedEnrollment ? getEnrollmentPayments(selectedEnrollment, profit) : [];
+
+  // Enrollment-level Cash & UPI totals for Payment Summary
+  const enrollmentCashTotal = (() => {
+    if (!selectedEnrollment) return 0;
+    let total = 0;
+    let hasVal = false;
+    if (modalPayments.length > 0) {
+      modalPayments.forEach((p) => {
+        const m = String(p.payment_method || '').toLowerCase();
+        if (p.cash_amount !== undefined && p.cash_amount !== null) {
+          total += Number(p.cash_amount);
+          hasVal = true;
+        } else if (m === 'cash') {
+          total += Number(p.amount || 0);
+          hasVal = true;
+        }
+      });
+    }
+    if (hasVal) return total;
+
+    if (Array.isArray(selectedEnrollment.installments)) {
+      selectedEnrollment.installments.forEach((inst) => {
+        const m = String(inst.payment_method || '').toLowerCase();
+        if (inst.cash_amount !== undefined && inst.cash_amount !== null) {
+          total += Number(inst.cash_amount);
+          hasVal = true;
+        } else if (m === 'cash') {
+          total += Number(inst.amount || inst.paid_amount || 0);
+          hasVal = true;
+        }
+      });
+    }
+    if (hasVal) return total;
+
+    if (selectedEnrollment.cash_amount !== undefined && selectedEnrollment.cash_amount !== null) {
+      return Number(selectedEnrollment.cash_amount);
+    }
+    return 0;
+  })();
+
+  const enrollmentUpiTotal = (() => {
+    if (!selectedEnrollment) return 0;
+    let total = 0;
+    let hasVal = false;
+    if (modalPayments.length > 0) {
+      modalPayments.forEach((p) => {
+        const m = String(p.payment_method || '').toLowerCase();
+        if (p.upi_amount !== undefined && p.upi_amount !== null) {
+          total += Number(p.upi_amount);
+          hasVal = true;
+        } else if (m === 'upi') {
+          total += Number(p.amount || 0);
+          hasVal = true;
+        }
+      });
+    }
+    if (hasVal) return total;
+
+    if (Array.isArray(selectedEnrollment.installments)) {
+      selectedEnrollment.installments.forEach((inst) => {
+        const m = String(inst.payment_method || '').toLowerCase();
+        if (inst.upi_amount !== undefined && inst.upi_amount !== null) {
+          total += Number(inst.upi_amount);
+          hasVal = true;
+        } else if (m === 'upi') {
+          total += Number(inst.amount || inst.paid_amount || 0);
+          hasVal = true;
+        }
+      });
+    }
+    if (hasVal) return total;
+
+    if (selectedEnrollment.upi_amount !== undefined && selectedEnrollment.upi_amount !== null) {
+      return Number(selectedEnrollment.upi_amount);
+    }
+    return 0;
+  })();
 
   return (
     <div
-      className="branch-profit-page min-h-screen md:flex"
-      style={{ ...sans, background: "#faf8f4", color: "#1c1a17" }}
+      className="min-h-screen md:flex"
+      style={{
+        fontFamily: "'Inter', system-ui, sans-serif",
+        background: '#faf8f4',
+        color: '#17140f',
+      }}
     >
       <style>{PAGE_CSS}</style>
       <BranchAdminSidebar
@@ -450,13 +404,15 @@ export default function BranchAdminProfit() {
         logout={logout}
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
-        openCreate={() => navigate("/branch-admin/courses")}
         activePage="fees"
       />
 
       <main className="min-w-0 flex-1">
-        {/* ---- Header ---- */}
-        <header className="sticky top-0 z-20 flex h-[92px] items-center justify-between border-b border-[#e3ddd0] bg-[#faf8f4]/95 px-6 backdrop-blur-md sm:px-10 shrink-0">
+        {/* Header */}
+        <header
+          className="flex items-center justify-between border-b px-6 py-5 sm:px-10"
+          style={{ borderColor: '#e3ddd0', background: '#ffffff' }}
+        >
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -466,198 +422,712 @@ export default function BranchAdminProfit() {
               <Menu className="h-5 w-5" />
             </button>
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#9c6b2e]">
+              <p
+                className="text-[10px] font-bold uppercase tracking-widest"
+                style={{ color: '#9c6b2e' }}
+              >
                 Branch Portal
-              </span>
-              <h1 className="text-xl font-extrabold tracking-tight text-slate-900 leading-tight">
-                Student Fees
+              </p>
+              <h1
+                className="mt-1 text-2xl font-bold"
+                style={{ fontFamily: "'Fraunces', serif" }}
+              >
+                Branch Revenue
               </h1>
             </div>
           </div>
+
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => navigate('/branch-admin/receipts')}
-              className="hidden sm:flex items-center gap-1.5 rounded-xl border border-[#e3ddd0] bg-white px-3 py-2 text-xs font-bold text-slate-800 shadow-sm transition hover:bg-[#f0ebe1]"
+              className="hidden sm:flex items-center gap-1.5 rounded-xl border border-[#e3ddd0] bg-white px-3.5 py-2 text-xs font-bold text-slate-800 shadow-sm transition hover:bg-[#f1ede4]"
             >
-              <Receipt className="h-3.5 w-3.5 text-[#9c6b2e]" />
+              <Receipt className="h-4 w-4 text-[#9c6b2e]" />
               <span>Payment Receipts</span>
             </button>
             <button
               type="button"
               onClick={() => navigate('/branch-admin/expenses')}
-              className="hidden sm:flex items-center gap-1.5 rounded-xl border border-[#e3ddd0] bg-white px-3 py-2 text-xs font-bold text-slate-800 shadow-sm transition hover:bg-[#f0ebe1]"
+              className="hidden sm:flex items-center gap-1.5 rounded-xl border border-[#e3ddd0] bg-white px-3.5 py-2 text-xs font-bold text-slate-800 shadow-sm transition hover:bg-[#f1ede4]"
             >
-              <IndianRupee className="h-3.5 w-3.5 text-[#9c6b2e]" />
+              <IndianRupee className="h-4 w-4 text-[#9c6b2e]" />
               <span>Branch Expenses</span>
             </button>
-            <div className="hidden text-right sm:block">
-              <p className="text-xs font-extrabold text-slate-900 leading-tight">
-                {user?.name || "Branch Admin"}
-              </p>
-              <p className="text-[10px] font-semibold text-slate-400">
-                {user?.branch_name || "Branch Administrator"}
-              </p>
-            </div>
+            <button
+              onClick={() => {
+                if (fromDate && toDate && fromDate > toDate) {
+                  setDateError('From Date cannot be later than To Date.');
+                  return;
+                }
+                loadProfit(fromDate, toDate);
+              }}
+              className="rounded-lg p-2 hover:bg-[#f1ede4] transition cursor-pointer"
+              title="Refresh Revenue Data"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${profitLoading ? 'animate-spin' : ''}`}
+                style={{ color: '#9c6b2e' }}
+              />
+            </button>
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#17140f] text-sm font-extrabold text-[#f4b942] shadow-sm ring-2 ring-[#e3ddd0]">
-              {user?.name?.charAt(0).toUpperCase() || "B"}
+              {user?.name?.charAt(0).toUpperCase() || 'B'}
             </div>
           </div>
         </header>
 
-        <div className="mx-auto w-full max-w-6xl space-y-8 px-6 py-8 sm:px-10">
+        <div className="mx-auto max-w-7xl px-6 py-8 sm:px-10 space-y-6">
           {error && (
             <div
-              role="alert"
-              className="ba-toast rounded-lg px-4 py-3 text-sm font-medium"
-              style={{ background: "#f8eae5", color: "#7c3324", border: "1px solid #eccec4" }}
+              className="rounded-xl px-4 py-4 text-sm font-medium flex items-center justify-between"
+              style={{
+                background: '#fef2f2',
+                color: '#991b1b',
+                border: '1px solid #fecaca',
+              }}
             >
-              {error}
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5" />
+                {error}
+              </div>
+              <button
+                onClick={() => {
+                  if (fromDate && toDate && fromDate > toDate) return;
+                  loadProfit(fromDate, toDate);
+                }}
+                className="underline font-bold cursor-pointer"
+              >
+                Retry
+              </button>
             </div>
           )}
 
-          {/* ---- Date bar (stays visible while loading / on error) ---- */}
-          <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-            <div>
-              <h2
-                className="text-xl"
-                style={{ ...serif, fontWeight: 500, color: "#17140f" }}
-              >
-                Daily report
-              </h2>
-              <p className="mt-1 text-sm" style={{ color: "#8a8175" }}>
-                Showing{" "}
-                <span style={{ color: "#17140f", fontWeight: 500 }}>
-                  {formatDate(profit?.date || selectedDate)}
-                </span>
-                .
-              </p>
-            </div>
-            <label
-              className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm transition-colors focus-within:border-[#9c6b2e] ${FOCUS_RING}`}
-              style={{ border: "1px solid #e3ddd0", color: "#5b5346", background: "#ffffff" }}
-              title="Choose a previous date to view student fee collections"
+          {dateError && (
+            <div
+              className="rounded-xl px-4 py-3 text-sm font-medium flex items-center gap-2"
+              style={{
+                background: '#fef2f2',
+                color: '#991b1b',
+                border: '1px solid #fecaca',
+              }}
             >
-              <CalendarDays className="h-4 w-4" style={{ color: "#9c6b2e" }} />
-              <span className="sr-only">Choose student fees date</span>
-              <input
-                type="date"
-                value={selectedDate}
-                max={getToday()}
-                onChange={(event) => event.target.value && setSelectedDate(event.target.value)}
-                className="bg-transparent outline-none"
-              />
-            </label>
-          </div>
+              <AlertCircle className="h-5 w-5 shrink-0" />
+              <span>{dateError}</span>
+            </div>
+          )}
 
-          {loading && <SkeletonView />}
-
-          {!loading && !error && profit && (
+          {loading ? (
+            <div className="flex justify-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#9c6b2e' }} />
+            </div>
+          ) : (
             <>
-              {/* ---- Metrics ---- */}
-              <section className="grid gap-4 sm:grid-cols-2">
-                <article
-                  className="ba-rise flex items-center justify-between rounded-2xl p-6"
-                  style={{ background: "#ffffff", border: "1px solid #e3ddd0" }}
-                >
-                  <div>
-                    <p className="text-xs" style={{ color: "#a39a8c" }}>Total fees collected</p>
-                    <p
-                      className="mt-2 text-4xl leading-none tabular-nums"
-                      style={{ ...serif, fontWeight: 500, color: "#5c7a5a" }}
-                    >
-                      {formatCurrency(totalProfit)}
-                    </p>
-                  </div>
-                  <span
-                    className="flex h-11 w-11 items-center justify-center rounded-full"
-                    style={{ background: "#eef2ea", color: "#5c7a5a" }}
-                  >
-                    <IndianRupee className="h-5 w-5" />
-                  </span>
-                </article>
-                <article
-                  className="ba-rise flex items-center justify-between rounded-2xl p-6"
-                  style={{
-                    background: "#ffffff",
-                    border: "1px solid #e3ddd0",
-                    animationDelay: "80ms",
-                  }}
-                >
-                  <div>
-                    <p className="text-xs" style={{ color: "#a39a8c" }}>Total enrollments</p>
-                    <p
-                      className="mt-2 text-4xl leading-none tabular-nums"
-                      style={{ ...serif, fontWeight: 500, color: "#b0803a" }}
-                    >
-                      {totalEnrollments}
-                    </p>
-                  </div>
-                  <span
-                    className="flex h-11 w-11 items-center justify-center rounded-full"
-                    style={{ background: "#f7efe0", color: "#b0803a" }}
-                  >
-                    <Users className="h-5 w-5" />
-                  </span>
-                </article>
-              </section>
-
-              {/* ---- Enrollment list ---- */}
-              <section className="space-y-5">
-                <div
-                  className="flex items-center gap-2 pb-4"
-                  style={{ borderBottom: "1px solid #e3ddd0" }}
-                >
-                  <TrendingUp className="h-4 w-4" style={{ color: "#9c6b2e" }} />
-                  <h2
-                    className="text-xl"
-                    style={{ ...serif, fontWeight: 500, color: "#17140f" }}
-                  >
-                    Enrollment details
-                  </h2>
-                  <span className="ml-auto text-sm" style={{ color: "#a39a8c" }}>
-                    {enrollments.length} record{enrollments.length === 1 ? "" : "s"}
-                  </span>
+              {/* Date Filters */}
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium" style={{ color: '#5b5346' }}>
+                    From Date:
+                  </label>
+                  <input
+                    type="date"
+                    value={fromDate}
+                    onChange={(e) => setFromDate(e.target.value)}
+                    className="rounded-xl border px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#9c6b2e]"
+                    style={{
+                      borderColor: dateError ? '#ef4444' : '#e3ddd0',
+                      background: '#ffffff',
+                      color: '#17140f',
+                    }}
+                  />
                 </div>
 
-                {enrollments.length === 0 ? (
-                  <div
-                    className="ba-fade rounded-2xl px-6 py-16 text-center"
-                    style={{ border: "1px dashed #dfc9a9", background: "#ffffff" }}
-                  >
-                    <TrendingUp className="mx-auto h-5 w-5" style={{ color: "#d9b77b" }} />
-                    <h3
-                      className="mt-3 text-lg"
-                      style={{ ...serif, fontWeight: 500, color: "#17140f" }}
-                    >
-                      No enrollments for this date
-                    </h3>
-                    <p className="mt-1 text-sm" style={{ color: "#8a8175" }}>
-                      Fee collection details will appear here when enrollments are recorded.
-                    </p>
-                  </div>
-                ) : (
-                  <div key={selectedDate} className="space-y-4">
-                    {enrollments.map((enrollment, index) => (
-                      <EnrollmentCard
-                        key={enrollment.enrollment_id || index}
-                        enrollment={enrollment}
-                        index={index}
-                        onViewDetails={setSelectedEnrollment}
-                      />
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium" style={{ color: '#5b5346' }}>
+                    To Date:
+                  </label>
+                  <input
+                    type="date"
+                    value={toDate}
+                    onChange={(e) => setToDate(e.target.value)}
+                    className="rounded-xl border px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#9c6b2e]"
+                    style={{
+                      borderColor: dateError ? '#ef4444' : '#e3ddd0',
+                      background: '#ffffff',
+                      color: '#17140f',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {profitLoading ? (
+                <div className="space-y-6">
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                      <div key={i} className="h-28 rounded-2xl bg-slate-200 animate-pulse" />
                     ))}
                   </div>
-                )}
-              </section>
+                  <div className="h-64 rounded-2xl bg-slate-200 animate-pulse" />
+                </div>
+              ) : (
+                <>
+                  {/* Stat Cards - Exactly like Super Admin Branch Revenue */}
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <StatCard
+                      label="Total Received"
+                      value={fmt(totalReceived)}
+                      icon={IndianRupee}
+                      accent="#10b981"
+                      delay={0}
+                    />
+                    <StatCard
+                      label="Students Enrolled"
+                      value={Number(totalEnrolledStudents || 0).toLocaleString('en-IN')}
+                      icon={Users}
+                      accent="#8b5cf6"
+                      delay={50}
+                    />
+                    <StatCard
+                      label="Cash Received"
+                      value={fmt(cashReceived)}
+                      icon={Banknote}
+                      accent="#059669"
+                      delay={100}
+                    />
+                    <StatCard
+                      label="Razorpay Received"
+                      value={fmt(razorpayReceived)}
+                      icon={CreditCard}
+                      accent="#3b82f6"
+                      delay={150}
+                    />
+                    <StatCard
+                      label="UPI Received"
+                      value={fmt(upiReceived)}
+                      icon={Smartphone}
+                      accent="#f59e0b"
+                      delay={200}
+                    />
+                    <StatCard
+                      label="Outstanding Due"
+                      value={fmt(dueStudentAmount)}
+                      icon={AlertCircle}
+                      accent="#ef4444"
+                      delay={250}
+                    />
+                  </div>
+
+                  {/* Payment Records Table - Exactly like Super Admin Branch Revenue */}
+                  {enrollments.length === 0 ? (
+                    <div
+                      className="rounded-2xl px-5 py-14 text-center text-sm"
+                      style={{
+                        background: '#ffffff',
+                        border: '1px solid #e3ddd0',
+                        color: '#a39a8c',
+                      }}
+                    >
+                      No payments or enrollments found for the selected date range.
+                    </div>
+                  ) : (
+                    <section
+                      className="rounded-2xl overflow-hidden"
+                      style={{ background: '#ffffff', border: '1px solid #e3ddd0' }}
+                    >
+                      <div
+                        className="px-6 py-4 flex items-center justify-between"
+                        style={{ borderBottom: '1px solid #f1ede4' }}
+                      >
+                        <h2 className="font-semibold" style={{ color: '#17140f' }}>
+                          Payment Records
+                        </h2>
+                        <span className="text-xs font-semibold text-slate-500">
+                          {enrollments.length} record{enrollments.length === 1 ? '' : 's'}
+                        </span>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm whitespace-nowrap">
+                          <thead>
+                            <tr style={{ background: '#faf8f4', borderBottom: '1px solid #e3ddd0' }}>
+                              {[
+                                'Student',
+                                'Course',
+                                'Total Fee',
+                                'Paid Today',
+                                'Total Paid',
+                                'Balance',
+                                'Installments',
+                                'Status',
+                                'Date',
+                                'Action',
+                              ].map((h) => (
+                                <th
+                                  key={h}
+                                  className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider"
+                                  style={{ color: '#a39a8c' }}
+                                >
+                                  {h}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {enrollments.map((enr, i) => (
+                              <tr
+                                key={enr.enrollment_id ?? enr.id ?? i}
+                                className="transition hover:bg-sky-50"
+                                style={{ borderBottom: '1px solid #f1ede4' }}
+                              >
+                                <td className="px-5 py-3 font-medium">
+                                  {enr.name || enr.student_name || '—'}
+                                </td>
+                                <td className="px-5 py-3" style={{ color: '#5b5346' }}>
+                                  {enr.course_title || '—'}
+                                </td>
+                                <td className="px-5 py-3 font-medium" style={{ color: '#17140f' }}>
+                                  {fmt(enr.total_fee ?? enr.course_fee)}
+                                </td>
+                                <td className="px-5 py-3 font-semibold" style={{ color: '#10b981' }}>
+                                  {fmt(enr.amount_paid_on_date ?? enr.amount ?? enr.paid_today ?? enr.total_paid)}
+                                </td>
+                                <td className="px-5 py-3" style={{ color: '#5b5346' }}>
+                                  {fmt(enr.total_paid ?? enr.amount_paid ?? enr.amount ?? 0)}
+                                </td>
+                                <td
+                                  className="px-5 py-3 font-medium"
+                                  style={{
+                                    color: Number(enr.balance_amount) > 0 ? '#ef4444' : '#5b5346',
+                                  }}
+                                >
+                                  {fmt(enr.balance_amount)}
+                                </td>
+                                <td className="px-5 py-3" style={{ color: '#5b5346' }}>
+                                  {enr.paid_installment_count ?? 0} / {enr.installment_count ?? enr.total_installments ?? 0}
+                                </td>
+                                <td className="px-5 py-3">{getStatusBadge(enr.status || enr.payment_status)}</td>
+                                <td className="px-5 py-3 text-xs" style={{ color: '#5b5346' }}>
+                                  {formatDate(getPaymentDate(enr, fromDate, toDate))}
+                                </td>
+                                <td className="px-5 py-3">
+                                  <button
+                                    onClick={() => setSelectedEnrollment(enr)}
+                                    className="text-xs font-bold text-sky-600 hover:text-sky-800 underline cursor-pointer"
+                                  >
+                                    View Details
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  )}
+                </>
+              )}
             </>
           )}
         </div>
       </main>
 
-      <EnrollmentDetailsModal
-        enrollment={selectedEnrollment}
-        onClose={() => setSelectedEnrollment(null)}
-      />
+      {/* View Details Modal - With Accurate Payment Method and Split Cash/UPI Breakdown */}
+      {selectedEnrollment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/40 backdrop-blur-sm">
+          <div
+            className="sa-modal-enter w-full max-w-4xl bg-[#faf8f4] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+            style={{ border: '1px solid #e3ddd0' }}
+          >
+            <header className="px-6 py-4 flex items-center justify-between bg-white border-b border-[#e3ddd0]">
+              <h2 className="text-xl font-bold" style={{ fontFamily: "'Fraunces', serif" }}>
+                Enrollment Details
+              </h2>
+              <button
+                onClick={() => setSelectedEnrollment(null)}
+                className="p-2 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5 text-slate-500" />
+              </button>
+            </header>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Section 1: Student Information */}
+                <section className="bg-white rounded-xl p-5 border border-[#e3ddd0] shadow-sm space-y-4">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 border-b pb-2 flex items-center gap-2">
+                    <Users className="h-4 w-4" /> Student Information
+                  </h3>
+                  <div className="space-y-2 text-sm">
+                    <p>
+                      <span className="text-slate-500 w-32 inline-block">Name:</span>
+                      <span className="font-semibold">{selectedEnrollment.name || selectedEnrollment.student_name || '—'}</span>
+                    </p>
+                    <p>
+                      <span className="text-slate-500 w-32 inline-block">Email:</span>
+                      <span>{selectedEnrollment.email || '—'}</span>
+                    </p>
+                    <p>
+                      <span className="text-slate-500 w-32 inline-block">Phone:</span>
+                      <span>{selectedEnrollment.phone || '—'}</span>
+                    </p>
+                    <p>
+                      <span className="text-slate-500 w-32 inline-block">Parent Name:</span>
+                      <span>{selectedEnrollment.parent_name || '—'}</span>
+                    </p>
+                    <p>
+                      <span className="text-slate-500 w-32 inline-block">Parent Phone:</span>
+                      <span>{selectedEnrollment.parent_phone || '—'}</span>
+                    </p>
+                    <p>
+                      <span className="text-slate-500 w-32 inline-block">Qualification:</span>
+                      <span>{selectedEnrollment.highest_qualification || '—'}</span>
+                    </p>
+                    <p>
+                      <span className="text-slate-500 w-32 inline-block">Address:</span>
+                      <span>{selectedEnrollment.address || '—'}</span>
+                    </p>
+                  </div>
+                </section>
+
+                {/* Section 2: Course Information */}
+                <section className="bg-white rounded-xl p-5 border border-[#e3ddd0] shadow-sm space-y-4">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 border-b pb-2 flex items-center gap-2">
+                    <BookOpen className="h-4 w-4" /> Course Information
+                  </h3>
+                  <div className="space-y-2 text-sm">
+                    <p>
+                      <span className="text-slate-500 w-32 inline-block">Course:</span>
+                      <span className="font-semibold">{selectedEnrollment.course_title || '—'}</span>
+                    </p>
+                    <p>
+                      <span className="text-slate-500 w-32 inline-block">Course ID:</span>
+                      <span>{selectedEnrollment.course_id || '—'}</span>
+                    </p>
+                    <p>
+                      <span className="text-slate-500 w-32 inline-block">Duration:</span>
+                      <span>{selectedEnrollment.course_duration || '—'}</span>
+                    </p>
+                    <p>
+                      <span className="text-slate-500 w-32 inline-block">Course Status:</span>
+                      {getStatusBadge(selectedEnrollment.course_status)}
+                    </p>
+                  </div>
+                </section>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Section 3: Payment Summary */}
+                <section className="bg-white rounded-xl p-5 border border-[#e3ddd0] shadow-sm space-y-4">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 border-b pb-2 flex items-center gap-2">
+                    <IndianRupee className="h-4 w-4" /> Payment Summary
+                  </h3>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">Total Fee:</span>
+                      <span className="font-medium">{fmt(selectedEnrollment.total_fee ?? selectedEnrollment.course_fee)}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 bg-emerald-50 text-emerald-800 rounded-lg">
+                      <span className="font-medium">Total Paid:</span>
+                      <span className="font-bold text-base">{fmt(selectedEnrollment.total_paid ?? selectedEnrollment.amount_paid ?? selectedEnrollment.amount ?? 0)}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 bg-sky-50 text-sky-800 rounded-lg">
+                      <span className="font-medium">Paid Today:</span>
+                      <span className="font-bold text-base">
+                        {fmt(selectedEnrollment.amount_paid_on_date ?? selectedEnrollment.amount ?? selectedEnrollment.paid_today ?? selectedEnrollment.total_paid)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 bg-rose-50 text-rose-800 rounded-lg">
+                      <span className="font-medium">Balance:</span>
+                      <span className="font-bold text-base">{fmt(selectedEnrollment.balance_amount)}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 bg-amber-50/80 text-amber-950 rounded-lg border border-amber-200/60">
+                      <span className="font-medium text-amber-900">Cash:</span>
+                      <span className="font-bold text-base">{fmt(enrollmentCashTotal)}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 bg-sky-50/80 text-sky-950 rounded-lg border border-sky-200/60">
+                      <span className="font-medium text-sky-900">UPI:</span>
+                      <span className="font-bold text-base">{fmt(enrollmentUpiTotal)}</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2">
+                      <span className="text-slate-500">Payment Status:</span>
+                      {getStatusBadge(selectedEnrollment.status || selectedEnrollment.payment_status)}
+                    </div>
+                  </div>
+                </section>
+
+                {/* Section 4: Installment Breakdown With Accurate Payment Method and Split Cash/UPI Breakdown */}
+                <section className="bg-white rounded-xl p-5 border border-[#e3ddd0] shadow-sm space-y-4">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 border-b pb-2 flex items-center gap-2">
+                    <Calendar className="h-4 w-4" /> Installment Breakdown
+                  </h3>
+                  {(() => {
+                    // Extract or synthesize installment list
+                    const rawInstList =
+                      Array.isArray(selectedEnrollment.installments) && selectedEnrollment.installments.length > 0
+                        ? selectedEnrollment.installments
+                        : modalPayments.length > 0
+                        ? modalPayments.map((p, pIdx) => ({
+                            installment_number: p.installment_number ?? pIdx + 1,
+                            amount: p.amount,
+                            paid_amount: p.amount,
+                            paid_date: p.payment_date || p.created_at,
+                            due_date: p.due_date || p.payment_date,
+                            status: p.status || 'paid',
+                            ...p,
+                          }))
+                        : [];
+
+                    if (rawInstList.length === 0) {
+                      return (
+                        <div className="text-xs text-slate-500 text-center py-6">
+                          No installment terms scheduled. Paid in full.
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                        {rawInstList.map((inst, idx) => {
+                          const instNum = Number(inst.installment_number ?? idx + 1);
+
+                          // Match authoritative payment record for this installment strictly
+                          const matchedPayment =
+                            modalPayments.find((p) => {
+                              if (!p) return false;
+                              if (Array.isArray(p.installment_numbers) && p.installment_numbers.map(Number).includes(instNum)) {
+                                return true;
+                              }
+                              if (p.installment_number !== undefined && p.installment_number !== null) {
+                                return Number(p.installment_number) === instNum;
+                              }
+                              if (inst.payment_id && (p.payment_id === inst.payment_id || p.id === inst.payment_id)) {
+                                return true;
+                              }
+                              return false;
+                            }) || null;
+
+                          const paidDate =
+                            inst.paid_date ||
+                            matchedPayment?.payment_date ||
+                            matchedPayment?.paid_at ||
+                            (inst.status === 'paid' ? selectedEnrollment.payment_date || selectedEnrollment.paid_at : null);
+
+                          const isPaid =
+                            String(inst.status || '').toLowerCase() === 'paid' ||
+                            String(matchedPayment?.status || '').toLowerCase() === 'paid' ||
+                            String(matchedPayment?.status || '').toLowerCase() === 'received' ||
+                            Boolean(paidDate);
+
+                          // Resolve Razorpay ID from payment record, installment, or enrollment
+                          const razorpayId = (() => {
+                            if (matchedPayment?.razorpay_payment_id) return matchedPayment.razorpay_payment_id;
+                            if (matchedPayment?.payment_reference && String(matchedPayment.payment_reference).startsWith('pay_')) {
+                              return matchedPayment.payment_reference;
+                            }
+                            if (matchedPayment?.transaction_id && String(matchedPayment.transaction_id).startsWith('pay_')) {
+                              return matchedPayment.transaction_id;
+                            }
+                            if (inst?.razorpay_payment_id) return inst.razorpay_payment_id;
+                            if (inst?.payment_reference && String(inst.payment_reference).startsWith('pay_')) {
+                              return inst.payment_reference;
+                            }
+                            if (inst?.transaction_id && String(inst.transaction_id).startsWith('pay_')) {
+                              return inst.transaction_id;
+                            }
+                            if (selectedEnrollment?.razorpay_payment_id) {
+                              return selectedEnrollment.razorpay_payment_id;
+                            }
+                            if (matchedPayment?.payment_reference && !String(matchedPayment.payment_reference).startsWith('BRANCH-')) {
+                              return matchedPayment.payment_reference;
+                            }
+                            return '';
+                          })();
+
+                          const rawMethod = String(
+                            matchedPayment?.payment_method ||
+                            matchedPayment?.method ||
+                            inst.payment_method ||
+                            inst.method ||
+                            (razorpayId ? 'razorpay' : '') ||
+                            ''
+                          ).toLowerCase().trim();
+
+                          const rawMethodLabel = matchedPayment?.payment_method_label || inst.payment_method_label;
+
+                          const cashAmount =
+                            matchedPayment?.cash_amount !== undefined && matchedPayment?.cash_amount !== null
+                              ? Number(matchedPayment.cash_amount)
+                              : inst.cash_amount !== undefined && inst.cash_amount !== null
+                              ? Number(inst.cash_amount)
+                              : null;
+
+                          const upiAmount =
+                            matchedPayment?.upi_amount !== undefined && matchedPayment?.upi_amount !== null
+                              ? Number(matchedPayment.upi_amount)
+                              : inst.upi_amount !== undefined && inst.upi_amount !== null
+                              ? Number(inst.upi_amount)
+                              : null;
+
+                          const isSplit =
+                            rawMethod === 'cash_upi' ||
+                            rawMethod === 'split' ||
+                            rawMethod.includes('cash+upi') ||
+                            rawMethod.includes('cash + upi') ||
+                            (cashAmount !== null && upiAmount !== null && cashAmount > 0 && upiAmount > 0);
+
+                          const isCash =
+                            !isSplit &&
+                            (rawMethod === 'cash' || (cashAmount !== null && cashAmount > 0 && (!upiAmount || upiAmount === 0)));
+
+                          const isUpi =
+                            !isSplit &&
+                            !isCash &&
+                            (rawMethod === 'upi' || (upiAmount !== null && upiAmount > 0 && (!cashAmount || cashAmount === 0)));
+
+                          const isRazorpay =
+                            !isSplit &&
+                            !isCash &&
+                            !isUpi &&
+                            (rawMethod === 'razorpay' ||
+                              rawMethod === 'online' ||
+                              rawMethod.includes('razorpay') ||
+                              Boolean(razorpayId));
+
+                          let methodDisplay = 'Pending';
+                          if (rawMethodLabel) {
+                            methodDisplay = rawMethodLabel;
+                          } else if (isSplit) {
+                            methodDisplay = 'Cash + UPI';
+                          } else if (isUpi) {
+                            methodDisplay = 'UPI';
+                          } else if (isCash) {
+                            methodDisplay = 'Cash';
+                          } else if (isRazorpay) {
+                            methodDisplay = 'Razorpay';
+                          } else if (rawMethod) {
+                            if (rawMethod === 'cash_upi') methodDisplay = 'Cash + UPI';
+                            else methodDisplay = rawMethod.charAt(0).toUpperCase() + rawMethod.slice(1);
+                          } else if (isPaid) {
+                            methodDisplay = 'Razorpay';
+                          }
+
+                          const paymentRef =
+                            matchedPayment?.payment_reference ||
+                            inst.payment_reference ||
+                            matchedPayment?.upi_transaction_id ||
+                            inst.upi_transaction_id ||
+                            matchedPayment?.transaction_id ||
+                            inst.transaction_id ||
+                            '';
+
+                          return (
+                            <div
+                              key={inst.id ?? inst.installment_id ?? idx}
+                              className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-2"
+                            >
+                              <div className="flex justify-between items-center font-bold">
+                                <span className="text-slate-900 font-extrabold">Term #{instNum}</span>
+                                <span className="text-slate-900 font-extrabold">
+                                  {fmt(inst.amount ?? matchedPayment?.amount ?? selectedEnrollment.total_fee / (rawInstList.length || 1))}
+                                </span>
+                              </div>
+
+                              <div className="flex justify-between text-slate-500 text-[11px]">
+                                <span>Due: {formatDate(inst.due_date)}</span>
+                                <span>
+                                  Status: {getStatusBadge(isPaid ? 'paid' : inst.status || 'pending')}
+                                </span>
+                              </div>
+
+                              {isPaid && (
+                                <div className="pt-2 border-t border-slate-200 space-y-1.5">
+                                  <div className="flex justify-between text-slate-600">
+                                    <span>Paid: {formatDate(paidDate)}</span>
+                                    <span className="font-bold text-slate-800">
+                                      Payment Method:{' '}
+                                      <span className="text-[#9c6b2e] font-extrabold">
+                                        {methodDisplay}
+                                      </span>
+                                    </span>
+                                  </div>
+
+                                  {/* Cash + UPI Breakdown */}
+                                  {isSplit && (
+                                    <div className="p-2.5 rounded-lg bg-amber-50/80 border border-amber-200 text-[11px] space-y-1 mt-1">
+                                      <div className="flex justify-between">
+                                        <span className="text-amber-900 font-semibold">Cash Amount:</span>
+                                        <span className="font-extrabold text-amber-950">{fmt(cashAmount ?? 0)}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="text-amber-900 font-semibold">UPI Amount:</span>
+                                        <span className="font-extrabold text-amber-950">{fmt(upiAmount ?? 0)}</span>
+                                      </div>
+                                      {paymentRef && (
+                                        <div className="flex justify-between pt-1 border-t border-amber-200/60 font-mono text-[10px]">
+                                          <span className="text-amber-800">Payment Ref:</span>
+                                          <span className="text-amber-950 font-bold select-all">{paymentRef}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Pure Cash with amount */}
+                                  {isCash && (
+                                    <div className="space-y-1 mt-1">
+                                      {cashAmount !== null && (
+                                        <div className="flex justify-between text-[11px] text-slate-600 bg-white p-2 rounded-lg border border-slate-200">
+                                          <span>Cash Amount:</span>
+                                          <span className="font-bold text-slate-900">{fmt(cashAmount)}</span>
+                                        </div>
+                                      )}
+                                      {paymentRef && (
+                                        <div className="flex justify-between font-mono text-[10px] bg-slate-100 p-1.5 rounded-lg text-slate-700">
+                                          <span>Receipt / Ref:</span>
+                                          <span className="font-bold select-all">{paymentRef}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Pure UPI with amount and transaction id */}
+                                  {isUpi && (
+                                    <div className="p-2.5 rounded-lg bg-sky-50/80 border border-sky-200 text-[11px] space-y-1 mt-1">
+                                      {upiAmount !== null && (
+                                        <div className="flex justify-between">
+                                          <span className="text-sky-900 font-semibold">UPI Amount:</span>
+                                          <span className="font-extrabold text-sky-950">{fmt(upiAmount)}</span>
+                                        </div>
+                                      )}
+                                      {paymentRef && (
+                                        <div className="flex justify-between font-mono text-[10px]">
+                                          <span className="text-sky-800">UPI Ref:</span>
+                                          <span className="text-sky-950 font-bold select-all">{paymentRef}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Razorpay transaction details - ALWAYS show razorpay_payment_id if Razorpay */}
+                                  {isRazorpay && (
+                                    <div className="flex justify-between items-center font-mono text-[10px] bg-slate-100 px-2.5 py-1.5 rounded-lg text-slate-700 mt-1">
+                                      <span className="font-sans font-semibold text-slate-500">Razorpay ID:</span>
+                                      <span className="font-bold select-all text-slate-900">
+                                        {razorpayId || 'Online Payment'}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </section>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

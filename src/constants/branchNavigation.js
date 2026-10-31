@@ -154,7 +154,7 @@ export const BRANCH_NAV_CONFIG = [
       {
         id: 'fees',
         backendKey: 'student_fees',
-        label: 'Student fees',
+        label: 'Branch Revenue',
         description: 'Fee payment records, receipts, and branch profit summaries',
         icon: IndianRupee,
         path: '/branch-admin/profit',
