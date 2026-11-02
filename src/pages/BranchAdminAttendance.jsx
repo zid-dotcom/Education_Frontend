@@ -1,11 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  Calendar,
   CalendarDays,
   Circle,
   Loader2,
   Menu,
   Save,
+  Clock,
+  CheckCircle2,
 } from "lucide-react";
+import AttendanceCalendarMatrix from "../components/common/AttendanceCalendarMatrix";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import BranchAdminSidebar from "../components/layout/BranchAdminSidebar";
@@ -76,6 +80,51 @@ const BranchAdminAttendance = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("attendance");
+
+  const handleMatrixSaveStatus = async (personId, dateStr, newStatus, existingRecord) => {
+    if (!token) return;
+    setSaving(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      if (newStatus === null) {
+        if (existingRecord) {
+          await updateBranchAdminAttendanceApi(existingRecord.id, { status: "absent" }, token);
+          setHistoryAttendance((prev) =>
+            prev.map((r) => (r.id === existingRecord.id ? { ...r, status: "Absent" } : r))
+          );
+        }
+        return;
+      }
+
+      if (existingRecord) {
+        await updateBranchAdminAttendanceApi(existingRecord.id, { status: newStatus }, token);
+        setHistoryAttendance((prev) =>
+          prev.map((r) => (r.id === existingRecord.id ? { ...r, status: newStatus } : r))
+        );
+      } else {
+        const res = await markBranchAdminAttendanceApi(
+          { date: dateStr, status: newStatus },
+          token
+        );
+        const newRecord = res?.attendance || {
+          id: Date.now(),
+          date: dateStr,
+          status: newStatus,
+        };
+        setHistoryAttendance((prev) => [...prev, newRecord]);
+      }
+      setSuccess(`Your attendance for ${formatDate(dateStr)} was saved as ${newStatus}.`);
+      await loadAttendance(selectedDate);
+    } catch (err) {
+      setError(err.message || "Failed to save attendance.");
+      throw err;
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const loadAttendance = async (date = "") => {
     if (!token) return;
@@ -226,7 +275,7 @@ const BranchAdminAttendance = () => {
           </div>
         </header>
 
-        <section className="mx-auto w-full max-w-6xl space-y-10 px-6 py-9 sm:px-10">
+        <section className="w-full space-y-8 px-6 py-8 sm:px-10">
           {error && (
             <div
               className="rounded-lg px-4 py-3 text-sm font-medium"
@@ -244,248 +293,181 @@ const BranchAdminAttendance = () => {
             </div>
           )}
 
-          {/* ---- Focal card: mark / update attendance ---- */}
-          <section
-            className="overflow-hidden rounded-2xl"
-            style={{ background: "#ffffff", border: "1px solid #e3ddd0" }}
+          {/* ---- Tabs Navigation ---- */}
+          <nav
+            className="flex gap-4 sm:gap-7 overflow-x-auto whitespace-nowrap scrollbar-none pb-0.5"
+            style={{ borderBottom: "1px solid #e3ddd0" }}
           >
-            <div className="flex flex-col gap-8 p-6 sm:p-8 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex items-start gap-5">
-                <span
-                  aria-hidden="true"
-                  className="mt-1 hidden h-16 w-1 shrink-0 rounded-full sm:block"
-                  style={{ background: "#9c6b2e" }}
-                />
-                <div>
-                  <p className="text-sm" style={{ color: "#8a8175" }}>
-                    {formatDate(selectedDate, { weekday: "long" })}
-                  </p>
-                  <p
-                    className="mt-1 text-[1.6rem] leading-tight sm:text-[1.85rem]"
-                    style={{ ...serif, fontWeight: 500, color: "#17140f" }}
-                  >
-                    {formatDate(selectedDate)}
-                  </p>
-                  <div
-                    className="mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium"
-                    style={{ background: activeStatus.bg, color: activeStatus.text }}
-                  >
-                    <Circle className="h-2 w-2" fill={activeStatus.dot} stroke="none" />
-                    {selectedRecord ? `Marked ${activeStatus.label}` : "Not marked yet"}
-                  </div>
-                  {selectedRecord?.marked_at && (
-                    <p className="mt-2 text-xs" style={{ color: "#a39a8c" }}>
-                      Last updated{" "}
-                      {new Date(selectedRecord.marked_at).toLocaleString("en-IN")}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <label
-                  className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm"
-                  style={{ border: "1px solid #e3ddd0", color: "#5b5346" }}
-                >
-                  <CalendarDays className="h-4 w-4" style={{ color: "#9c6b2e" }} />
-                  <span className="sr-only">Attendance date</span>
-                  <input
-                    type="date"
-                    value={selectedDate}
-                    max={getToday()}
-                    onChange={(event) => setSelectedDate(event.target.value)}
-                    className="bg-transparent outline-none"
-                  />
-                </label>
-
-                <div className="flex overflow-hidden rounded-lg" style={{ border: "1px solid #e3ddd0" }}>
-                  {statusOptions.map((option, index) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setDraftStatus(option.value)}
-                      className="px-3.5 py-2.5 text-sm font-medium transition-colors"
-                      style={{
-                        borderLeft: index === 0 ? "none" : "1px solid #e3ddd0",
-                        background: draftStatus === option.value ? option.bg : "transparent",
-                        color: draftStatus === option.value ? option.text : "#8a8175",
-                      }}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-
+            {[
+              { id: "attendance", label: "Mark attendance", icon: CalendarDays },
+              { id: "history", label: "Attendance history", icon: Clock },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
                 <button
+                  key={tab.id}
                   type="button"
-                  onClick={saveAttendance}
-                  disabled={saving || loading}
-                  className="flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium text-white transition-opacity disabled:opacity-50"
-                  style={{ background: "#17140f" }}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    if (tab.id === "history") loadHistory();
+                  }}
+                  className="relative flex shrink-0 items-center gap-2 pb-3 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors cursor-pointer"
+                  style={{ color: isActive ? "#17140f" : "#8a8175" }}
                 >
-                  {saving ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4" />
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span>{tab.label}</span>
+                  {isActive && (
+                    <span
+                      className="absolute inset-x-0 -bottom-px h-0.5 rounded-full"
+                      style={{ background: "#9c6b2e" }}
+                    />
                   )}
-                  {selectedRecord ? "Update" : "Save"}
                 </button>
-              </div>
-            </div>
+              );
+            })}
+          </nav>
 
-            {/* ---- Summary strip ---- */}
-            <div
-              className="grid grid-cols-3 divide-x"
-              style={{ borderTop: "1px solid #e3ddd0", background: "#faf8f4" }}
-            >
-              {[
-                { label: "Present", value: visibleSummary.present, color: "#5c7a5a" },
-                { label: "Half day", value: visibleSummary.half_day, color: "#b0803a" },
-                { label: "Leave", value: visibleSummary.leave, color: "#a24a3a" },
-              ].map((stat) => (
-                <div key={stat.label} className="px-6 py-5" style={{ borderColor: "#e3ddd0" }}>
-                  <p className="text-xs" style={{ color: "#a39a8c" }}>
-                    {stat.label}
-                    {(startDate || endDate) && " · filtered"}
-                  </p>
-                  <p
-                    className="mt-1 text-2xl"
-                    style={{ ...serif, fontWeight: 500, color: stat.color }}
-                  >
-                    {stat.value}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* ---- History ---- */}
-          <section className="space-y-5">
-            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          {/* ---- Tab 1: Mark Attendance ---- */}
+          {activeTab === "attendance" && (
+            <div className="space-y-6">
               <div>
-                <h2 style={{ ...serif, fontWeight: 500, color: "#17140f" }} className="text-xl">
-                  Attendance history
+                <h2
+                  className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900"
+                  style={{ ...serif, fontWeight: 600, color: "#17140f" }}
+                >
+                  Administrator Attendance
                 </h2>
-                <p className="mt-1 text-sm" style={{ color: "#8a8175" }}>
-                  {filteredAttendance.length} record{filteredAttendance.length === 1 ? "" : "s"}
+                <p className="mt-1 text-sm text-slate-500">
+                  Mark and inspect your daily attendance in calendar format.
                 </p>
               </div>
-              <div className="flex flex-wrap items-end gap-3">
-                <label className="flex flex-col gap-1 text-xs" style={{ color: "#8a8175" }}>
-                  From
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(event) => setStartDate(event.target.value)}
-                    className="rounded-lg px-3 py-2 text-sm"
-                    style={{ border: "1px solid #e3ddd0", color: "#1c1a17" }}
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-xs" style={{ color: "#8a8175" }}>
-                  To
-                  <input
-                    type="date"
-                    value={endDate}
-                    min={startDate || undefined}
-                    onChange={(event) => setEndDate(event.target.value)}
-                    className="rounded-lg px-3 py-2 text-sm"
-                    style={{ border: "1px solid #e3ddd0", color: "#1c1a17" }}
-                  />
-                </label>
-                {(startDate || endDate) && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStartDate("");
-                      setEndDate("");
-                    }}
-                    className="rounded-lg px-3 py-2 text-sm font-medium"
-                    style={{ color: "#9c6b2e" }}
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-            </div>
 
-            <div className="overflow-hidden rounded-2xl" style={{ border: "1px solid #e3ddd0" }}>
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-left text-sm">
-                  <thead>
-                    <tr style={{ borderBottom: "1px solid #e3ddd0", background: "#faf8f4" }}>
-                      <th className="px-6 py-3 text-xs font-medium" style={{ color: "#8a8175" }}>Date</th>
-                      <th className="px-6 py-3 text-xs font-medium" style={{ color: "#8a8175" }}>Status</th>
-                      <th className="px-6 py-3 text-xs font-medium" style={{ color: "#8a8175" }}>Marked at</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loading ? (
-                      <tr>
-                        <td colSpan="3" className="px-6 py-16 text-center" style={{ color: "#a39a8c" }}>
-                          <Loader2 className="mx-auto h-5 w-5 animate-spin" />
-                        </td>
+              <AttendanceCalendarMatrix
+                people={[
+                  {
+                    id: user?.id || "admin",
+                    name: user?.name || user?.full_name || "Branch Administrator",
+                    email: user?.email || "",
+                    role: user?.branch_name || "Branch Administrator",
+                  },
+                ]}
+                records={historyAttendance}
+                onSaveStatus={handleMatrixSaveStatus}
+                title="My Attendance"
+                subtitle="Personal monthly attendance register"
+                isSinglePerson={true}
+                fullWidth={true}
+                savingKey={saving ? "admin" : null}
+              />
+            </div>
+          )}
+
+          {/* ---- Tab 2: Attendance History ---- */}
+          {activeTab === "history" && (
+            <div className="space-y-6">
+              <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+                <div>
+                  <h2 style={{ ...serif, fontWeight: 500, color: "#17140f" }} className="text-xl sm:text-2xl font-bold">
+                    Attendance History
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {filteredAttendance.length} record{filteredAttendance.length === 1 ? "" : "s"} found
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-end gap-3">
+                  <label className="flex flex-col gap-1 text-xs text-slate-500 font-semibold">
+                    From
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(event) => setStartDate(event.target.value)}
+                      className="rounded-lg px-3 py-2 text-sm bg-white"
+                      style={{ border: "1px solid #e3ddd0", color: "#1c1a17" }}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs text-slate-500 font-semibold">
+                    To
+                    <input
+                      type="date"
+                      value={endDate}
+                      min={startDate || undefined}
+                      onChange={(event) => setEndDate(event.target.value)}
+                      className="rounded-lg px-3 py-2 text-sm bg-white"
+                      style={{ border: "1px solid #e3ddd0", color: "#1c1a17" }}
+                    />
+                  </label>
+                  {(startDate || endDate) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStartDate("");
+                        setEndDate("");
+                      }}
+                      className="rounded-lg px-3 py-2 text-sm font-semibold transition hover:underline"
+                      style={{ color: "#9c6b2e" }}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-2xl bg-white shadow-xs" style={{ border: "1px solid #e3ddd0" }}>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-left text-sm">
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid #e3ddd0", background: "#faf8f4" }}>
+                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">Date</th>
+                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">Status</th>
+                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">Marked at</th>
                       </tr>
-                    ) : filteredAttendance.length === 0 ? (
-                      <tr>
-                        <td colSpan="3" className="px-6 py-16 text-center text-sm" style={{ color: "#a39a8c" }}>
-                          No attendance records in this range yet.
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredAttendance.map((record, index) => {
-                        const status = statusFor(record.status);
-                        const isActive = record.date === selectedDate;
-                        return (
-                          <tr
-                            key={record.id}
-                            onClick={() => {
-                              setSelectedDate(record.date);
-                              setDraftStatus(normalizeStatus(record.status));
-                            }}
-                            className="cursor-pointer transition-colors"
-                            style={{
-                              borderTop: index === 0 ? "none" : "1px solid #efe9dd",
-                              background: isActive ? "#f7f1e4" : "transparent",
-                              boxShadow: isActive ? "inset 3px 0 0 #9c6b2e" : "inset 3px 0 0 transparent",
-                            }}
-                            onMouseEnter={(e) => {
-                              if (!isActive) e.currentTarget.style.background = "#faf8f4";
-                            }}
-                            onMouseLeave={(e) => {
-                              if (!isActive) e.currentTarget.style.background = "transparent";
-                            }}
-                          >
-                            <td className="px-6 py-4 font-medium" style={{ color: "#1c1a17" }}>
-                              {formatDate(record.date)}
-                              {isActive && (
-                                <span className="ml-2 text-xs font-normal" style={{ color: "#9c6b2e" }}>
-                                  selected
+                    </thead>
+                    <tbody className="divide-y divide-[#efe9dd]">
+                      {loading ? (
+                        <tr>
+                          <td colSpan="3" className="px-6 py-16 text-center text-slate-400">
+                            <Loader2 className="mx-auto h-5 w-5 animate-spin text-[#9c6b2e]" />
+                          </td>
+                        </tr>
+                      ) : filteredAttendance.length === 0 ? (
+                        <tr>
+                          <td colSpan="3" className="px-6 py-16 text-center text-sm text-slate-500">
+                            No attendance records in this range yet.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredAttendance.map((record) => {
+                          const status = statusFor(record.status);
+                          return (
+                            <tr key={record.id} className="hover:bg-slate-50/70 transition-colors">
+                              <td className="px-6 py-4 font-bold text-slate-900">
+                                {formatDate(record.date)}
+                              </td>
+                              <td className="px-6 py-4">
+                                <span
+                                  className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold"
+                                  style={{ background: status.bg, color: status.text }}
+                                >
+                                  <Circle className="h-2 w-2" fill={status.dot} stroke="none" />
+                                  {status.label}
                                 </span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4">
-                              <span
-                                className="inline-flex items-center gap-2 text-sm font-medium"
-                                style={{ color: status.text }}
-                              >
-                                <Circle className="h-2 w-2" fill={status.dot} stroke="none" />
-                                {status.label}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 text-xs" style={{ color: "#a39a8c" }}>
-                              {record.marked_at
-                                ? new Date(record.marked_at).toLocaleString("en-IN")
-                                : "—"}
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
+                              </td>
+                              <td className="px-6 py-4 text-xs font-medium text-slate-500">
+                                {record.marked_at
+                                  ? new Date(record.marked_at).toLocaleString("en-IN")
+                                  : "—"}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-          </section>
+          )}
         </section>
       </main>
     </div>

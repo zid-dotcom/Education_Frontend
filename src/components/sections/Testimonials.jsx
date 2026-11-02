@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Star } from 'lucide-react';
-import { testimonials as defaultTestimonials } from '../../data/testimonials';
 import { getPublicReviewsApi } from '../../services/reviews';
 
 const Testimonials = () => {
-  const [reviewsList, setReviewsList] = useState(defaultTestimonials);
+  const [reviewsList, setReviewsList] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -23,16 +23,17 @@ const Testimonials = () => {
             rating: rev.rating || 5,
             quote: rev.review,
           }));
-          // Combine or display real reviews; if less than 4, pad with defaults
-          if (mapped.length < 4) {
-            setReviewsList([...mapped, ...defaultTestimonials]);
-          } else {
-            setReviewsList(mapped);
-          }
+          setReviewsList(mapped);
+        } else {
+          setReviewsList([]);
         }
       })
       .catch((err) => {
         console.warn('Could not load live public reviews:', err);
+        if (isMounted) setReviewsList([]);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
       });
 
     return () => {
@@ -40,8 +41,14 @@ const Testimonials = () => {
     };
   }, []);
 
-  // Duplicate the list so the marquee loops seamlessly
-  const track = [...reviewsList, ...reviewsList];
+  // If there are no approved/real reviews yet, don't show dummy data
+  if (!loading && reviewsList.length === 0) {
+    return null;
+  }
+
+  // Duplicate the list so the marquee loops seamlessly across all screen sizes
+  const repeatCount = reviewsList.length > 0 ? Math.max(2, Math.ceil(8 / reviewsList.length)) : 1;
+  const track = Array(repeatCount).fill(reviewsList).flat();
 
   return (
     <section className="py-16 sm:py-28 bg-[linear-gradient(115deg,#fffaf0_0%,#ffffff_46%,#fff4c7_100%)] relative overflow-hidden">
@@ -99,43 +106,43 @@ const Testimonials = () => {
               key={`${item.id}-${idx}`}
               className="w-[300px] sm:w-[340px] shrink-0 bg-white rounded-[1.75rem] p-6 sm:p-8 border border-amber-100 shadow-[0_1px_2px_rgba(28,25,23,0.06)] flex flex-col justify-between"
             >
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="tm-serif text-[#1C1917] text-4xl leading-none select-none">
-                    "
-                  </div>
-                  {/* Rating Stars */}
-                  <div className="flex items-center gap-0.5">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star
-                        key={star}
-                        className={`h-3.5 w-3.5 ${
-                          star <= (item.rating || 5)
-                            ? 'text-amber-400 fill-amber-400'
-                            : 'text-stone-200'
-                        }`}
-                      />
-                    ))}
-                  </div>
+              {/* Quote Mark & Rating */}
+              <div className="flex items-center justify-between mb-6">
+                <span className="tm-serif text-4xl text-amber-500/70 leading-none">“</span>
+                <div className="flex gap-1" aria-label={`${item.rating} out of 5 stars`}>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`w-3.5 h-3.5 ${
+                        i < item.rating
+                          ? 'fill-amber-400 text-amber-400'
+                          : 'fill-stone-200 text-stone-200'
+                      }`}
+                    />
+                  ))}
                 </div>
-                <p className="tm-sans text-sm text-stone-700 leading-relaxed line-clamp-4">
-                  {item.quote}
-                </p>
               </div>
 
-              <div className="mt-8 pt-4 border-t border-amber-200/60 flex items-center gap-3">
+              {/* Quote Text */}
+              <p className="tm-sans text-stone-700 text-sm sm:text-base leading-relaxed line-clamp-4 flex-1">
+                {item.quote}
+              </p>
+
+              {/* Author */}
+              <div className="flex items-center gap-3.5 pt-6 mt-6 border-t border-amber-100/60">
                 <img
                   src={item.avatar}
                   alt={item.name}
-                  className="w-10 h-10 rounded-full object-cover border border-amber-200"
+                  className="w-10 h-10 rounded-full object-cover ring-2 ring-amber-100"
+                  loading="lazy"
                 />
                 <div className="min-w-0">
-                  <div className="tm-sans text-xs font-bold text-[#1C1917] truncate">
+                  <h4 className="tm-sans text-xs sm:text-sm font-semibold text-[#1C1917] truncate">
                     {item.name}
-                  </div>
-                  <div className="tm-sans text-[11px] font-semibold text-stone-500 truncate">
-                    {item.course} • {item.batch}
-                  </div>
+                  </h4>
+                  <p className="tm-sans text-[11px] text-stone-600 truncate mt-0.5">
+                    {item.course} {item.batch ? `• ${item.batch}` : ''}
+                  </p>
                 </div>
               </div>
             </div>

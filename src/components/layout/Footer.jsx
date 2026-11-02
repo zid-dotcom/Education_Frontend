@@ -84,7 +84,7 @@ const Footer = ({ onOpenApplyModal }) => {
                 <Link to="/contact" className="hover:text-[#FBBF24] transition-colors">Terms & Conditions</Link>
               </li>
               <li>
-                <Link to="/contact" className="hover:text-[#FBBF24] transition-colors">Privacy Policy</Link>
+                <Link to="/privacy-policy" className="hover:text-[#FBBF24] transition-colors">Privacy Policy</Link>
               </li>
             </ul>
           </div>

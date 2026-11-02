@@ -229,7 +229,7 @@ const StudentStudyMaterials = () => {
   };
 
   return (
-    <div className="min-h-full bg-[#FAF8F4] p-4 sm:p-6 lg:p-8 space-y-6">
+    <div className="w-full space-y-6 pb-8">
       {/* 1. Header Banner (Warm Light Theme) */}
       <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-r from-[#FAF8F4] via-[#F5EFE6] to-[#FAF8F4] border border-[#E3DDD0] p-6 sm:p-8 text-[#17140F] shadow-sm">
         {/* Background Decorative Glow Accents */}
@@ -242,7 +242,7 @@ const StudentStudyMaterials = () => {
               <FolderDown className="h-3.5 w-3.5 text-[#9C6B2E]" />
               <span>Academic Resources</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#17140F] font-['Fraunces',serif]">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#17140F]">
               Study Materials & Notes
             </h1>
             <p className="text-xs sm:text-sm text-[#5B5346] font-normal leading-relaxed">

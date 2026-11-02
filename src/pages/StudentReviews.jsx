@@ -236,10 +236,7 @@ const StudentReviews = () => {
             <span className="inline-flex items-center rounded-full bg-[#FAF4EA] px-3 py-1 text-[11px] font-bold text-[#9C6B2E] border border-[#E3DDD0]">
               <span>Student Experience & Feedback</span>
             </span>
-            <h1
-              className="text-2xl sm:text-3xl font-extrabold text-[#17140F] tracking-tight"
-              style={{ fontFamily: "'Fraunces', serif" }}
-            >
+            <h1 className="text-xl sm:text-2xl font-bold text-[#17140F] tracking-tight">
               Course Reviews
             </h1>
             <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">

@@ -123,7 +123,7 @@ const StudentEnquiries = () => {
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-[#9C6B2E]">Student Portal</p>
-              <h1 className="text-2xl sm:text-3xl font-black text-[#17140F] tracking-tight">Enquiries</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-[#17140F] tracking-tight">Enquiries</h1>
               <p className="mt-1 text-xs sm:text-sm text-[#5B5346] font-normal">
                 Send admission requests or general queries directly to your branch administrator.
               </p>

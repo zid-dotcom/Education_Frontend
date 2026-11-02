@@ -261,98 +261,122 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
       `}</style>
       
       {/* BREADCRUMB & HERO BANNER */}
-      <section className="bg-white py-6 sm:py-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
-          <Link
-            to={coursePath}
-            className={`mb-6 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition-colors ${
-              studentView
-                ? 'text-[#9C6B2E] hover:text-[#855923]'
-                : 'text-slate-500 hover:text-amber-700'
-            }`}
-          >
-            <ArrowLeft className="w-4 h-4" /> Back to All Courses
-          </Link>
+      {studentView ? (
+        <section className="bg-white py-6 sm:py-10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <Link
+              to={coursePath}
+              className="mb-6 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition-colors text-[#9C6B2E] hover:text-[#855923]"
+            >
+              <ArrowLeft className="w-4 h-4" /> Back to All Courses
+            </Link>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-            
-            <div className="space-y-5 lg:col-span-8">
-              <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className={`inline-flex px-3 py-1 text-xs font-bold uppercase tracking-wider ${
-                    studentView
-                      ? 'rounded-full border border-[#E3DDD0] bg-[#FAF8F4] text-[#9C6B2E]'
-                      : 'border border-amber-200 bg-amber-50 text-amber-800'
-                  }`}
-                >
-                  {category}
-                </span>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+              <div className="space-y-5 lg:col-span-8">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full border border-[#E3DDD0] bg-[#FAF8F4] text-[#9C6B2E]">
+                    {category}
+                  </span>
+                </div>
+
+                <h1 className="max-w-4xl text-3xl font-bold leading-tight tracking-tight text-slate-950 sm:text-5xl">
+                  {title}
+                </h1>
+
+                <p className="max-w-3xl text-base font-normal leading-relaxed text-slate-600 sm:text-lg">
+                  {shortDesc}
+                </p>
+
+                <div className="flex flex-wrap items-center gap-3 pt-1 text-xs font-semibold text-slate-700 sm:text-sm">
+                  <span className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#E3DDD0] bg-[#FAF8F4] text-[#9C6B2E] font-bold">
+                    <Clock className="h-4 w-4 text-[#9C6B2E]" /> Duration: {duration}
+                  </span>
+                  <span className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#E3DDD0] bg-[#FAF8F4] text-slate-700 font-bold">
+                    <BarChart className="w-4 h-4 text-[#9C6B2E]" /> Level: {level}
+                  </span>
+                </div>
               </div>
 
-              <h1 className="max-w-4xl text-3xl font-bold leading-tight tracking-tight text-slate-950 sm:text-5xl">
-                {title}
-              </h1>
-
-              <p className="max-w-3xl text-base font-normal leading-relaxed text-slate-600 sm:text-lg">
-                {shortDesc}
-              </p>
-
-              <div className="flex flex-wrap items-center gap-3 pt-1 text-xs font-semibold text-slate-700 sm:text-sm">
-                <span
-                  className={`flex items-center gap-1.5 px-3 py-2 ${
-                    studentView
-                      ? 'rounded-xl border border-[#E3DDD0] bg-[#FAF8F4] text-[#9C6B2E] font-bold'
-                      : 'rounded-lg border border-amber-200 bg-amber-50 text-amber-800'
-                  }`}
-                >
-                  <Clock className={`h-4 w-4 ${studentView ? 'text-[#9C6B2E]' : 'text-amber-700'}`} /> Duration: {duration}
-                </span>
-                <span
-                  className={`flex items-center gap-1.5 px-3 py-2 ${
-                    studentView
-                      ? 'rounded-xl border border-[#E3DDD0] bg-[#FAF8F4] text-slate-700 font-bold'
-                      : 'rounded-lg border border-slate-200 bg-slate-50 text-slate-700'
-                  }`}
-                >
-                  <BarChart className={`w-4 h-4 ${studentView ? 'text-[#9C6B2E]' : 'text-slate-500'}`} /> Level: {level}
-                </span>
+              <div className="lg:col-span-4">
+                <div className="overflow-hidden rounded-2xl border border-[#E3DDD0] bg-[#FAF8F4] shadow-xs">
+                  <img
+                    src={imageUrl}
+                    alt={title}
+                    className="h-64 w-full object-cover sm:h-72"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80';
+                    }}
+                  />
+                </div>
               </div>
             </div>
-
-            <div className="lg:col-span-4">
-              <div
-                className={`overflow-hidden ${
-                  studentView
-                    ? 'rounded-2xl border border-[#E3DDD0] bg-[#FAF8F4] shadow-xs'
-                    : 'rounded-[1.75rem] border-[1.5px] border-[#f0d9a8] bg-[#fffdf8] shadow-[0_22px_45px_rgba(169,132,74,0.1)]'
-                }`}
-              >
-                <img
-                  src={imageUrl}
-                  alt={title}
-                  className="h-64 w-full object-cover sm:h-72"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80';
-                  }}
-                />
-              </div>
-            </div>
-
           </div>
-
-        </div>
-      </section>
+        </section>
+      ) : (
+        /* PUBLIC VIEW: TOP HERO IMAGE (FULL WIDTH WITH TOP PORTION IN FULL VIEW) */
+        <section className="w-full overflow-hidden relative bg-stone-900 border-b border-amber-200/40">
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute left-0 top-0 z-10 h-1/2 w-1/3 rounded-br-full bg-gradient-to-r from-amber-300/35 via-orange-200/15 to-transparent blur-3xl"
+          />
+          <div className="relative w-full h-72 sm:h-96 md:h-[440px] lg:h-[520px] xl:h-[560px] overflow-hidden">
+            <img
+              src={imageUrl}
+              alt={title}
+              className="hero-pop-in block w-full h-full object-cover object-top"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80';
+              }}
+            />
+          </div>
+        </section>
+      )}
 
       {/* MAIN CONTENT & SIDEBAR ENROLMENT CARD */}
       <section className="bg-white py-8 sm:py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 items-start lg:grid-cols-12 gap-8">
+        <div className={studentView ? "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" : "w-full max-w-[1920px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16"}>
+          {!studentView && (
+            <Link
+              to={coursePath}
+              className="mb-6 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition-colors text-slate-500 hover:text-amber-700"
+            >
+              <ArrowLeft className="w-4 h-4" /> Back to All Courses
+            </Link>
+          )}
+
+          <div className="grid grid-cols-1 items-start lg:grid-cols-12 gap-8 lg:gap-10 xl:gap-12">
             
             {/* LEFT MAIN DETAILS */}
             <div className="space-y-6 lg:col-span-8">
-              
+              {!studentView && (
+                <div className="space-y-4 pb-6 border-b border-stone-200">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full border border-amber-200 bg-amber-50 text-amber-800">
+                      {category}
+                    </span>
+                  </div>
+
+                  <h1 className="w-full text-3xl font-extrabold leading-tight tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
+                    {title}
+                  </h1>
+
+                  <p className="w-full text-base font-normal leading-relaxed text-slate-600 sm:text-lg">
+                    {shortDesc}
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-3 pt-1 text-xs font-semibold text-slate-700 sm:text-sm">
+                    <span className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 font-bold">
+                      <Clock className="h-4 w-4 text-amber-700" /> Duration: {duration}
+                    </span>
+                    <span className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-700 font-bold">
+                      <BarChart className="w-4 h-4 text-slate-500" /> Level: {level}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Course Overview */}
               <div>
                 <h3 className="mb-3 text-2xl font-bold text-slate-950">
@@ -373,7 +397,7 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
                   >
                     Key Skills You Will Acquire
                   </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                     {course.skills.map((skill, idx) => (
                       <div
                         key={idx}
@@ -615,12 +639,12 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
       {/* RELATED COURSES */}
       {relatedCourses.length > 0 && (
         <section className="border-t border-slate-200 bg-white py-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className={studentView ? "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" : "w-full max-w-[1920px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16"}>
             <h3 className="mb-8 text-2xl font-bold text-slate-950">
               Explore Other Related Courses
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
               {relatedCourses.map((rCourse) => (
                 <CourseCard key={rCourse.id} course={rCourse} onApply={onOpenApplyModal} linkPrefix={coursePath} />
               ))}

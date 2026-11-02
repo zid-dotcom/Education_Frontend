@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, CheckCircle2, Clock, Loader2, RefreshCw, ShoppingCart, X, User, Mail, Phone, GraduationCap, MapPin, Users, IndianRupee, Wallet, Calendar, AlertCircle, ShieldCheck, CreditCard, BookOpen, ChevronDown, Search } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -27,6 +27,8 @@ const SuperAdminDueStudents = () => {
   const [branches, setBranches] = useState([]);
   const [selectedBranchId, setSelectedBranchId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [dueStudents, setDueStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   
@@ -83,6 +85,105 @@ const SuperAdminDueStudents = () => {
   useEffect(() => {
     loadDueStudents(selectedBranchId);
   }, [selectedBranchId, token]);
+
+  const getStudentDueDates = (student) => {
+    const dates = [];
+    if (Array.isArray(student.due_enrollments)) {
+      student.due_enrollments.forEach((enr) => {
+        if (Array.isArray(enr.due_installments)) {
+          enr.due_installments.forEach((inst) => {
+            if (inst.due_date) dates.push(inst.due_date);
+          });
+        }
+      });
+    }
+    if (Array.isArray(student.due_installments)) {
+      student.due_installments.forEach((inst) => {
+        if (inst.due_date) dates.push(inst.due_date);
+      });
+    }
+    if (Array.isArray(student.installments)) {
+      student.installments.forEach((inst) => {
+        if (inst.due_date) dates.push(inst.due_date);
+      });
+    }
+    if (student.next_installment?.due_date) dates.push(student.next_installment.due_date);
+    if (student.next_due_date) dates.push(student.next_due_date);
+    if (student.due_date) dates.push(student.due_date);
+    if (student.admission_date && dates.length === 0) dates.push(student.admission_date);
+    return dates;
+  };
+
+  const formatDisplayDate = (dStr) => {
+    if (!dStr) return '—';
+    try {
+      const clean = dStr.includes('T') ? dStr : `${dStr}T00:00:00`;
+      const d = new Date(clean);
+      if (isNaN(d.getTime())) return String(dStr);
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch {
+      return String(dStr);
+    }
+  };
+
+  const filteredDueStudents = useMemo(() => {
+    return dueStudents.filter((p) => {
+      const branchMatches =
+        !selectedBranchId ||
+        p.due_enrollments?.some((e) => String(e.branch_id) === String(selectedBranchId)) ||
+        String(p.branch_id) === String(selectedBranchId);
+
+      const term = searchTerm.trim().toLowerCase();
+      const nameMatches = !term || p.name?.toLowerCase().includes(term);
+      const courseMatches =
+        !term ||
+        p.due_enrollments?.some((e) => e.course_title?.toLowerCase().includes(term)) ||
+        p.course_title?.toLowerCase().includes(term) ||
+        p.course_name?.toLowerCase().includes(term);
+      const searchMatches = !term || nameMatches || courseMatches;
+
+      let dateMatches = true;
+      if (fromDate || toDate) {
+        const dates = getStudentDueDates(p);
+        if (dates.length === 0) {
+          dateMatches = false;
+        } else {
+          dateMatches = dates.some((dStr) => {
+            const cleanDate = dStr.split('T')[0];
+            if (fromDate && cleanDate < fromDate) return false;
+            if (toDate && cleanDate > toDate) return false;
+            return true;
+          });
+        }
+      }
+
+      return branchMatches && searchMatches && dateMatches;
+    });
+  }, [dueStudents, selectedBranchId, searchTerm, fromDate, toDate]);
+
+  const getPendingTermsText = (student) => {
+    if (!student) return '';
+    const installments = student.installments || [];
+    const pendingInstalls = installments.filter((inst) => {
+      const status = String(inst.status || '').toLowerCase();
+      const rem = Number(inst.remaining_amount ?? (Number(inst.amount || 0) - Number(inst.paid_amount || 0)));
+      return status !== 'paid' && (status === 'pending' || status === 'due' || status === 'partial' || rem > 0);
+    });
+
+    const listToUse = pendingInstalls.length > 0 ? pendingInstalls : installments;
+    if (listToUse.length === 0) return '';
+
+    const numbers = listToUse.map((inst, idx) => inst.installment_number || idx + 1);
+    if (numbers.length === 1) return `#${numbers[0]}`;
+    return `#${numbers.slice(0, -1).join(', #')} and #${numbers[numbers.length - 1]}`;
+  };
+
+  const totalOutstanding = useMemo(() => {
+    return dueStudents.reduce((sum, s) => {
+      const amt = Number(s.total_due_amount ?? s.balance_amount ?? s.remaining_amount ?? 0);
+      return sum + amt;
+    }, 0);
+  }, [dueStudents]);
 
   
 
@@ -164,41 +265,110 @@ const SuperAdminDueStudents = () => {
             </div>
           )}
 
-          {/* Filter Bar: Branch selection + Tabs */}
+          {/* Summary Stat Cards */}
+          <section className="grid gap-4 sm:grid-cols-2" aria-label="Due students summary">
+            <div
+              className="rounded-2xl p-5 bg-white border shadow-2xs"
+              style={{ borderColor: '#e3ddd0' }}
+            >
+              <p className="text-xs uppercase font-bold text-stone-500 tracking-wider">
+                Students with dues
+              </p>
+              <p className="mt-2 text-3xl font-bold text-slate-900" style={{ fontFamily: "'Fraunces', serif" }}>
+                {loading ? <Loader2 className="h-6 w-6 animate-spin mt-1" /> : dueStudents.length}
+              </p>
+            </div>
+            <div
+              className="rounded-2xl p-5 bg-white border shadow-2xs"
+              style={{ borderColor: '#e3ddd0' }}
+            >
+              <p className="text-xs uppercase font-bold text-stone-500 tracking-wider">
+                Total outstanding due
+              </p>
+              <p className="mt-2 text-3xl font-bold text-[#9c6b2e]" style={{ fontFamily: "'Fraunces', serif" }}>
+                {loading ? (
+                  <Loader2 className="h-6 w-6 animate-spin mt-1" />
+                ) : (
+                  fmt(totalOutstanding)
+                )}
+              </p>
+            </div>
+          </section>
+
+          {/* Filter Bar: Branch selection + Date Range + Search */}
           <div
             className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-white border shadow-2xs"
             style={{ borderColor: '#e3ddd0' }}
           >
+            {/* Left controls: Branch Filter & Date Range */}
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Branch Filter dropdown */}
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-stone-500" />
+                <div className="relative">
+                  <select
+                    value={selectedBranchId}
+                    onChange={(e) => setSelectedBranchId(e.target.value)}
+                    className="appearance-none rounded-xl border pl-3 pr-8 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#9c6b2e] bg-stone-50"
+                    style={{ borderColor: '#e3ddd0', color: '#17140f' }}
+                  >
+                    <option value="">All Branches</option>
+                    {branches.map((b) => (
+                      <option
+                        key={b.id ?? b.branch_id}
+                        value={String(b.id ?? b.branch_id)}
+                      >
+                        {b.name || b.branch_name}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2"
+                    style={{ color: '#a39a8c' }}
+                  />
+                </div>
+              </div>
 
-            {/* Branch Filter dropdown */}
-            <div className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-stone-500" />
-              <div className="relative">
-                <select
-                  value={selectedBranchId}
-                  onChange={(e) => setSelectedBranchId(e.target.value)}
-                  className="appearance-none rounded-xl border pl-3 pr-8 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#9c6b2e] bg-stone-50"
-                  style={{ borderColor: '#e3ddd0', color: '#17140f' }}
-                >
-                  <option value="">All Branches</option>
-                  {branches.map((b) => (
-                    <option
-                      key={b.id ?? b.branch_id}
-                      value={String(b.id ?? b.branch_id)}
-                    >
-                      {b.name || b.branch_name}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2"
-                  style={{ color: '#a39a8c' }}
-                />
+              {/* Date Filter: From Date & To Date */}
+              <div className="flex flex-wrap items-center gap-2 sm:border-l sm:pl-3 border-stone-200">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-600">
+                  <Calendar className="h-3.5 w-3.5 text-[#9c6b2e]" />
+                  <span className="text-[11px] uppercase tracking-wider text-stone-500 font-bold">From:</span>
+                  <input
+                    type="date"
+                    value={fromDate}
+                    onChange={(e) => setFromDate(e.target.value)}
+                    className="rounded-xl border border-[#e3ddd0] bg-stone-50 px-2.5 py-1.5 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#9c6b2e]/30 focus:border-[#9c6b2e]"
+                  />
+                </div>
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-600">
+                  <span className="text-[11px] uppercase tracking-wider text-stone-500 font-bold">To:</span>
+                  <input
+                    type="date"
+                    value={toDate}
+                    onChange={(e) => setToDate(e.target.value)}
+                    className="rounded-xl border border-[#e3ddd0] bg-stone-50 px-2.5 py-1.5 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#9c6b2e]/30 focus:border-[#9c6b2e]"
+                  />
+                </div>
+                {(fromDate || toDate) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFromDate('');
+                      setToDate('');
+                    }}
+                    className="rounded-lg px-2 py-1 text-stone-500 hover:text-stone-800 hover:bg-stone-100 transition text-xs font-semibold flex items-center gap-1 border border-stone-200"
+                    title="Clear date filter"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    <span>Clear</span>
+                  </button>
+                )}
               </div>
             </div>
 
             {/* Search Input */}
-            <div className="flex-1 w-full sm:w-auto">
+            <div className="flex-1 min-w-[220px] max-w-md w-full sm:w-auto">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
                 <input
@@ -220,7 +390,7 @@ const SuperAdminDueStudents = () => {
                 style={{ color: '#9c6b2e' }}
               />
             </div>
-          ) : dueStudents.length === 0 ? (
+          ) : filteredDueStudents.length === 0 ? (
             <div
               className="rounded-2xl px-5 py-16 text-center text-sm bg-white border"
               style={{ borderColor: '#e3ddd0', color: '#64748b' }}
@@ -228,8 +398,8 @@ const SuperAdminDueStudents = () => {
               <ShoppingCart className="h-10 w-10 text-stone-300 mx-auto mb-2" />
               <p className="font-semibold text-slate-700">No due students found.</p>
               <p className="text-xs text-slate-400 mt-1">
-                {searchTerm || selectedBranchId
-                  ? 'No students found matching your criteria.'
+                {searchTerm || selectedBranchId || fromDate || toDate
+                  ? 'No students found matching your criteria or date range.'
                   : `There are currently no students with pending dues.`}
               </p>
             </div>
@@ -267,16 +437,9 @@ const SuperAdminDueStudents = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {dueStudents.filter(p => {
-                      const branchMatches = !selectedBranchId || p.due_enrollments?.some(e => String(e.branch_id) === String(selectedBranchId));
-                      if (!searchTerm) return branchMatches;
-                      
-                      const term = searchTerm.toLowerCase();
-                      const nameMatches = p.name?.toLowerCase().includes(term);
-                      const courseMatches = p.due_enrollments?.some(e => e.course_title?.toLowerCase().includes(term));
-                      return branchMatches && (nameMatches || courseMatches);
-                    }).map((p, i) => {
+                    {filteredDueStudents.map((p, i) => {
                       const id = p.enrollment_id ?? p.id;
+                      const primaryDueDate = getStudentDueDates(p)[0];
                       return (
                         <tr
                           key={id ?? i}
@@ -292,25 +455,28 @@ const SuperAdminDueStudents = () => {
                             <p className="text-[10px] text-slate-500 mt-0.5">{p.phone || '—'}</p>
                           </td>
                           <td className="px-4 py-3 text-xs font-semibold text-slate-700">
-                            {p.due_enrollments?.map(e => e.course_title).join(', ') || '—'}
+                            {p.due_enrollments?.map(e => e.course_title).join(', ') || p.course_title || '—'}
                           </td>
                           <td className="px-4 py-3 text-xs font-semibold text-slate-700">
-                            {p.due_enrollments?.map(e => e.branch_name).join(', ') || '—'}
+                            {p.due_enrollments?.map(e => e.branch_name).join(', ') || p.branch_name || '—'}
                           </td>
                           <td className="px-4 py-3 text-xs font-semibold text-slate-700">
-                            {p.due_enrollments?.[0]?.due_installments?.[0]?.due_date ? new Date(p.due_enrollments[0].due_installments[0].due_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                            {formatDisplayDate(primaryDueDate)}
                           </td>
                           <td className="px-4 py-3 font-bold text-sm">
                             <span className="text-rose-600">{fmt(p.total_due_amount)}</span>
                           </td>
                           <td className="px-4 py-3">
                             <button
-                               onClick={() => setSelectedStudent({
-                                 ...p,
-                                 ...(p.due_enrollments?.[0] || {}),
-                                 installments: p.due_enrollments?.[0]?.due_installments || [],
-                                 user_id: p.student_id
-                               })}
+                               onClick={() => {
+                                 const enr = p.due_enrollments?.[0] || p;
+                                 setSelectedStudent({
+                                   ...p,
+                                   ...enr,
+                                   installments: enr.due_installments || enr.installments || p.due_installments || p.installments || [],
+                                   user_id: p.student_id || enr.student_id || p.user_id,
+                                 });
+                               }}
                                className="px-3 py-1.5 rounded-lg text-xs font-bold text-stone-600 bg-stone-50 hover:bg-stone-100 transition whitespace-nowrap border border-stone-200 shadow-2xs"
                             >
                                View Details
@@ -343,6 +509,12 @@ const SuperAdminDueStudents = () => {
                     <span className="text-slate-300 hidden sm:inline">•</span>
                     <span className="flex items-center gap-1"><Building2 className="h-3.5 w-3.5 text-stone-500" /> {selectedStudent.branch_name}</span>
                   </p>
+                  {getPendingTermsText(selectedStudent) && (
+                    <p className="text-xs font-semibold text-rose-600 mt-1.5 flex items-center gap-1.5">
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0 text-rose-500" />
+                      Currently installment {getPendingTermsText(selectedStudent)} is pending
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
                    <div className="flex flex-col items-end mr-4">
@@ -439,11 +611,7 @@ const SuperAdminDueStudents = () => {
                                <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Branch Name</p>
                                <p className="text-sm font-medium text-slate-800 mt-1 flex items-center gap-2"><Building2 className="h-3.5 w-3.5 text-stone-500"/> {selectedStudent.branch_name}</p>
                              </div>
-                             <div>
-                               <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Course Duration</p>
-                               <p className="text-sm font-medium text-slate-800 mt-1 flex items-center gap-2"><Clock className="h-3.5 w-3.5 text-stone-500"/> {selectedStudent.course_duration || '—'}</p>
-                             </div>
-                             <div>
+                             <div className="col-span-2">
                                <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Course Fee</p>
                                <p className="text-sm font-bold text-[#9c6b2e] mt-1 flex items-center gap-1.5"><IndianRupee className="h-3.5 w-3.5 text-[#9c6b2e]"/> {fmt(selectedStudent.total_fee || selectedStudent.course_fee).replace('₹','')}</p>
                              </div>
@@ -553,9 +721,17 @@ const SuperAdminDueStudents = () => {
                 {/* Installment Schedule (Full Width) */}
                 {selectedStudent.installments && selectedStudent.installments.length > 0 ? (
                   <div className="bg-white rounded-2xl border border-[#e3ddd0] shadow-sm overflow-hidden mt-6">
-                     <div className="px-5 py-3.5 border-b border-[#e3ddd0] bg-slate-50 flex items-center gap-2">
-                       <Calendar className="h-4 w-4 text-stone-500" />
-                       <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Installment Schedule</h3>
+                     <div className="px-5 py-3.5 border-b border-[#e3ddd0] bg-slate-50 flex flex-wrap items-center justify-between gap-2">
+                       <div className="flex items-center gap-2">
+                         <Calendar className="h-4 w-4 text-stone-500" />
+                         <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Installment Due Details</h3>
+                       </div>
+                       {getPendingTermsText(selectedStudent) && (
+                         <span className="text-xs font-bold text-rose-600 flex items-center gap-1.5 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200">
+                           <span className="inline-block h-2 w-2 rounded-full bg-rose-500" />
+                           Currently installment {getPendingTermsText(selectedStudent)} is pending
+                         </span>
+                       )}
                      </div>
                      <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left">

@@ -295,7 +295,7 @@ const StudentMessages = () => {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-base sm:text-lg font-extrabold text-[#17140F] tracking-tight">
+              <h1 className="text-base sm:text-lg font-bold text-[#17140F] tracking-tight">
                 Faculty Messages
               </h1>
               {unreadCount > 0 && (

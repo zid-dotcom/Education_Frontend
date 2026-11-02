@@ -908,7 +908,7 @@ export default function StudentReceipts() {
           <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#9c6b2e]">
             Student Financial Records
           </span>
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 leading-tight" style={serif}>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#17140F] leading-tight">
             Payment Receipts
           </h1>
           <p className="mt-1 text-xs text-[#8a8175]">

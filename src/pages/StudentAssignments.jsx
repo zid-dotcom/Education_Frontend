@@ -28,6 +28,7 @@ import {
   submitStudentAssignmentApi,
 } from '../services/studentassignments';
 import { useStudentModalBlur } from '../utils/useStudentModalBlur';
+import { AssignmentBannerIllustration } from '../components/common/AssignmentBannerIllustration';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -375,33 +376,46 @@ const StudentAssignments = () => {
         }
       `}</style>
 
-      {/* Hero Banner (Warm Light Theme) */}
-      <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-r from-[#FAF8F4] via-[#F5EFE6] to-[#FAF8F4] p-6 sm:p-8 text-[#17140F] border border-[#E3DDD0] shadow-xs mb-6">
-        <div className="pointer-events-none absolute -right-12 -top-12 h-64 w-64 rounded-full bg-[#9C6B2E]/10 blur-2xl" />
-        <div className="relative z-10 flex flex-col justify-between gap-5 md:flex-row md:items-center">
-          <div className="max-w-2xl space-y-1.5">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/80 backdrop-blur-md px-3 py-1 text-[11px] font-bold text-[#9C6B2E] border border-[#E3DDD0]">
-              <ClipboardList className="h-3 w-3 text-[#9C6B2E]" />
+      {/* Hero Banner Matching User Design */}
+      <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#FAF6EE] via-[#FDF9F2] to-[#FAF1DF] text-[#17140F] border border-[#ECDDC6] shadow-xs mb-6">
+        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between">
+          {/* Left Text Content */}
+          <div className="p-6 sm:p-8 md:p-10 max-w-2xl space-y-2.5">
+            {/* Pill Badge */}
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3.5 py-1.5 text-[11px] sm:text-xs font-bold text-[#9C6B2E] border border-[#ECD8B5] shadow-2xs">
+              <ClipboardList className="h-3.5 w-3.5 text-[#9C6B2E]" />
               <span>Student Coursework & Submissions</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[#17140F] leading-tight">
+
+            {/* Title */}
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-[#17140F] leading-tight">
               My Assignments
             </h1>
-            <p className="text-xs sm:text-sm text-[#5B5346] font-normal">
+
+            {/* Subtitle */}
+            <p className="text-xs sm:text-sm md:text-base text-[#6B6252] font-medium leading-relaxed max-w-xl">
               Access tasks, submit coursework directly in PDF format, and review evaluation marks and feedback from your instructors.
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={fetchAssignments}
-            disabled={loading}
-            className="inline-flex items-center gap-2 self-start md:self-auto rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-[#17140F] border border-[#E3DDD0] shadow-xs transition hover:bg-[#F1EDE4] disabled:opacity-50"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
-          </button>
+          {/* Right SVG Illustration */}
+          <div className="w-full md:w-auto flex justify-end shrink-0 select-none overflow-hidden pr-0 sm:pr-2 md:pr-4">
+            <div className="w-full max-w-[320px] sm:max-w-[400px] md:max-w-[460px] lg:max-w-[500px]">
+              <AssignmentBannerIllustration />
+            </div>
+          </div>
         </div>
+
+        {/* Unobtrusive Top-Right Refresh Button */}
+        <button
+          type="button"
+          onClick={fetchAssignments}
+          disabled={loading}
+          title="Refresh assignments"
+          className="absolute top-4 right-4 z-20 flex h-8 w-8 items-center justify-center rounded-lg bg-white/85 text-slate-500 border border-[#E3DDD0] shadow-2xs hover:bg-white hover:text-slate-800 transition cursor-pointer disabled:opacity-50"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+        </button>
       </section>
 
       {/* Global Alerts */}

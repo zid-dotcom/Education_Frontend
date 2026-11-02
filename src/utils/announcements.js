@@ -172,7 +172,15 @@ export const normalizeAnnouncement = (raw, type, meta = {}) => {
       course_title: courseTitle,
       scheduled_event_time: scheduledEventTime,
       publisher,
-      image: raw.image || null,
+      image:
+        raw.image ||
+        raw.image_url ||
+        raw.attachment ||
+        raw.attachment_url ||
+        raw.banner ||
+        raw.cover_image ||
+        raw.photo ||
+        null,
       audience: raw.audience || null,
     };
   }
@@ -206,7 +214,15 @@ export const normalizeAnnouncement = (raw, type, meta = {}) => {
     branch_id: raw.branch_id || null,
     audience,
     publisher,
-    image: raw.image || null,
+    image:
+      raw.image ||
+      raw.image_url ||
+      raw.attachment ||
+      raw.attachment_url ||
+      raw.banner ||
+      raw.cover_image ||
+      raw.photo ||
+      null,
     scheduled_event_time: raw.scheduled_event_time || null,
   };
 };

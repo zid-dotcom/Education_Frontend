@@ -78,7 +78,7 @@ const StudentCourses = () => {
               <BookOpen className="h-3 w-3 text-[#9C6B2E]" />
               <span>Academic Programs & Courses</span>
             </span>
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-bold text-[#17140F] tracking-tight">
               Find your next course
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 font-normal">

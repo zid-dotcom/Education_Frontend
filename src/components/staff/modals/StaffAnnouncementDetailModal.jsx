@@ -48,6 +48,14 @@ const StaffAnnouncementDetailModal = ({
 
   const isCourse = announcement.type === 'course';
   const isRecent = isNewOrRecent(announcement);
+  const detailImage =
+    announcement.image ||
+    announcement.image_url ||
+    announcement.attachment ||
+    announcement.attachment_url ||
+    announcement.banner ||
+    announcement.photo ||
+    null;
 
   const rawEventTime =
     announcement.scheduled_event_time ||
@@ -183,19 +191,19 @@ const StaffAnnouncementDetailModal = ({
           </div>
 
           {/* Attached Image with Lightbox click */}
-          {announcement.image && (
+          {detailImage && (
             <div className="mb-6">
               <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#8A8175] mb-2">
                 Attached Media
               </div>
               <div className="group relative overflow-hidden rounded-2xl border border-[#E3DDD0] bg-[#FAF8F4] p-2 flex items-center justify-center max-h-80">
                 <img
-                  src={getCourseImageUrl(announcement.image)}
+                  src={getCourseImageUrl(detailImage)}
                   alt={announcement.title}
                   className="max-h-72 w-auto max-w-full rounded-xl object-contain shadow-xs cursor-pointer transition hover:scale-[1.01]"
                   onClick={() =>
                     setViewingImage({
-                      url: getCourseImageUrl(announcement.image),
+                      url: getCourseImageUrl(detailImage),
                       title: announcement.title,
                     })
                   }
@@ -205,7 +213,7 @@ const StaffAnnouncementDetailModal = ({
                   type="button"
                   onClick={() =>
                     setViewingImage({
-                      url: getCourseImageUrl(announcement.image),
+                      url: getCourseImageUrl(detailImage),
                       title: announcement.title,
                     })
                   }

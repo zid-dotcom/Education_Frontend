@@ -33,6 +33,7 @@ import HospitalityCategory from './pages/HospitalityCategory';
 import CourseDetails from './pages/CourseDetails';
 import Admissions from './pages/Admissions';
 import Contact from './pages/Contact';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import Login from './pages/Login';
 import StaffLogin from './pages/StaffLogin';
 import StaffDashboard from './pages/StaffDashboard';
@@ -185,6 +186,7 @@ const ClientAppContent = () => {
           
           <Route path="/admissions" element={<Admissions />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           
           {/* Fallback route */}
           <Route path="*" element={<Home onOpenApplyModal={handleOpenApplyModal} />} />

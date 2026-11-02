@@ -1250,6 +1250,53 @@ const StudentDashboard = () => {
       return;
     }
 
+    const computeDueSummary = (enrichedList, nextUnpaid, enr, detailsObj = {}) => {
+      const dueList = enrichedList.filter((i) => {
+        if (isInstallmentPaidOrSubmitted(i)) return false;
+        return (
+          i.is_due === true ||
+          String(i.is_due).toLowerCase() === 'true' ||
+          checkIsInstallmentDue(i, false) ||
+          String(i.status || '').toLowerCase() === 'due'
+        );
+      });
+
+      const unpaidList = dueList.length > 0 ? dueList : (nextUnpaid ? [nextUnpaid] : []);
+      const numbers = unpaidList.map((inst, idx) => inst.installment_number || idx + 1);
+
+      let dueTermsText = '';
+      let pendingDescription = '';
+      if (numbers.length === 1) {
+        dueTermsText = `${numbers[0]}`;
+        pendingDescription = `Currently installment #${numbers[0]} is pending`;
+      } else if (numbers.length > 1) {
+        dueTermsText = `${numbers.slice(0, -1).join(', ')} and ${numbers[numbers.length - 1]}`;
+        pendingDescription = `Currently installment #${numbers.slice(0, -1).join(', #')} and #${numbers[numbers.length - 1]} is pending`;
+      } else if (nextUnpaid?.installment_number) {
+        dueTermsText = `${nextUnpaid.installment_number}`;
+        pendingDescription = `Currently installment #${nextUnpaid.installment_number} is pending`;
+      } else {
+        pendingDescription = 'Currently installment is pending';
+      }
+
+      const totalDueAmount = dueList.length > 0
+        ? dueList.reduce((sum, i) => sum + Number(i.remaining_amount ?? i.amount ?? 0), 0)
+        : Number(nextUnpaid?.remaining_amount ?? nextUnpaid?.amount ?? 0);
+
+      const isOverdue = unpaidList.some((i) => checkIsInstallmentDue(i, false));
+      const earliestDueDate = dueList[0]?.due_date || nextUnpaid?.due_date;
+
+      return {
+        dueInstallments: dueList,
+        dueTermsText,
+        pendingDescription,
+        totalDueAmount: totalDueAmount > 0 ? totalDueAmount : Number(nextUnpaid?.amount || 0),
+        isOverdue,
+        earliestDueDate,
+        hasDue: dueList.length > 0 || isOverdue || Number(detailsObj.balance_amount ?? enr.balance_amount ?? 0) > 0,
+      };
+    };
+
     const loadNextDueDetails = async () => {
       // Find candidate enrollments that have installment plan or balance > 0
       const activeInstallmentEnrollments = enrollments.filter(
@@ -1272,6 +1319,7 @@ const StudentDashboard = () => {
           const nextUnpaid = enriched.find((i) => !isInstallmentPaidOrSubmitted(i));
           if (nextUnpaid && Number(nextUnpaid.amount || enr.balance_amount || 0) > 0) {
             if (isMounted) {
+              const dueSummary = computeDueSummary(enriched, nextUnpaid, enr);
               setNextDueInstallment({
                 enrollment: { ...enr, installments: enriched },
                 enrollmentId: enr.enrollment_id || enr.id,
@@ -1280,6 +1328,7 @@ const StudentDashboard = () => {
                 amount: nextUnpaid.amount,
                 dueDate: nextUnpaid.due_date,
                 balanceAmount: enr.balance_amount,
+                ...dueSummary,
               });
             }
             return;
@@ -1325,6 +1374,7 @@ const StudentDashboard = () => {
             const nextUnpaid = enrichedList.find((i) => !isInstallmentPaidOrSubmitted(i));
             if (nextUnpaid && Number(nextUnpaid.amount || detailsObj.balance_amount || enr.balance_amount || 0) > 0) {
               if (isMounted) {
+                const dueSummary = computeDueSummary(enrichedList, nextUnpaid, enr, detailsObj);
                 setNextDueInstallment({
                   enrollment: { ...enr, ...detailsObj, installments: enrichedList },
                   enrollmentId,
@@ -1333,6 +1383,7 @@ const StudentDashboard = () => {
                   amount: nextUnpaid.amount,
                   dueDate: nextUnpaid.due_date,
                   balanceAmount: detailsObj.balance_amount ?? enr.balance_amount,
+                  ...dueSummary,
                 });
               }
               return;
@@ -2282,28 +2333,28 @@ const StudentDashboard = () => {
               </div>
             </div>
 
-            {/* Next Installment Due Detail (Adjusted Width with Course Name on the Right) */}
+            {/* Next Installment Due Detail (Green Theme as Requested) */}
             {nextDueInstallment ? (
               <button
                 type="button"
                 onClick={() => handleOpenPaymentModal(nextDueInstallment.enrollment)}
-                className="group hidden sm:flex items-center justify-between gap-3 sm:gap-4 rounded-2xl bg-red-50/95 hover:bg-red-100 border border-red-200 px-3.5 sm:px-4 py-2 text-left shadow-xs transition-all duration-200 cursor-pointer flex-1 max-w-xl mx-2 sm:mx-4"
+                className="group hidden sm:flex items-center justify-between gap-3 sm:gap-4 rounded-2xl bg-emerald-50/95 hover:bg-emerald-100 border border-emerald-200 px-3.5 sm:px-4 py-2 text-left shadow-xs transition-all duration-200 cursor-pointer flex-1 max-w-xl mx-2 sm:mx-4"
                 title="Click to view & pay next installment"
               >
                 <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                   <span className="relative flex h-2.5 w-2.5 shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span>
                   </span>
                   <div className="leading-tight min-w-0">
-                    <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-red-600 flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3 text-red-600 shrink-0" />
+                    <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-emerald-700 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3 text-emerald-600 shrink-0" />
                       Next Installment #{nextDueInstallment.installmentNumber}
                     </p>
-                    <p className="text-xs sm:text-sm font-extrabold text-red-600 tracking-tight whitespace-nowrap">
+                    <p className="text-xs sm:text-sm font-extrabold text-emerald-700 tracking-tight whitespace-nowrap">
                       Amount: {formatCurrency(nextDueInstallment.amount)}
                       {nextDueInstallment.dueDate && (
-                        <span className="text-[11px] font-bold text-red-500 ml-1.5 font-sans">
+                        <span className="text-[11px] font-bold text-emerald-600/90 ml-1.5 font-sans">
                           | Due: {formatDate(nextDueInstallment.dueDate)}
                         </span>
                       )}
@@ -2314,7 +2365,7 @@ const StudentDashboard = () => {
                 {/* Right side: Course Name & Pay Button */}
                 <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
                   {nextDueInstallment.courseTitle && (
-                    <div className="text-right border-l border-red-200/90 pl-2.5 sm:pl-3 min-w-0">
+                    <div className="text-right border-l border-emerald-200/90 pl-2.5 sm:pl-3 min-w-0">
                       <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 block leading-tight">
                         Course
                       </span>
@@ -2326,7 +2377,7 @@ const StudentDashboard = () => {
                       </span>
                     </div>
                   )}
-                  <span className="inline-flex items-center rounded-lg bg-red-600 px-3 py-1.5 text-[11px] font-extrabold uppercase text-white shadow-xs group-hover:bg-red-700 transition shrink-0">
+                  <span className="inline-flex items-center rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-extrabold uppercase text-white shadow-xs group-hover:bg-emerald-700 transition shrink-0">
                     Pay
                   </span>
                 </div>
@@ -2378,22 +2429,22 @@ const StudentDashboard = () => {
             </div>
           </header>
 
-          {/* Mobile Installment Due Banner in Red Text */}
+          {/* Mobile Installment Due Banner in Green Theme */}
           {nextDueInstallment && (
             <div className="sm:hidden pb-3 shrink-0">
               <button
                 type="button"
                 onClick={() => handleOpenPaymentModal(nextDueInstallment.enrollment)}
-                className="w-full flex items-center justify-between gap-2.5 rounded-xl bg-red-50 border border-red-200/90 px-3.5 py-2 text-left shadow-xs transition-all cursor-pointer"
+                className="w-full flex items-center justify-between gap-2.5 rounded-xl bg-emerald-50 border border-emerald-200/90 px-3.5 py-2 text-left shadow-xs transition-all cursor-pointer"
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="relative flex h-2 w-2 shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
                   </span>
                   <div className="min-w-0 truncate">
                     <div className="flex items-center gap-1.5 truncate">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-red-600 shrink-0">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-emerald-700 shrink-0">
                         Next Installment #{nextDueInstallment.installmentNumber}
                       </p>
                       {nextDueInstallment.courseTitle && (
@@ -2402,13 +2453,13 @@ const StudentDashboard = () => {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs font-black text-red-600 truncate">
+                    <p className="text-xs font-black text-emerald-700 truncate">
                       Amount: {formatCurrency(nextDueInstallment.amount)}
                       {nextDueInstallment.dueDate && ` | Due: ${formatDate(nextDueInstallment.dueDate)}`}
                     </p>
                   </div>
                 </div>
-                <span className="inline-flex items-center rounded-lg bg-red-600 px-2 py-1 text-[10px] font-extrabold uppercase text-white shadow-xs shrink-0">
+                <span className="inline-flex items-center rounded-lg bg-emerald-600 px-2 py-1 text-[10px] font-extrabold uppercase text-white shadow-xs shrink-0">
                   Pay
                 </span>
               </button>
@@ -2463,6 +2514,136 @@ const StudentDashboard = () => {
               announcements={displayAnnouncements}
               onSelectAnnouncement={(ann) => setSelectedAnnouncement(ann)}
             />
+
+            {/* Installment Due Details Section (Prominent in Red Color for Easy Access & Understanding) */}
+            {nextDueInstallment && (
+              <div className="rounded-3xl border-2 border-red-200/90 bg-gradient-to-br from-red-50/80 via-white to-rose-50/40 p-5 sm:p-6 shadow-sm shadow-red-500/5 mb-7 relative overflow-hidden">
+                {/* Soft decorative glow in background */}
+                <div className="absolute top-0 right-0 w-80 h-full bg-gradient-to-l from-red-100/40 via-red-50/20 to-transparent pointer-events-none" />
+
+                <div className="relative z-10">
+                  {/* Top Row: Header Badge, Dynamic Pending Text, and Pay CTA */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-red-100">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider bg-red-100/90 text-red-700 border border-red-200">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+                        </span>
+                        <AlertCircle className="h-3.5 w-3.5 text-red-600" />
+                        Installment Due Details
+                      </span>
+
+                      {/* Dynamic Pending Description in Red Text */}
+                      <p className="text-xs sm:text-sm font-bold text-red-600 flex items-center gap-1.5">
+                        {nextDueInstallment.pendingDescription || (
+                          nextDueInstallment.dueTermsText
+                            ? `Currently installment #${nextDueInstallment.dueTermsText} is pending`
+                            : `Currently installment #${nextDueInstallment.installmentNumber || 1} is pending`
+                        )}
+                      </p>
+                    </div>
+
+                    {/* Pay Button CTA */}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenPaymentModal(nextDueInstallment.enrollment)}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 hover:bg-red-700 active:scale-[0.98] px-5 py-2.5 text-xs sm:text-sm font-extrabold uppercase tracking-wider text-white shadow-md shadow-red-600/25 transition-all cursor-pointer shrink-0 self-start sm:self-auto"
+                    >
+                      <Receipt className="h-4 w-4" />
+                      <span>Pay Installment</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {/* Course & Key Due Information Cards Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    {/* 1. Course Name */}
+                    <div className="rounded-2xl bg-white/90 border border-red-100 p-3.5 sm:p-4 shadow-2xs">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-red-600/75 flex items-center gap-1 mb-1">
+                        <BookOpen className="h-3 w-3 text-red-500" />
+                        Course
+                      </p>
+                      <p className="text-sm font-extrabold text-slate-900 truncate" title={nextDueInstallment.courseTitle}>
+                        {nextDueInstallment.courseTitle || 'Enrolled Course'}
+                      </p>
+                      <p className="text-[11px] font-medium text-slate-500 mt-0.5">
+                        Enrollment #{nextDueInstallment.enrollmentId || '—'}
+                      </p>
+                    </div>
+
+                    {/* 2. Pending Term */}
+                    <div className="rounded-2xl bg-white/90 border border-red-100 p-3.5 sm:p-4 shadow-2xs">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-red-600/75 flex items-center gap-1 mb-1">
+                        <Calendar className="h-3 w-3 text-red-500" />
+                        Pending Term
+                      </p>
+                      <p className="text-base sm:text-lg font-black text-red-600">
+                        Term #{nextDueInstallment.dueTermsText || nextDueInstallment.installmentNumber}
+                      </p>
+                      <p className="text-[11px] font-medium text-slate-500 mt-0.5">
+                        {Array.isArray(nextDueInstallment.dueInstallments) && nextDueInstallment.dueInstallments.length > 1
+                          ? `${nextDueInstallment.dueInstallments.length} installments pending`
+                          : 'Installment due'}
+                      </p>
+                    </div>
+
+                    {/* 3. Total Outstanding Due */}
+                    <div className="rounded-2xl bg-white/90 border border-red-100 p-3.5 sm:p-4 shadow-2xs">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-red-600/75 flex items-center gap-1 mb-1">
+                        <Wallet className="h-3 w-3 text-red-500" />
+                        Total Outstanding Due
+                      </p>
+                      <p className="text-xl sm:text-2xl font-black text-red-600 tracking-tight">
+                        {formatCurrency(nextDueInstallment.totalDueAmount || nextDueInstallment.amount)}
+                      </p>
+                      <p className="text-[11px] font-medium text-slate-500 mt-0.5">
+                        Payable via online payment
+                      </p>
+                    </div>
+
+                    {/* 4. Due Date */}
+                    <div className="rounded-2xl bg-white/90 border border-red-100 p-3.5 sm:p-4 shadow-2xs">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-red-600/75 flex items-center gap-1 mb-1">
+                        <Clock className="h-3 w-3 text-red-500" />
+                        Due Date
+                      </p>
+                      <p className="text-sm sm:text-base font-extrabold text-slate-900">
+                        {nextDueInstallment.earliestDueDate
+                          ? formatDate(nextDueInstallment.earliestDueDate)
+                          : (nextDueInstallment.dueDate ? formatDate(nextDueInstallment.dueDate) : 'Immediate')}
+                      </p>
+                      <p className="text-[11px] font-bold mt-0.5">
+                        {nextDueInstallment.isOverdue ? (
+                          <span className="text-red-600">⚠️ Payment overdue</span>
+                        ) : (
+                          <span className="text-amber-600">📅 Due payment</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Multi-term Pending Breakdown (if multiple installments are due) */}
+                  {Array.isArray(nextDueInstallment.dueInstallments) && nextDueInstallment.dueInstallments.length > 1 && (
+                    <div className="mt-3.5 pt-3 border-t border-red-100/90 flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] font-bold text-slate-500">Pending breakdown:</span>
+                      {nextDueInstallment.dueInstallments.map((inst, idx) => (
+                        <span
+                          key={inst.id || inst.installment_number || idx}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-red-50 px-2.5 py-1 text-[11px] font-bold text-red-700 border border-red-200"
+                        >
+                          <span>Term #{inst.installment_number || idx + 1}:</span>
+                          <span className="font-extrabold">{formatCurrency(inst.remaining_amount ?? inst.amount)}</span>
+                          {inst.due_date && (
+                            <span className="text-[10px] font-medium text-red-500">({formatDate(inst.due_date)})</span>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* 4. Top 4 Stat Cards */}
             <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-7">

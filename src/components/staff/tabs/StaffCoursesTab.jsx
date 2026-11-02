@@ -68,6 +68,42 @@ const StaffCoursesTab = ({
     }
   };
 
+  const getStudentFeeInfo = (s) => {
+    if (!s) return { totalPaid: 0, totalFee: 0, balance: 0, isFullyPaid: true, hasValidFeeBreakdown: false };
+    const totalFee = Number(
+      s.total_fee ??
+      s.enrollment?.total_fee ??
+      s.course_fee ??
+      s.fee ??
+      activeCourseObj?.fee ??
+      activeCourseObj?.total_fee ??
+      0
+    );
+    const totalPaid = Number(
+      s.total_paid ??
+      s.enrollment?.total_paid ??
+      s.paid_amount ??
+      0
+    );
+    const balance = Number(
+      s.balance_amount ??
+      s.enrollment?.balance_amount ??
+      s.balance ??
+      (totalFee > 0 && totalPaid > 0 ? Math.max(0, totalFee - totalPaid) : 0)
+    );
+    const statusStr = String(s.status || s.payment_status || s.enrollment?.status || '').toLowerCase();
+    const isFullyPaid = balance <= 0 || statusStr === 'paid' || statusStr === 'completed';
+    const hasValidFeeBreakdown = totalPaid > 0 && totalFee > 0 && !(totalPaid === 0 && totalFee === 0);
+
+    return {
+      totalPaid,
+      totalFee,
+      balance,
+      isFullyPaid,
+      hasValidFeeBreakdown,
+    };
+  };
+
   return (
     <div className="space-y-6 sa-fade">
       {/* Course selector header card */}
@@ -187,25 +223,30 @@ const StaffCoursesTab = ({
                       </div>
 
                       {/* Financial Balance Summary */}
-                      <div className="pt-2 border-t border-[#E3DDD0] flex items-center justify-between gap-2">
-                        <div>
-                          <span className="text-[#8A8175] text-[10px] block font-semibold">FEE STATUS</span>
-                          <span className="text-slate-800 font-bold text-[11px]">
-                            ₹{Number(s.total_paid || 0).toLocaleString('en-IN')} / ₹{Number(s.total_fee || activeCourseObj?.fee || 0).toLocaleString('en-IN')}
-                          </span>
-                        </div>
-                        <div>
-                          {Number(s.balance_amount || 0) <= 0 ? (
-                            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                              Fully Paid
-                            </span>
-                          ) : (
-                            <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
-                              ₹{Number(s.balance_amount || 0).toLocaleString('en-IN')} Due
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                      {(() => {
+                        const feeInfo = getStudentFeeInfo(s);
+                        return (
+                          <div className="pt-2 border-t border-[#E3DDD0] flex items-center justify-between gap-2">
+                            <div>
+                              <span className="text-[#8A8175] text-[10px] block font-semibold">FEE STATUS</span>
+                              <span className="text-slate-800 font-bold text-[11px]">
+                                {feeInfo.isFullyPaid ? 'Settled' : 'Balance'}
+                              </span>
+                            </div>
+                            <div>
+                              {feeInfo.isFullyPaid ? (
+                                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 inline-flex items-center">
+                                  Fully Paid
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200 inline-flex items-center">
+                                  ₹{feeInfo.balance.toLocaleString('en-IN')}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
 
                       {s.phone && (
                         <div className="pt-1 border-t border-[#E3DDD0] flex items-center gap-1.5 text-slate-700 text-[11px]">
@@ -246,7 +287,9 @@ const StaffCoursesTab = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E3DDD0]/50 font-medium text-slate-700">
-                  {filteredStudents.map((s, idx) => (
+                  {filteredStudents.map((s, idx) => {
+                    const feeInfo = getStudentFeeInfo(s);
+                    return (
                     <tr
                       key={s.id || s.enrollment_id || s.enrollment?.enrollment_id || idx}
                       onClick={() => onSelectStudent(s)}
@@ -275,26 +318,21 @@ const StaffCoursesTab = ({
                         )}
                       </td>
                       <td className="px-5 py-3.5">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-xs font-bold text-slate-800">
-                            ₹{Number(s.total_paid || 0).toLocaleString('en-IN')} / ₹{Number(s.total_fee || activeCourseObj?.fee || 0).toLocaleString('en-IN')}
-                          </span>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            {Number(s.balance_amount || 0) <= 0 ? (
-                              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                                Fully Paid
-                              </span>
-                            ) : (
-                              <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
-                                ₹{Number(s.balance_amount || 0).toLocaleString('en-IN')} Due
-                              </span>
-                            )}
-                            {(s.payment_review_status === 'pending' || s.payment_review_status === 'awaiting_review') && (
-                              <span className="text-[9px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
-                                Review Pending
-                              </span>
-                            )}
-                          </div>
+                        <div className="flex items-center gap-1.5">
+                          {feeInfo.isFullyPaid ? (
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 inline-flex items-center">
+                              Fully Paid
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200 inline-flex items-center">
+                              ₹{feeInfo.balance.toLocaleString('en-IN')}
+                            </span>
+                          )}
+                          {(s.payment_review_status === 'pending' || s.payment_review_status === 'awaiting_review') && (
+                            <span className="text-[9px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                              Review Pending
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-3.5">
@@ -327,7 +365,8 @@ const StaffCoursesTab = ({
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -88,7 +88,7 @@ const BranchCourseSelector = ({ branches = [], selectedBranchId, onBranchChange,
           <p className="mt-1 text-xs text-slate-500">Select a branch to view its available courses.</p>
         </div>
 
-        <label className="relative block w-full sm:max-w-xs">
+        <label className="relative block w-full sm:max-w-md lg:max-w-lg">
           <span className="mb-1 block text-xs font-semibold text-slate-700">Branch</span>
           <Building2 className="pointer-events-none absolute bottom-3 left-3 h-4 w-4 text-[#aa8c63]" />
           <select

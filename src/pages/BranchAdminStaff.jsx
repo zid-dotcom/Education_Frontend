@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   BookOpen,
+  Calendar,
   CalendarDays,
   Circle,
   ClipboardCheck,
@@ -25,6 +26,7 @@ import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import BranchAdminSidebar from "../components/layout/BranchAdminSidebar";
 import Toast from "../components/common/Toast";
+import AttendanceCalendarMatrix from "../components/common/AttendanceCalendarMatrix";
 import { getMyCoursesApi } from "../services/branchadmincourses";
 import {
   createBranchStaffApi,
@@ -143,6 +145,76 @@ const BranchAdminStaff = () => {
   const [attendanceSaving, setAttendanceSaving] = useState(null);
   const [attendanceDrafts, setAttendanceDrafts] = useState({});
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
+  const [attendanceViewMode, setAttendanceViewMode] = useState("calendar");
+
+  const handleMatrixSaveStatus = async (staffId, dateStr, newStatus, existingRecord) => {
+    if (!token) return;
+    const member = staff.find((s) => String(s.id) === String(staffId));
+    const memberName = member ? member.name : "Staff";
+    const cellKey = `${String(staffId)}_${dateStr}`;
+    setAttendanceSaving(cellKey);
+    setError("");
+
+    try {
+      const existing =
+        existingRecord ||
+        attendanceHistory.find(
+          (r) =>
+            String(r.staff_id) === String(staffId) &&
+            String(r.date) === String(dateStr)
+        );
+
+      if (newStatus === null) {
+        if (existing) {
+          await updateStaffAttendanceApi(existing.id, { status: "Absent" }, token);
+          setAttendanceHistory((prev) =>
+            prev.map((r) => (r.id === existing.id ? { ...r, status: "Absent" } : r))
+          );
+        }
+        return;
+      }
+
+      if (existing) {
+        await updateStaffAttendanceApi(existing.id, { status: newStatus }, token);
+        setAttendanceHistory((prev) =>
+          prev.map((r) => (r.id === existing.id ? { ...r, status: newStatus } : r))
+        );
+      } else {
+        const res = await markStaffAttendanceApi(
+          { staff_id: staffId, date: dateStr, status: newStatus },
+          token
+        );
+        const newRecord = res?.attendance || {
+          id: Date.now(),
+          staff_id: staffId,
+          date: dateStr,
+          status: newStatus,
+        };
+        setAttendanceHistory((prev) => {
+          const exists = prev.some(
+            (r) =>
+              String(r.staff_id) === String(staffId) &&
+              String(r.date) === String(dateStr)
+          );
+          if (exists) {
+            return prev.map((r) =>
+              String(r.staff_id) === String(staffId) &&
+              String(r.date) === String(dateStr)
+                ? { ...r, ...newRecord, status: newStatus }
+                : r
+            );
+          }
+          return [...prev, newRecord];
+        });
+      }
+      setSuccess(`${memberName}'s attendance for ${dateStr} saved as ${newStatus}.`);
+    } catch (err) {
+      setError(err.message || "Failed to save staff attendance.");
+      throw err;
+    } finally {
+      setAttendanceSaving(null);
+    }
+  };
 
   const loadStaff = async () => {
     if (!token) return;
@@ -192,9 +264,7 @@ const BranchAdminStaff = () => {
       setAttendanceLoading(true);
       const data = await getStaffAttendanceApi(token);
       setAttendanceHistory(
-        Array.isArray(data?.attendance)
-          ? data.attendance.filter((record) => record.status !== "Absent")
-          : [],
+        Array.isArray(data?.attendance) ? data.attendance : []
       );
     } catch (err) {
       setError(err.message || "Failed to load attendance history.");
@@ -206,6 +276,7 @@ const BranchAdminStaff = () => {
   useEffect(() => {
     loadStaff();
     loadAttendance(attendanceDate);
+    loadAttendanceHistory();
     if (token) {
       getMyCoursesApi(token)
         .then((data) => setCourses(Array.isArray(data) ? data : []))
@@ -471,7 +542,7 @@ const BranchAdminStaff = () => {
           </div>
         </header>
 
-        <div className="mx-auto w-full max-w-6xl px-6 py-8 sm:px-10">
+        <div className="w-full px-6 py-8 sm:px-10">
           {error && (
             <div
               className="mb-6 rounded-lg px-4 py-3 text-sm font-medium"
@@ -490,7 +561,10 @@ const BranchAdminStaff = () => {
           )}
 
           {/* ---- Tabs ---- */}
-          <nav className="mb-8 flex gap-7" style={{ borderBottom: "1px solid #e3ddd0" }}>
+          <nav
+            className="mb-8 flex gap-4 sm:gap-7 overflow-x-auto whitespace-nowrap scrollbar-none pb-0.5"
+            style={{ borderBottom: "1px solid #e3ddd0" }}
+          >
             {TABS.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -502,11 +576,11 @@ const BranchAdminStaff = () => {
                     setActiveTab(tab.id);
                     if (tab.id === "history") loadAttendanceHistory();
                   }}
-                  className={`relative flex items-center gap-2 pb-3 text-sm font-medium transition-colors ${FOCUS_RING}`}
+                  className={`relative flex shrink-0 items-center gap-2 pb-3 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors cursor-pointer ${FOCUS_RING}`}
                   style={{ color: isActive ? "#17140f" : "#8a8175" }}
                 >
-                  <Icon className="h-4 w-4" />
-                  {tab.label}
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span>{tab.label}</span>
                   {isActive && (
                     <span
                       className="absolute inset-x-0 -bottom-px h-0.5 rounded-full"
@@ -521,160 +595,31 @@ const BranchAdminStaff = () => {
           {/* ---- Mark attendance ---- */}
           {activeTab === "attendance" && (
             <section className="space-y-6">
-              <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+              <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
                 <div>
                   <h2
-                    className="text-xl"
-                    style={{ ...serif, fontWeight: 500, color: "#17140f" }}
+                    className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900"
+                    style={{ ...serif, fontWeight: 600, color: "#17140f" }}
                   >
-                    Mark your branch team
+                    Branch Staff Attendance
                   </h2>
-                  <p className="mt-1 text-sm" style={{ color: "#8a8175" }}>
-                    Recording attendance for{" "}
-                    <span style={{ color: "#17140f", fontWeight: 500 }}>
-                      {formatAttendanceDate(attendanceDate)}
-                    </span>
-                    .
+                  <p className="mt-1 text-sm text-slate-500">
+                    Track and mark your branch team's monthly attendance in interactive calendar format.
                   </p>
                 </div>
-                <label
-                  className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm"
-                  style={{ border: "1px solid #e3ddd0", color: "#5b5346" }}
-                >
-                  <CalendarDays className="h-4 w-4" style={{ color: "#9c6b2e" }} />
-                  <span className="sr-only">Attendance date</span>
-                  <input
-                    type="date"
-                    value={attendanceDate}
-                    max={getToday()}
-                    onChange={handleAttendanceDateChange}
-                    className="bg-transparent outline-none"
-                  />
-                </label>
               </div>
 
-              <div
-                className="overflow-hidden rounded-2xl"
-                style={{ background: "#ffffff", border: "1px solid #e3ddd0" }}
-              >
-                <div
-                  className="grid grid-cols-3 divide-x"
-                  style={{ borderBottom: "1px solid #e3ddd0", background: "#faf8f4" }}
-                >
-                  {[
-                    { label: "Present", value: attendanceSummary.present, color: "#5c7a5a" },
-                    { label: "Half day", value: attendanceSummary.half_day, color: "#b0803a" },
-                    { label: "Leave", value: attendanceSummary.leave, color: "#a24a3a" },
-                  ].map((stat) => (
-                    <div key={stat.label} className="px-6 py-5" style={{ borderColor: "#e3ddd0" }}>
-                      <p className="text-xs" style={{ color: "#a39a8c" }}>{stat.label}</p>
-                      <p className="mt-1 text-2xl" style={{ ...serif, fontWeight: 500, color: stat.color }}>
-                        {stat.value}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-
-                {attendanceLoading ? (
-                  <div className="flex items-center gap-2 px-6 py-14 text-sm" style={{ color: "#8a8175" }}>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Loading attendance…
-                  </div>
-                ) : staff.length === 0 ? (
-                  <div className="px-6 py-14 text-center text-sm" style={{ color: "#8a8175" }}>
-                    Create a staff account before marking attendance.
-                  </div>
-                ) : (
-                  <div>
-                    {staff.map((member, index) => {
-                      const currentStatus = attendanceDrafts[member.id] || "Present";
-                      const savedRecord = attendance.find(
-                        (record) =>
-                          record.staff_id === member.id &&
-                          record.date === attendanceDate,
-                      );
-                      const meta = statusMeta(savedRecord?.status);
-                      return (
-                        <div
-                          key={member.id}
-                          className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between"
-                          style={{ borderTop: index === 0 ? "none" : "1px solid #efe9dd" }}
-                        >
-                          <div className="flex min-w-0 items-center gap-3">
-                            <div
-                              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-medium"
-                              style={{ background: "#f1ede4", color: "#7a531f" }}
-                            >
-                              {member.name?.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-medium" style={{ color: "#17140f" }}>
-                                {member.name}
-                              </p>
-                              <p className="truncate text-xs" style={{ color: "#8a8175" }}>
-                                {member.email}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-3">
-                            <span
-                              className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium"
-                              style={{ background: meta.bg, color: meta.text }}
-                            >
-                              <Circle className="h-2 w-2" fill={meta.dot} stroke="none" />
-                              {savedRecord ? `Marked ${savedRecord.status}` : "Not marked"}
-                            </span>
-
-                            <div className="flex overflow-hidden rounded-lg" style={{ border: "1px solid #e3ddd0" }}>
-                              {["Present", "Half Day", "Leave"].map((option, i) => {
-                                const optionMeta = statusMeta(option);
-                                const selected = currentStatus === option;
-                                return (
-                                  <button
-                                    key={option}
-                                    type="button"
-                                    onClick={() =>
-                                      setAttendanceDrafts((current) => ({
-                                        ...current,
-                                        [member.id]: option,
-                                      }))
-                                    }
-                                    className={`px-3 py-2 text-xs font-medium transition-colors ${FOCUS_RING}`}
-                                    style={{
-                                      borderLeft: i === 0 ? "none" : "1px solid #e3ddd0",
-                                      background: selected ? optionMeta.bg : "transparent",
-                                      color: selected ? optionMeta.text : "#8a8175",
-                                    }}
-                                  >
-                                    {option}
-                                  </button>
-                                );
-                              })}
-                            </div>
-
-                            <button
-                              type="button"
-                              disabled={attendanceSaving === member.id}
-                              onClick={() => saveAttendance(member)}
-                              className={`flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-xs font-medium text-white transition-opacity disabled:opacity-50 ${FOCUS_RING}`}
-                              style={{ background: "#17140f" }}
-                            >
-                              {attendanceSaving === member.id ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <Save className="h-3.5 w-3.5" />
-                              )}
-                              {savedRecord ? "Update" : "Save"}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
+              <AttendanceCalendarMatrix
+                people={staff}
+                records={attendanceHistory}
+                onSaveStatus={handleMatrixSaveStatus}
+                title="Branch Staff"
+                subtitle={`${staff.length} staff accounts`}
+                savingKey={attendanceSaving}
+                isStaffPage={true}
+              />
+        </section>
+      )}
 
           {/* ---- Attendance history ---- */}
           {activeTab === "history" && (

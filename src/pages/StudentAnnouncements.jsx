@@ -214,7 +214,7 @@ const StudentAnnouncements = () => {
                 <Megaphone className="h-3 w-3 text-[#9C6B2E]" />
                 <span>Course & Academic Bulletins</span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[#17140F] leading-tight">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#17140F] leading-tight">
                 Course Announcements
               </h1>
               <p className="text-xs sm:text-sm text-[#5B5346] font-normal">
