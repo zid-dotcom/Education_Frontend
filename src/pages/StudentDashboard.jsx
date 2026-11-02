@@ -46,6 +46,7 @@ import {
   Star,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import NavLogoutButton from '../components/common/NavLogoutButton';
 import { getCourseImageUrl } from '../services/courses';
 import { getMyEnrollmentsApi, getEnrollmentInstallmentsApi } from '../services/enrollments';
 import { createPaymentOrderApi, loadRazorpayScript, verifyPaymentApi } from '../services/payments';
@@ -2426,6 +2427,8 @@ const StudentDashboard = () => {
                   </p>
                 </div>
               </div>
+
+              <NavLogoutButton redirectTo="/login" />
             </div>
           </header>
 

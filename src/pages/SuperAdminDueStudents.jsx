@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Building2, CheckCircle2, Clock, Loader2, RefreshCw, ShoppingCart, X, User, Mail, Phone, GraduationCap, MapPin, Users, IndianRupee, Wallet, Calendar, AlertCircle, ShieldCheck, CreditCard, BookOpen, ChevronDown, Search } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import { getSuperAdminRecordBranchesApi, getSuperAdminAllDueStudentsApi, getSuperAdminBranchDueStudentsApi } from '../services/superadmin';
 
 const PAGE_CSS = `
@@ -210,7 +211,7 @@ const SuperAdminDueStudents = () => {
 
       <main className="min-w-0 flex-1">
         <header
-          className="flex items-center justify-between border-b px-6 py-5 sm:px-10"
+          className="hidden md:flex items-center justify-between border-b px-6 py-5 sm:px-10"
           style={{ borderColor: '#e3ddd0', background: '#ffffff' }}
         >
           <div>
@@ -226,6 +227,7 @@ const SuperAdminDueStudents = () => {
             >
               Due Students
             </h1>
+            <NavLogoutButton redirectTo="/super-admin/login" />
           </div>
           <button
             onClick={() => loadDueStudents(selectedBranchId)}

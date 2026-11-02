@@ -3,6 +3,7 @@ import { AlertCircle, CalendarDays, Check, Circle, Clock, Download, Edit3, Eye, 
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import BranchAdminSidebar from "../components/layout/BranchAdminSidebar";
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import { getMyCoursesApi, getMyCourseApi } from "../services/branchadmincourses";
 import {
   addBranchAdmissionPaymentApi,
@@ -759,7 +760,7 @@ const StudentInstallmentModal = ({
                       Student portal login and features access
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
                     <span
                       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase ${
                         isAct
@@ -1913,8 +1914,8 @@ function BranchAdminStudentRegistration() {
       />
 
       <main className="min-w-0 flex-1">
-        <header className="sticky top-0 z-20 flex h-[92px] items-center justify-between border-b border-[#e3ddd0] bg-[#faf8f4]/95 px-6 backdrop-blur-md sm:px-10 shrink-0">
-          <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-20 flex min-h-[68px] sm:h-[92px] items-center justify-between gap-2 border-b border-[#e3ddd0] bg-[#faf8f4]/95 px-3.5 sm:px-6 lg:px-10 backdrop-blur-md sm:px-10 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
             <button
               onClick={() => setSidebarOpen(true)}
               className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e3ddd0] bg-white text-slate-600 shadow-sm transition hover:bg-[#f0ebe1] md:hidden"
@@ -1926,7 +1927,7 @@ function BranchAdminStudentRegistration() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#9c6b2e]">
                 Branch Portal
               </span>
-              <h1 className="text-xl font-extrabold tracking-tight text-slate-900 leading-tight">
+              <h1 className="text-base sm:text-xl font-extrabold tracking-tight text-slate-900 leading-tight truncate">
                 Student Registration
               </h1>
             </div>
@@ -1947,6 +1948,7 @@ function BranchAdminStudentRegistration() {
             >
               {user?.name?.charAt(0).toUpperCase() || "B"}
             </div>
+            <NavLogoutButton redirectTo="/branch-admin-login" />
           </div>
         </header>
 

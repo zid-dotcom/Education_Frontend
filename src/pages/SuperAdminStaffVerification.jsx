@@ -31,6 +31,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import {
   getSuperAdminStaffVerificationPendingApi,
   getSuperAdminStaffVerificationApprovedApi,
@@ -1070,7 +1071,7 @@ const SuperAdminStaffVerification = () => {
       <main className="min-w-0 flex-1">
         {/* HEADER */}
         <header
-          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b px-6 py-5 sm:px-10"
+          className="hidden md:flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b px-6 py-5 sm:px-10"
           style={{ borderColor: '#e3ddd0', background: '#ffffff' }}
         >
           <div>
@@ -1103,6 +1104,7 @@ const SuperAdminStaffVerification = () => {
               <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} style={{ color: '#9c6b2e' }} />
               <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
             </button>
+            <NavLogoutButton redirectTo="/super-admin/login" />
           </div>
         </header>
 

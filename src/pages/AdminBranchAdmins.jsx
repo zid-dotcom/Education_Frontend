@@ -3,6 +3,7 @@ import { Bell, Building2, ChevronDown, Edit3, Eye, EyeOff, GraduationCap, KeyRou
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import { createBranchAdminApi, deleteBranchAdminApi, getBranchAdminsApi, getBranchesApi, getStoredBranches, storeBranches, updateBranchAdminApi } from '../services/adminbranches';
 
 const EMPTY_ADMIN = { branch_id: '', password: '', name: '', email: '', phone: '' };
@@ -98,7 +99,7 @@ export default function AdminBranchAdmins() {
         activePage="branch-admins"
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="border-b border-slate-200 bg-white px-5 py-5 sm:px-8">
+        <header className="hidden md:block border-b border-slate-200 bg-white px-5 py-5 sm:px-8">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-amber-700">Super admin management</p>
@@ -114,6 +115,7 @@ export default function AdminBranchAdmins() {
                 {user?.name?.charAt(0).toUpperCase() || 'A'}
               </div>
             </div>
+            <NavLogoutButton redirectTo="/super-admin/login" />
           </div>
         </header>
 

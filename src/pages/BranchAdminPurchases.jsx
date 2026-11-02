@@ -27,6 +27,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import BranchAdminSidebar from "../components/layout/BranchAdminSidebar";
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import {
   approveBranchAdminPurchaseApi,
   getBranchAdminApprovedPurchasesApi,
@@ -497,9 +498,9 @@ export default function BranchAdminPurchases() {
       <main className="min-w-0 flex-1">
         {/* ---- Header ---- */}
         <header
-          className="sticky top-0 z-20 flex h-[92px] items-center justify-between border-b border-[#e3ddd0] bg-[#faf8f4]/95 px-6 backdrop-blur-md sm:px-10 shrink-0"
+          className="sticky top-0 z-20 flex min-h-[68px] sm:h-[92px] items-center justify-between gap-2 border-b border-[#e3ddd0] bg-[#faf8f4]/95 px-3.5 sm:px-6 lg:px-10 backdrop-blur-md sm:px-10 shrink-0"
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
             <button
               type="button"
               onClick={() => setSidebarOpen((open) => !open)}
@@ -512,7 +513,7 @@ export default function BranchAdminPurchases() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#9c6b2e]">
                 Branch Portal
               </span>
-              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
+              <h2 className="text-base sm:text-xl font-extrabold text-slate-900 tracking-tight truncate">
                 Course Approvals
               </h2>
             </div>
@@ -549,6 +550,7 @@ export default function BranchAdminPurchases() {
                 </p>
               </div>
             </div>
+            <NavLogoutButton redirectTo="/branch-admin-login" />
           </div>
         </header>
 

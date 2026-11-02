@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import { getBranchAdminsApi, getBranchesApi } from '../services/adminbranches';
 import {
   getSuperAdminUnreadMessagesCountApi,
@@ -415,7 +416,7 @@ const SuperAdminMessages = () => {
       <main className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#faf8f4]">
         {/* Top Header */}
         <header
-          className="flex h-16 shrink-0 items-center justify-between border-b px-6 sm:px-10"
+          className="hidden md:flex h-16 shrink-0 items-center justify-between border-b px-6 sm:px-10"
           style={{ borderColor: '#e3ddd0', background: '#ffffff' }}
         >
           <div className="flex items-center gap-3">
@@ -473,6 +474,7 @@ const SuperAdminMessages = () => {
             >
               {user?.name?.charAt(0).toUpperCase() || 'A'}
             </div>
+            <NavLogoutButton redirectTo="/super-admin/login" />
           </div>
         </header>
 

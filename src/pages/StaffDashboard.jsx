@@ -1178,6 +1178,7 @@ const StaffDashboard = ({ defaultTab }) => {
               onNavigateDocuments={() => setActiveTab('documents')}
               onNavigateProfile={() => setActiveTab('profile')}
               onOpenKycModal={() => setForceShowKycModal(true)}
+              onLogout={() => logout({ redirectTo: '/staff-login' })}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
             />

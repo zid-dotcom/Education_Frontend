@@ -20,6 +20,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import BranchAdminSidebar from '../components/layout/BranchAdminSidebar';
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import {
   createBranchAdminExpenseApi,
   getBranchAdminExpensesApi,
@@ -326,41 +327,42 @@ export default function BranchAdminExpenses() {
 
       <main className="min-w-0 flex-1">
         {/* Header */}
-        <header className="sticky top-0 z-20 flex h-[92px] items-center justify-between border-b border-[#e3ddd0] bg-[#faf8f4]/95 px-6 backdrop-blur-md sm:px-10 shrink-0">
-          <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-20 flex min-h-[68px] sm:h-[92px] items-center justify-between border-b border-[#e3ddd0] bg-[#faf8f4]/95 px-3.5 sm:px-6 lg:px-10 backdrop-blur-md shrink-0 gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e3ddd0] bg-white text-slate-600 shadow-sm transition hover:bg-[#f0ebe1] md:hidden"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#e3ddd0] bg-white text-slate-600 shadow-sm transition hover:bg-[#f0ebe1] md:hidden"
               aria-label="Open sidebar"
             >
               <Menu className="h-5 w-5" />
             </button>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#9c6b2e]">
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#9c6b2e] block truncate">
                 Branch Operations
               </span>
-              <h1 className="text-xl font-extrabold tracking-tight text-slate-900 leading-tight">
+              <h1 className="text-base sm:text-xl font-extrabold tracking-tight text-slate-900 leading-tight truncate">
                 Branch Expenses
               </h1>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <button
               type="button"
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-[#9c6b2e]"
+              className="flex items-center gap-1 sm:gap-2 rounded-xl px-2.5 sm:px-4 py-1.5 sm:py-2.5 text-xs font-bold text-white shadow-sm transition hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-[#9c6b2e]"
               style={{ background: '#17140f' }}
             >
-              <Plus className="h-4 w-4 text-[#f4b942]" />
-              <span>Add Expense</span>
+              <Plus className="h-4 w-4 text-[#f4b942] shrink-0" />
+              <span className="hidden sm:inline">Add Expense</span>
+              <span className="sm:hidden text-xs">Add</span>
             </button>
 
             <button
               type="button"
               onClick={() => loadExpenses(false)}
               disabled={refreshing}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e3ddd0] bg-white text-slate-600 shadow-sm transition hover:bg-[#f0ebe1] disabled:opacity-60"
+              className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg border border-[#e3ddd0] bg-white text-slate-600 shadow-sm transition hover:bg-[#f0ebe1] disabled:opacity-60 shrink-0"
               title="Refresh expenses"
             >
               <RefreshCw
@@ -376,6 +378,7 @@ export default function BranchAdminExpenses() {
                 {user?.branch_name || 'Branch Portal'}
               </p>
             </div>
+            <NavLogoutButton redirectTo="/branch-admin-login" />
           </div>
         </header>
 

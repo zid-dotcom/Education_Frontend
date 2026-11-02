@@ -1,3 +1,4 @@
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -662,7 +663,7 @@ const AdminDashboard = () => {
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         
         {/* TOP BAR / HEADER */}
-        <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-20 shadow-2xs">
+        <header className="bg-white border-b border-slate-200 px-6 py-4 hidden md:flex items-center justify-between sticky top-0 z-20 shadow-2xs">
           <div className="flex items-center gap-3">
             <h2 className="text-lg sm:text-xl font-extrabold text-slate-950 tracking-tight capitalize">
               {activeTab === 'dashboard' && 'Dashboard Overview'}
@@ -674,6 +675,9 @@ const AdminDashboard = () => {
             <span className="hidden sm:inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">
               Live Portal
             </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <NavLogoutButton redirectTo="/super-admin/login" />
           </div>
         </header>
 

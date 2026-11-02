@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import {
   getSuperAdminAnnouncementBranchesApi,
   getSuperAdminAllAnnouncementsApi,
@@ -338,7 +339,7 @@ const SuperAdminAnnouncements = () => {
       {/* Main Content Area */}
       <main className="min-w-0 flex-1 h-screen overflow-y-auto">
         {/* Top Header */}
-        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-[#E3DDD0] bg-[#FAF8F4]/90 px-6 backdrop-blur-md">
+        <header className="sticky top-0 z-20 hidden md:flex h-16 items-center justify-between border-b border-[#E3DDD0] bg-[#FAF8F4]/90 px-6 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -378,6 +379,7 @@ const SuperAdminAnnouncements = () => {
               <Plus className="h-4 w-4" />
               <span>New Announcement</span>
             </button>
+            <NavLogoutButton redirectTo="/super-admin/login" />
           </div>
         </header>
 

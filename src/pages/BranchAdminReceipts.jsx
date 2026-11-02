@@ -28,6 +28,7 @@ import html2canvas from "html2canvas-pro";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import BranchAdminSidebar from "../components/layout/BranchAdminSidebar";
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import {
   getBranchAdminReceiptApi,
   getBranchAdminReceiptsApi,
@@ -616,7 +617,7 @@ function ReceiptVoucherCard({ receipt, user, copiedKey, onCopy }) {
         style={{ borderBottom: "2px solid #e3ddd0" }}
       >
         <div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <div
               className="flex h-11 w-11 items-center justify-center rounded-xl font-black shadow-xs text-base shrink-0"
               style={{ background: "#17140f", color: "#f4b942" }}
@@ -1626,20 +1627,20 @@ export default function BranchAdminReceipts() {
         {/* Main Content Area */}
         <main className="min-w-0 flex-1">
           {/* Sticky Header */}
-          <header className="sticky top-0 z-20 flex h-[92px] items-center justify-between border-b border-[#e3ddd0] bg-[#faf8f4]/95 px-6 backdrop-blur-md sm:px-10 shrink-0">
-            <div className="flex items-center gap-3">
+          <header className="sticky top-0 z-20 flex min-h-[68px] sm:h-[92px] items-center justify-between border-b border-[#e3ddd0] bg-[#faf8f4]/95 px-3.5 sm:px-6 lg:px-10 backdrop-blur-md shrink-0 gap-2">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e3ddd0] bg-white text-slate-600 shadow-sm transition hover:bg-[#f0ebe1] md:hidden"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#e3ddd0] bg-white text-slate-600 shadow-sm transition hover:bg-[#f0ebe1] md:hidden"
                 aria-label="Open sidebar"
               >
                 <Menu className="h-5 w-5" />
               </button>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#9c6b2e]">
+              <div className="min-w-0">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#9c6b2e] block truncate">
                   Branch Finance
                 </span>
-                <h1 className="text-xl font-extrabold tracking-tight text-slate-900 leading-tight">
+                <h1 className="text-base sm:text-xl font-extrabold tracking-tight text-slate-900 leading-tight truncate">
                   Payment Receipts
                 </h1>
               </div>
@@ -1686,7 +1687,8 @@ export default function BranchAdminReceipts() {
               >
                 {user?.name?.charAt(0).toUpperCase() || "B"}
               </div>
-            </div>
+              <NavLogoutButton redirectTo="/branch-admin-login" />
+          </div>
           </header>
 
           {/* Page Body */}

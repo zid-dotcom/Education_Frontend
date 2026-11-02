@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import {
   getSuperAdminEnrollmentBranchesApi,
   getSuperAdminBranchEnrollmentCoursesApi,
@@ -246,7 +247,7 @@ const SuperAdminEnrollments = () => {
 
       <main className="min-w-0 flex-1">
         <header
-          className="flex items-center justify-between border-b px-6 py-5 sm:px-10"
+          className="hidden md:flex items-center justify-between border-b px-6 py-5 sm:px-10"
           style={{ borderColor: '#e3ddd0', background: '#ffffff' }}
         >
           <div>
@@ -262,6 +263,7 @@ const SuperAdminEnrollments = () => {
             >
               Course Enrollments
             </h1>
+            <NavLogoutButton redirectTo="/super-admin/login" />
           </div>
           <button
             onClick={() => loadStudents(selectedBranchId, selectedCourseId, courses)}

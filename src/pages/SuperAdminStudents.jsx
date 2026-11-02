@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import {
   getSuperAdminAllStudentsApi,
   getSuperAdminBranchStudentsApi,
@@ -651,7 +652,7 @@ const SuperAdminStudents = () => {
       <main className="min-w-0 flex-1 pb-16">
         {/* Sticky Header */}
         <header
-          className="sticky top-0 z-20 flex h-[92px] items-center justify-between border-b px-6 py-5 sm:px-10 backdrop-blur-md bg-white/95"
+          className="sticky top-0 z-20 hidden md:flex h-[92px] items-center justify-between border-b px-6 py-5 sm:px-10 backdrop-blur-md bg-white/95"
           style={{ borderColor: '#e3ddd0' }}
         >
           <div>
@@ -679,6 +680,7 @@ const SuperAdminStudents = () => {
                 style={{ color: '#9c6b2e' }}
               />
             </button>
+            <NavLogoutButton redirectTo="/super-admin/login" />
           </div>
         </header>
 

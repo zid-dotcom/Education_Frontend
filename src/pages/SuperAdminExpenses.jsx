@@ -18,6 +18,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import { getSuperAdminExpensesApi } from '../services/expenses';
 import { getBranchesApi } from '../services/adminbranches';
 
@@ -308,7 +309,7 @@ export default function SuperAdminExpenses() {
       <main className="min-w-0 flex-1">
         {/* Header */}
         <header
-          className="sticky top-0 z-20 flex h-[92px] items-center justify-between border-b px-6 backdrop-blur-md sm:px-10 shrink-0"
+          className="sticky top-0 z-20 hidden md:flex h-[92px] items-center justify-between border-b px-6 backdrop-blur-md sm:px-10 shrink-0"
           style={{ borderColor: '#e3ddd0', background: '#faf8f4/95' }}
         >
           <div className="flex items-center gap-3">
@@ -345,6 +346,7 @@ export default function SuperAdminExpenses() {
                 className={`h-4 w-4 text-[#9c6b2e] ${refreshing ? 'animate-spin' : ''}`}
               />
             </button>
+            <NavLogoutButton redirectTo="/super-admin/login" />
           </div>
         </header>
 

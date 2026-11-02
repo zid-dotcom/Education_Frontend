@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BranchAdminSidebar from '../components/layout/BranchAdminSidebar';
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import { getDueAdmissionsApi } from '../services/branchadminadmissions';
 import { getBranchAdminDashboardApi } from '../services/branchadmindashboard';
 
@@ -320,10 +321,10 @@ function BranchAdminFeesDue() {
       <main className="min-w-0 flex-1">
         {/* Header */}
         <header
-          className="flex items-center justify-between border-b px-6 py-5 sm:px-10"
+          className="flex items-center justify-between gap-2 border-b px-3.5 sm:px-6 lg:px-10 py-5 sm:px-10"
           style={{ borderColor: '#e3ddd0', background: '#ffffff' }}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
             <button
               type="button"
               onClick={() => setSidebarOpen((open) => !open)}
@@ -376,6 +377,7 @@ function BranchAdminFeesDue() {
                 </p>
               </div>
             </div>
+            <NavLogoutButton redirectTo="/branch-admin-login" />
           </div>
         </header>
 

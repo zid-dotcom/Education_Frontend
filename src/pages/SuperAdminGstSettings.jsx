@@ -17,6 +17,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import {
   getSuperAdminGstSettingsApi,
   updateSuperAdminGstSettingsApi,
@@ -173,7 +174,7 @@ const SuperAdminGstSettings = () => {
 
       <main className="min-w-0 flex-1">
         {/* Header */}
-        <header className="sticky top-0 z-20 flex h-[92px] items-center justify-between border-b border-[#e3ddd0] bg-[#faf8f4]/95 px-6 backdrop-blur-md sm:px-10 shrink-0">
+        <header className="sticky top-0 z-20 hidden md:flex h-[92px] items-center justify-between border-b border-[#e3ddd0] bg-[#faf8f4]/95 px-6 backdrop-blur-md sm:px-10 shrink-0">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -213,6 +214,7 @@ const SuperAdminGstSettings = () => {
             >
               {user?.name?.charAt(0).toUpperCase() || 'S'}
             </div>
+            <NavLogoutButton redirectTo="/super-admin/login" />
           </div>
         </header>
 

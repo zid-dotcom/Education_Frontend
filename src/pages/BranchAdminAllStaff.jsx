@@ -25,6 +25,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import BranchAdminSidebar from "../components/layout/BranchAdminSidebar";
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import {
   getBranchStaffApi,
   updateBranchAdminStaffStatusApi,
@@ -140,7 +141,7 @@ const StaffDetailsModal = ({
           className="flex items-center justify-between px-6 py-5 sm:px-8"
           style={{ borderBottom: "1px solid #e3ddd0", background: "#faf8f4" }}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <div
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base font-semibold"
               style={{ background: "#f1ede4", color: "#7a531f" }}
@@ -508,35 +509,35 @@ const BranchAdminAllStaff = () => {
       <div className="flex flex-1 flex-col overflow-x-hidden">
         {/* Header bar */}
         <header
-          className="sticky top-0 z-20 flex h-[92px] items-center justify-between px-6 sm:px-10 border-b border-[#e3ddd0] bg-[#faf8f4]/95 backdrop-blur-md shrink-0"
+          className="sticky top-0 z-20 flex min-h-[68px] sm:h-[92px] items-center justify-between px-3.5 sm:px-6 lg:px-10 border-b border-[#e3ddd0] bg-[#faf8f4]/95 backdrop-blur-md shrink-0 gap-2"
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
-              className="rounded-xl bg-[#faf8f4] border border-[#e3ddd0] p-2 text-[#17140f] hover:bg-[#f1ede4] transition md:hidden"
+              className="rounded-xl bg-[#faf8f4] border border-[#e3ddd0] p-2 text-[#17140f] hover:bg-[#f1ede4] transition md:hidden shrink-0"
               aria-label="Open sidebar"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#9c6b2e]">
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#9c6b2e] block truncate">
                 Branch Portal
               </span>
-              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
+              <h2 className="text-base sm:text-xl font-extrabold text-slate-900 tracking-tight truncate">
                 All Staffs
               </h2>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <button
               type="button"
               onClick={loadStaffData}
               disabled={loading}
-              className={`ba-press flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-100 border border-[#e3ddd0] ${FOCUS_RING}`}
+              className={`ba-press flex items-center gap-1 sm:gap-1.5 rounded-lg px-2 sm:px-3 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-100 border border-[#e3ddd0] shrink-0 ${FOCUS_RING}`}
               title="Refresh staff list"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
@@ -545,12 +546,14 @@ const BranchAdminAllStaff = () => {
             <button
               type="button"
               onClick={() => navigate("/branch-admin/staff", { state: { openCreate: true } })}
-              className={`ba-press flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs ${FOCUS_RING}`}
+              className={`ba-press flex items-center gap-1 sm:gap-1.5 rounded-lg px-2.5 sm:px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs shrink-0 ${FOCUS_RING}`}
               style={{ background: "#17140f" }}
             >
               <UserPlus className="h-3.5 w-3.5" />
-              <span>Add Staff</span>
+              <span className="hidden sm:inline">Add Staff</span>
+              <span className="sm:hidden text-xs">Add</span>
             </button>
+            <NavLogoutButton redirectTo="/branch-admin-login" />
           </div>
         </header>
 

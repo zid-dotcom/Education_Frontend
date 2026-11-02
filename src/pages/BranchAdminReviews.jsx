@@ -18,6 +18,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import BranchAdminSidebar from '../components/layout/BranchAdminSidebar';
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import { getBranchAdminReviewsApi } from '../services/reviews';
 import { getMyCoursesApi } from '../services/branchadmincourses';
 
@@ -160,7 +161,7 @@ const BranchAdminReviews = () => {
           style={{ background: '#faf8f4', borderColor: '#e3ddd0' }}
         >
           <div className="mx-auto max-w-7xl flex h-[72px] sm:h-[84px] items-center justify-between px-4 sm:px-8">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
               <button
                 type="button"
                 onClick={() => setSidebarOpen(true)}
@@ -193,6 +194,7 @@ const BranchAdminReviews = () => {
                 <span className="hidden sm:inline">Refresh</span>
               </button>
             </div>
+            <NavLogoutButton redirectTo="/branch-admin-login" />
           </div>
         </div>
 

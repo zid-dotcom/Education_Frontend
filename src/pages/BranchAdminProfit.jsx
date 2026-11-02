@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BranchAdminSidebar from '../components/layout/BranchAdminSidebar';
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import { getBranchAdminProfitApi } from '../services/branchadminprofit';
 
 const PAGE_CSS = `
@@ -410,10 +411,10 @@ export default function BranchAdminProfit() {
       <main className="min-w-0 flex-1">
         {/* Header */}
         <header
-          className="flex items-center justify-between border-b px-6 py-5 sm:px-10"
+          className="flex items-center justify-between gap-2 border-b px-3.5 sm:px-6 lg:px-10 py-5 sm:px-10"
           style={{ borderColor: '#e3ddd0', background: '#ffffff' }}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
             <button
               onClick={() => setSidebarOpen(true)}
               className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e3ddd0] bg-white text-slate-600 shadow-sm transition hover:bg-[#f0ebe1] md:hidden"
@@ -437,7 +438,7 @@ export default function BranchAdminProfit() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <button
               type="button"
               onClick={() => navigate('/branch-admin/receipts')}
@@ -473,6 +474,7 @@ export default function BranchAdminProfit() {
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#17140f] text-sm font-extrabold text-[#f4b942] shadow-sm ring-2 ring-[#e3ddd0]">
               {user?.name?.charAt(0).toUpperCase() || 'B'}
             </div>
+            <NavLogoutButton redirectTo="/branch-admin-login" />
           </div>
         </header>
 
@@ -736,7 +738,7 @@ export default function BranchAdminProfit() {
             className="sa-modal-enter w-full max-w-4xl bg-[#faf8f4] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
             style={{ border: '1px solid #e3ddd0' }}
           >
-            <header className="px-6 py-4 flex items-center justify-between bg-white border-b border-[#e3ddd0]">
+            <header className="px-3.5 sm:px-6 lg:px-10 py-4 flex items-center justify-between gap-2 bg-white border-b border-[#e3ddd0]">
               <h2 className="text-xl font-bold" style={{ fontFamily: "'Fraunces', serif" }}>
                 Enrollment Details
               </h2>

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import { getSuperAdminDashboardOverviewApi } from '../services/superadmin';
 
 const PAGE_CSS = `
@@ -648,7 +649,7 @@ const SuperAdminDashboard = () => {
       <SuperAdminSidebar user={user} navigate={navigate} logout={logout} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} activePage="dashboard" />
 
       <main className="min-w-0 flex-1 relative">
-        <header className="flex items-center justify-between border-b px-6 py-5 sm:px-10" style={{ borderColor: '#e3ddd0', background: '#ffffff' }}>
+        <header className="hidden md:flex items-center justify-between border-b px-6 py-5 sm:px-10" style={{ borderColor: '#e3ddd0', background: '#ffffff' }}>
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#9c6b2e' }}>Super Admin</p>
             <h1 className="mt-1 text-2xl font-bold tracking-tight" style={{ fontFamily: "'Fraunces', serif", color: '#17140f' }}>Dashboard</h1>
@@ -665,6 +666,7 @@ const SuperAdminDashboard = () => {
             <div className="flex h-9 w-9 items-center justify-center rounded-full font-bold text-sm shadow-sm" style={{ background: '#17140f', color: '#f4b942' }}>
               {user?.name?.charAt(0).toUpperCase() || 'A'}
             </div>
+            <NavLogoutButton redirectTo="/super-admin/login" />
           </div>
         </header>
 

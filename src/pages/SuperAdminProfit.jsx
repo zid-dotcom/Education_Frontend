@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import {
   getSuperAdminProfitBranchesApi,
   getSuperAdminBranchProfitApi,
@@ -295,7 +296,7 @@ const SuperAdminProfit = () => {
       <SuperAdminSidebar user={user} navigate={navigate} logout={logout} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} activePage="profit" />
 
       <main className="min-w-0 flex-1">
-        <header className="flex items-center justify-between border-b px-6 py-5 sm:px-10" style={{ borderColor: '#e3ddd0', background: '#ffffff' }}>
+        <header className="hidden md:flex items-center justify-between border-b px-6 py-5 sm:px-10" style={{ borderColor: '#e3ddd0', background: '#ffffff' }}>
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#9c6b2e' }}>Super Admin</p>
             <h1 className="mt-1 text-2xl font-bold" style={{ fontFamily: "'Fraunces', serif" }}>Branch Revenue</h1>
@@ -322,6 +323,7 @@ const SuperAdminProfit = () => {
             >
               <RefreshCw className={`h-4 w-4 ${profitLoading ? 'animate-spin' : ''}`} style={{ color: '#9c6b2e' }} />
             </button>
+            <NavLogoutButton redirectTo="/super-admin/login" />
           </div>
         </header>
 

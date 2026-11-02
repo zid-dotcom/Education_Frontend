@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BranchAdminSidebar from '../components/layout/BranchAdminSidebar';
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import { getBranchAdminStaffMonitoringApi } from '../services/staffMonitoring';
 import { getBranchAdminDashboardApi } from '../services/branchadmindashboard';
 
@@ -424,8 +425,8 @@ const BranchAdminStaffMonitoring = () => {
       {/* Main Content Area */}
       <main className="min-w-0 flex-1 h-screen overflow-y-auto">
         {/* Top Header */}
-        <header className="sticky top-0 z-20 flex h-[92px] items-center justify-between border-b border-[#e3ddd0] bg-[#faf8f4]/95 px-6 backdrop-blur-md sm:px-10 shrink-0">
-          <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-20 flex min-h-[68px] sm:h-[92px] items-center justify-between gap-2 border-b border-[#e3ddd0] bg-[#faf8f4]/95 px-3.5 sm:px-6 lg:px-10 backdrop-blur-md sm:px-10 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
@@ -459,6 +460,7 @@ const BranchAdminStaffMonitoring = () => {
               <UserCheck className="h-3.5 w-3.5 text-[#9C6B2E]" />
               <span className="hidden sm:inline">Staff Accounts</span>
             </Link>
+            <NavLogoutButton redirectTo="/branch-admin-login" />
           </div>
         </header>
 

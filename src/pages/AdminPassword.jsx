@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import { changeAdminPasswordApi } from '../services/adminpassword';
 
 const AdminPassword = () => {
@@ -105,9 +106,10 @@ const AdminPassword = () => {
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4 shadow-2xs sm:px-8">
+        <header className="sticky top-0 z-20 hidden md:flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4 shadow-2xs sm:px-8">
           <div><p className="text-[10px] font-extrabold uppercase tracking-widest text-amber-700">Account security</p><h1 className="mt-1 text-lg font-black tracking-tight text-slate-950 sm:text-xl">Change Password</h1></div>
-          <div className="flex items-center gap-3"><span className="hidden text-right sm:block"><span className="block text-xs font-extrabold text-slate-900">{user?.name || 'Administrator'}</span><span className="block text-[10px] font-semibold text-slate-500">Administrator</span></span><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950 text-sm font-black text-amber-400">{user?.name?.charAt(0).toUpperCase() || 'A'}</div></div>
+          <div className="flex items-center gap-3"><span className="hidden text-right sm:block"><span className="block text-xs font-extrabold text-slate-900">{user?.name || 'Administrator'}</span><span className="block text-[10px] font-semibold text-slate-500">Administrator</span></span><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950 text-sm font-black text-amber-400">{user?.name?.charAt(0).toUpperCase() || 'A'}</div>  <NavLogoutButton redirectTo="/super-admin/login" />
+          </div>
         </header>
 
         <main className="flex w-full max-w-6xl flex-1 flex-col px-5 py-7 sm:px-8 lg:py-12">

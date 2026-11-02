@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import {
   getSuperAdminStaffInboxApi,
   getSuperAdminStaffUnreadCountApi,
@@ -368,7 +369,7 @@ const SuperAdminStaffMessages = () => {
       {/* Main Container */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header */}
-        <header className="px-6 py-4 bg-white border-b border-[#e3ddd0] shrink-0 flex items-center justify-between">
+        <header className="px-6 py-4 bg-white border-b border-[#e3ddd0] shrink-0 hidden md:flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-black text-[#17140F] tracking-tight">
@@ -395,6 +396,7 @@ const SuperAdminStaffMessages = () => {
               <RefreshCw className={`h-3.5 w-3.5 text-[#9c6b2e] ${refreshing ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">{refreshing ? 'Syncing…' : 'Refresh'}</span>
             </button>
+            <NavLogoutButton redirectTo="/super-admin/login" />
           </div>
         </header>
 

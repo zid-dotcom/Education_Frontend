@@ -22,6 +22,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getUserAnnouncementsApi } from '../../services/userannouncements';
 import { getStudentAssignmentsApi } from '../../services/studentassignments';
 import { getStudentUnreadCountApi } from '../../services/studentStaffMessages';
+import NavLogoutButton from '../common/NavLogoutButton';
 
 // Load modern Plus Jakarta Sans + Inter + Fraunces fonts
 const useStudentLayoutFonts = () => {
@@ -473,6 +474,8 @@ const StudentLayout = () => {
                   </p>
                 </div>
               </div>
+
+              <NavLogoutButton redirectTo="/login" />
             </div>
           </header>
 

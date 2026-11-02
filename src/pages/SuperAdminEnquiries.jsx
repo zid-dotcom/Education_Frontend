@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import { getBranchesApi, getStoredBranches } from '../services/adminbranches';
 import {
   getSuperAdminRecordsEnquiriesApi,
@@ -351,7 +352,7 @@ const SuperAdminEnquiries = () => {
       <main className="min-w-0 flex-1 flex flex-col">
         {/* Page Top Header - Centered */}
         <header
-          className="sticky top-0 z-20 w-full border-b"
+          className="hidden md:block sticky top-0 z-20 w-full border-b"
           style={{ borderColor: '#e3ddd0', background: '#ffffff' }}
         >
           <div className="mx-auto max-w-7xl px-6 py-5 sm:px-10 flex items-center justify-between">
@@ -386,6 +387,7 @@ const SuperAdminEnquiries = () => {
                 <span className="hidden sm:inline">Refresh</span>
               </button>
             </div>
+            <NavLogoutButton redirectTo="/super-admin/login" />
           </div>
         </header>
 

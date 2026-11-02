@@ -28,6 +28,7 @@ import {
   updateAnnouncementApi,
 } from '../services/adminannouncements';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
+import NavLogoutButton from "../components/common/NavLogoutButton";
 
 const EMPTY_FORM = { title: '', message: '', audience: 'all' };
 
@@ -152,10 +153,13 @@ const AdminAnnouncements = () => {
       <SuperAdminSidebar user={user} navigate={navigate} logout={logout} sidebarOpen={isSidebarOpen} setSidebarOpen={setIsSidebarOpen} activePage="global-announcements" />
 
       <main className="min-w-0 flex-1">
-        <header className="flex items-center justify-between border-b px-6 py-5 sm:px-10" style={{ borderColor: '#e3ddd0', background: '#ffffff' }}>
+        <header className="hidden md:flex items-center justify-between border-b px-6 py-5 sm:px-10" style={{ borderColor: '#e3ddd0', background: '#ffffff' }}>
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#9c6b2e' }}>Super Admin</p>
             <h1 className="mt-1 text-2xl font-bold" style={{ fontFamily: "'Fraunces', serif" }}>Global Announcements</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <NavLogoutButton redirectTo="/super-admin/login" />
           </div>
         </header>
 

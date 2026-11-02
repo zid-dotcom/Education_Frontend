@@ -1,11 +1,13 @@
 import React from 'react';
 import { RefreshCw, Menu, Building2 } from 'lucide-react';
+import NavLogoutButton from '../common/NavLogoutButton';
 
 const StaffHeader = ({
   title,
   loading,
   refreshing,
   onRefresh,
+  onLogout,
   user,
   profileData,
   branchName = '',
@@ -136,6 +138,13 @@ const StaffHeader = ({
             </span>
           </div>
         </button>
+
+        {/* Top-Right Logout Button */}
+        <NavLogoutButton
+          redirectTo="/staff-login"
+          onLogoutClick={onLogout}
+          className="rounded-2xl"
+        />
       </div>
     </header>
   );

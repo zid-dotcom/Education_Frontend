@@ -268,20 +268,32 @@ const SuperAdminSidebar = ({
       <style>{SIDEBAR_CSS}</style>
       {/* Mobile top bar */}
       <div
-        className="sticky top-0 z-30 flex items-center justify-start gap-3 px-4 py-3 md:hidden"
+        className="sticky top-0 z-30 flex items-center justify-between gap-3 px-4 py-3 md:hidden"
         style={{ ...sans, background: '#faf8f4', borderBottom: '1px solid #e3ddd0' }}
       >
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen((o) => !o)}
+            className={`rounded-lg p-2 transition-colors hover:bg-[#f1ede4] ${FOCUS_RING}`}
+            style={{ color: '#17140f', border: '1px solid #e3ddd0', background: '#ffffff' }}
+            aria-label="Toggle navigation"
+            aria-expanded={sidebarOpen}
+          >
+            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+          <Brand />
+        </div>
         <button
           type="button"
-          onClick={() => setSidebarOpen((o) => !o)}
-          className={`rounded-lg p-2 transition-colors hover:bg-[#f1ede4] ${FOCUS_RING}`}
-          style={{ color: '#17140f', border: '1px solid #e3ddd0', background: '#ffffff' }}
-          aria-label="Toggle navigation"
-          aria-expanded={sidebarOpen}
+          onClick={handleLogout}
+          className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors hover:bg-rose-100 ${FOCUS_RING}`}
+          style={{ color: '#be123c', border: '1px solid #fecdd3', background: '#fff1f2' }}
+          title="Logout"
         >
-          {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          <LogOut className="h-3.5 w-3.5" />
+          <span>Logout</span>
         </button>
-        <Brand />
       </div>
 
       {sidebarOpen && (

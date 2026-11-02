@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { CalendarCheck, CheckCircle2, ChevronDown, Clock, Loader2, RefreshCw, X, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import {
   getSuperAdminAttendanceBranchesApi,
   getSuperAdminBranchStaffAttendanceApi,
@@ -142,12 +143,13 @@ const SuperAdminAttendance = () => {
       <SuperAdminSidebar user={user} navigate={navigate} logout={logout} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} activePage="attendance" />
 
       <main className="min-w-0 flex-1">
-        <header className="flex items-center justify-between border-b px-6 py-5 sm:px-10" style={{ borderColor: '#e3ddd0', background: '#ffffff' }}>
+        <header className="hidden md:flex items-center justify-between border-b px-6 py-5 sm:px-10" style={{ borderColor: '#e3ddd0', background: '#ffffff' }}>
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#9c6b2e' }}>Super Admin</p>
             <h1 className="mt-1 text-2xl font-bold" style={{ fontFamily: "'Fraunces', serif" }}>Attendance</h1>
           </div>
-          <button
+          <div className="flex items-center gap-3">
+            <button
             onClick={() => {
               if (fromDate && toDate && fromDate > toDate) {
                 setDateError('From Date cannot be later than To Date.');
@@ -160,6 +162,8 @@ const SuperAdminAttendance = () => {
           >
             <RefreshCw className={`h-4 w-4 ${dataLoading ? 'animate-spin' : ''}`} style={{ color: '#9c6b2e' }} />
           </button>
+            <NavLogoutButton redirectTo="/super-admin/login" />
+          </div>
         </header>
 
         <div className="mx-auto max-w-7xl px-6 py-8 sm:px-10 space-y-6">

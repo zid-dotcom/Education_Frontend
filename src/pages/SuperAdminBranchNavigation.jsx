@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import { getBranchesApi } from '../services/adminbranches';
 import {
   getBranchSidebarNavigationApi,
@@ -196,7 +197,7 @@ const SuperAdminBranchNavigation = () => {
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Sticky Header */}
-        <header className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4 shadow-2xs sm:px-8">
+        <header className="sticky top-0 z-20 hidden md:flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4 shadow-2xs sm:px-8">
           <div>
             <p className="text-[10px] font-extrabold uppercase tracking-widest text-[#9c6b2e]">
               Branch Access Control
@@ -217,6 +218,7 @@ const SuperAdminBranchNavigation = () => {
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950 text-sm font-black text-[#f4b942]">
               {user?.name?.charAt(0).toUpperCase() || 'A'}
             </div>
+            <NavLogoutButton redirectTo="/super-admin/login" />
           </div>
         </header>
 

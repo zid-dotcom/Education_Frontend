@@ -25,6 +25,7 @@ import {
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import BranchAdminSidebar from "../components/layout/BranchAdminSidebar";
+import NavLogoutButton from "../components/common/NavLogoutButton";
 import Toast from "../components/common/Toast";
 import AttendanceCalendarMatrix from "../components/common/AttendanceCalendarMatrix";
 import { getMyCoursesApi } from "../services/branchadmincourses";
@@ -502,8 +503,8 @@ const BranchAdminStaff = () => {
       />
       <main className="min-w-0 flex-1">
         {/* ---- Header ---- */}
-        <header className="sticky top-0 z-20 flex h-[92px] items-center justify-between border-b border-[#e3ddd0] bg-[#faf8f4]/95 px-6 backdrop-blur-md sm:px-10 shrink-0">
-          <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-20 flex min-h-[68px] sm:h-[92px] items-center justify-between gap-2 border-b border-[#e3ddd0] bg-[#faf8f4]/95 px-3.5 sm:px-6 lg:px-10 backdrop-blur-md sm:px-10 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
             <button
               onClick={() => setSidebarOpen(true)}
               className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e3ddd0] bg-white text-slate-600 shadow-sm transition hover:bg-[#f0ebe1] md:hidden"
@@ -515,12 +516,12 @@ const BranchAdminStaff = () => {
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#9c6b2e]">
                 Branch Portal
               </span>
-              <h1 className="text-xl font-extrabold tracking-tight text-slate-900 leading-tight">
+              <h1 className="text-base sm:text-xl font-extrabold tracking-tight text-slate-900 leading-tight truncate">
                 Staff Management
               </h1>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <Link
               to="/branch-admin/staff-monitoring"
               className="hidden sm:inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition hover:bg-[#f1ede4] border border-[#e3ddd0] text-[#17140f] bg-white shadow-2xs"
@@ -539,6 +540,7 @@ const BranchAdminStaff = () => {
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#17140f] text-sm font-extrabold text-[#f4b942] shadow-sm ring-2 ring-[#e3ddd0]">
               {user?.name?.charAt(0).toUpperCase() || "B"}
             </div>
+            <NavLogoutButton redirectTo="/branch-admin-login" />
           </div>
         </header>
 
