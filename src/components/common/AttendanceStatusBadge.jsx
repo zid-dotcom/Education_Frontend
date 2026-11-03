@@ -83,3 +83,4 @@ export const AttendanceStatusBadge = ({ status, className = "" }) => {
 };
 
 export default AttendanceStatusBadge;
+

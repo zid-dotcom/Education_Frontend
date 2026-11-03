@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import hero1Image from '../../assets/hero1.png';
@@ -20,13 +20,28 @@ const SLIDES = [
   },
 ];
 
-// Slow and relaxed carousel timings (8 seconds per slide, 1.6s smooth dissolve)
-const AUTO_PLAY_INTERVAL = 8000; // 8 seconds per slide
-const FADE_TRANSITION_MS = 1600; // 1.6 seconds slow, gentle cross-fade movement
+// Cloned array for seamless infinite horizontal slide show: [CloneLast, Slide0, Slide1, CloneFirst]
+const TRACK_SLIDES = [
+  SLIDES[SLIDES.length - 1],
+  ...SLIDES,
+  SLIDES[0],
+];
+
+// Slow and relaxed slideshow timings (6s per slide, 1.4s smooth horizontal gliding motion)
+const AUTO_PLAY_INTERVAL = 6000; // 6 seconds display per slide
+const SLIDE_TRANSITION_MS = 1400; // 1.4 seconds smooth, slow horizontal slide
 
 const Hero = () => {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  // Starts at trackIndex 1 (real Slide 0: Welcome to Aurum FX)
+  const [trackIndex, setTrackIndex] = useState(1);
+  const [withTransition, setWithTransition] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
+  const isTransitioningRef = useRef(false);
+  const touchStartXRef = useRef(0);
+  const touchEndXRef = useRef(0);
+
+  // Active indicator dot calculation based on original slides count
+  const activeSlideIndex = (trackIndex - 1 + SLIDES.length) % SLIDES.length;
 
   // Dynamically compute exact height so hero fills the exact screen without any gap at the bottom
   const [heroHeight, setHeroHeight] = useState(() => {
@@ -67,17 +82,72 @@ const Hero = () => {
   }, []);
 
   const nextSlide = useCallback(() => {
-    setCurrentIndex((prev) => (prev + 1) % SLIDES.length);
+    if (isTransitioningRef.current) return;
+    isTransitioningRef.current = true;
+    setWithTransition(true);
+    setTrackIndex((prev) => prev + 1);
   }, []);
 
   const prevSlide = useCallback(() => {
-    setCurrentIndex((prev) => (prev - 1 + SLIDES.length) % SLIDES.length);
+    if (isTransitioningRef.current) return;
+    isTransitioningRef.current = true;
+    setWithTransition(true);
+    setTrackIndex((prev) => prev - 1);
   }, []);
 
   const goToSlide = (index) => {
-    setCurrentIndex(index);
+    if (isTransitioningRef.current) return;
+    isTransitioningRef.current = true;
+    setWithTransition(true);
+    setTrackIndex(index + 1);
   };
 
+  const handleTransitionEnd = () => {
+    isTransitioningRef.current = false;
+    // If reached end clone (Slide 0 clone at index 3), silently reset to real Slide 0 (index 1)
+    if (trackIndex >= TRACK_SLIDES.length - 1) {
+      setWithTransition(false);
+      setTrackIndex(1);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setWithTransition(true);
+        });
+      });
+    }
+    // If reached start clone (Slide 1 clone at index 0), silently reset to real Slide 1 (index 2)
+    else if (trackIndex <= 0) {
+      setWithTransition(false);
+      setTrackIndex(TRACK_SLIDES.length - 2);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setWithTransition(true);
+        });
+      });
+    }
+  };
+
+  // Touch swipe support for mobile
+  const handleTouchStart = (e) => {
+    touchStartXRef.current = e.touches[0].clientX;
+    touchEndXRef.current = e.touches[0].clientX;
+  };
+
+  const handleTouchMove = (e) => {
+    touchEndXRef.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    const diff = touchStartXRef.current - touchEndXRef.current;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) {
+        nextSlide();
+      } else {
+        prevSlide();
+      }
+    }
+  };
+
+  // Autoplay timer that restarts fresh on every slide change
   useEffect(() => {
     if (isPaused) return;
 
@@ -86,48 +156,54 @@ const Hero = () => {
     }, AUTO_PLAY_INTERVAL);
 
     return () => clearTimeout(timer);
-  }, [currentIndex, isPaused, nextSlide]);
+  }, [trackIndex, isPaused, nextSlide]);
 
   return (
     <section className="w-full overflow-hidden">
-      {/* Full-Width Hero Carousel - Fills exact screen height down to viewport bottom with slow, relaxed transition */}
+      {/* Full-Width Hero Slideshow - Fills exact screen height down to viewport bottom */}
       <div
         className="group relative w-full overflow-hidden bg-white aspect-[16/9] md:aspect-auto"
         style={heroHeight ? { height: heroHeight } : undefined}
-        onMouseEnter={() => setIsPaused(true)}
-        onMouseLeave={() => setIsPaused(false)}
-        onTouchStart={() => setIsPaused(true)}
-        onTouchEnd={() => setIsPaused(false)}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         aria-roledescription="carousel"
         aria-label="Aurum FX Academy Hero Carousel"
       >
-        {/* Carousel Slides with Slow 1.6s Cross-Fade Movement */}
-        {SLIDES.map((slide, index) => {
-          const isActive = index === currentIndex;
-          return (
+        {/* Horizontal Slideshow Track (glides slowly from one image to another) */}
+        <div
+          className="flex h-full w-full select-none"
+          style={{
+            transform: `translateX(-${trackIndex * 100}%)`,
+            transition: withTransition
+              ? `transform ${SLIDE_TRANSITION_MS}ms cubic-bezier(0.25, 1, 0.35, 1)`
+              : 'none',
+          }}
+          onTransitionEnd={handleTransitionEnd}
+        >
+          {TRACK_SLIDES.map((slide, index) => (
             <div
-              key={slide.id}
-              className={`absolute inset-0 w-full h-full transition-opacity ease-in-out ${
-                isActive ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'
-              }`}
-              style={{ transitionDuration: `${FADE_TRANSITION_MS}ms` }}
-              aria-hidden={!isActive}
+              key={`${slide.id}-${index}`}
+              className="relative h-full w-full shrink-0 grow-0"
+              aria-hidden={index !== trackIndex}
             >
               <img
                 src={slide.image}
                 alt={slide.alt}
-                className="block w-full h-full object-cover select-none"
+                className="block h-full w-full object-cover select-none pointer-events-none"
                 style={{ objectPosition: slide.objectPosition || 'center 55%' }}
-                loading={index === 0 ? 'eager' : 'lazy'}
+                loading={index === 1 ? 'eager' : 'lazy'}
               />
             </div>
-          );
-        })}
+          ))}
+        </div>
 
         {/* Navigation Arrows */}
         <button
           type="button"
           onClick={prevSlide}
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
           aria-label="Previous slide"
           className="absolute left-3 sm:left-5 top-1/2 z-20 -translate-y-1/2 flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-white/85 text-slate-800 shadow-md backdrop-blur-xs transition-all hover:bg-white hover:text-amber-600 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-amber-500/50 opacity-80 sm:opacity-0 sm:group-hover:opacity-100 cursor-pointer"
         >
@@ -137,6 +213,8 @@ const Hero = () => {
         <button
           type="button"
           onClick={nextSlide}
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
           aria-label="Next slide"
           className="absolute right-3 sm:right-5 top-1/2 z-20 -translate-y-1/2 flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-white/85 text-slate-800 shadow-md backdrop-blur-xs transition-all hover:bg-white hover:text-amber-600 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-amber-500/50 opacity-80 sm:opacity-0 sm:group-hover:opacity-100 cursor-pointer"
         >
@@ -144,9 +222,13 @@ const Hero = () => {
         </button>
 
         {/* Carousel Indicators / Progress Pills */}
-        <div className="absolute bottom-3 sm:bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/25 px-3 py-1.5 backdrop-blur-xs">
+        <div
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+          className="absolute bottom-3 sm:bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/25 px-3 py-1.5 backdrop-blur-xs"
+        >
           {SLIDES.map((slide, index) => {
-            const isActive = index === currentIndex;
+            const isActive = index === activeSlideIndex;
             return (
               <button
                 key={slide.id}

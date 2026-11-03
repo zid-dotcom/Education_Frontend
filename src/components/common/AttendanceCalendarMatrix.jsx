@@ -400,6 +400,7 @@ const AttendanceCalendarMatrix = ({
   savingKey = null, // key of cell currently saving e.g. `${personId}_${dateStr}`
   isStaffPage = false,
   fullWidth = false,
+  allowPastUpdates = false, // When false, only TODAY's attendance can be marked or updated
 }) => {
   const isExpandedLayout = isStaffPage || fullWidth;
   const todayStr = getToday();
@@ -466,6 +467,7 @@ const AttendanceCalendarMatrix = ({
       const isSaturday = dateObj.getDay() === 6;
       const isToday = dateStr === todayStr;
       const isFuture = dateStr > todayStr;
+      const isPast = dateStr < todayStr;
       return {
         dayNum,
         dateStr,
@@ -475,6 +477,7 @@ const AttendanceCalendarMatrix = ({
         isWeekend: isSunday || isSaturday,
         isToday,
         isFuture,
+        isPast,
       };
     });
   }, [year, monthIndex, todayStr]);
@@ -588,6 +591,8 @@ const AttendanceCalendarMatrix = ({
 
   // Handle cell click
   const handleCellClick = (e, person, day) => {
+    // Only TODAY's attendance can be marked or updated. Yesterday and past dates cannot be updated!
+    if (!day.isToday && !allowPastUpdates) return;
     if (day.isFuture) return; // Tomorrow and future dates are strictly read-only!
     if (e) {
       e.preventDefault();
@@ -620,6 +625,8 @@ const AttendanceCalendarMatrix = ({
   const handleSelectStatus = async (statusKey) => {
     if (!activeCell || !onSaveStatus) return;
     const { personId, dateStr, record } = activeCell;
+    // Guard: Only TODAY can be marked or updated!
+    if (dateStr !== todayStr && !allowPastUpdates) return;
     if (dateStr > todayStr) return; // Guard: Future dates are strictly read-only!
 
     const config = STATUS_CONFIG[statusKey];
@@ -637,6 +644,8 @@ const AttendanceCalendarMatrix = ({
   const handleClearStatus = async () => {
     if (!activeCell || !onSaveStatus) return;
     const { personId, dateStr, record } = activeCell;
+    // Guard: Only TODAY can be cleared!
+    if (dateStr !== todayStr && !allowPastUpdates) return;
     setActiveCell(null);
     try {
       await onSaveStatus(personId, dateStr, null, record);
@@ -873,7 +882,7 @@ const AttendanceCalendarMatrix = ({
                       key={day.dateStr}
                       className={`py-2 px-1 text-center min-w-[44px] sm:min-w-[48px] border-r border-[#efe9dd] last:border-r-0 ${
                         day.isToday
-                          ? "bg-amber-100/60 font-bold"
+                          ? "bg-amber-100/70 font-extrabold ring-1 ring-amber-400/50"
                           : day.isFuture
                           ? "bg-slate-50/50 opacity-60"
                           : day.isWeekend
@@ -885,7 +894,7 @@ const AttendanceCalendarMatrix = ({
                         <span
                           className={`text-[10px] font-bold tracking-tight uppercase ${
                             day.isToday
-                              ? "text-amber-800"
+                              ? "text-amber-900 font-extrabold"
                               : day.isFuture
                               ? "text-slate-400"
                               : day.isWeekend
@@ -898,7 +907,7 @@ const AttendanceCalendarMatrix = ({
                         <span
                           className={`text-xs mt-0.5 inline-flex items-center justify-center h-6 w-6 rounded-full font-bold ${
                             day.isToday
-                              ? "bg-amber-500 text-slate-950 shadow-xs"
+                              ? "bg-[#9c6b2e] text-white shadow-xs ring-2 ring-amber-300"
                               : day.isFuture
                               ? "text-slate-400"
                               : "text-slate-800"
@@ -906,6 +915,11 @@ const AttendanceCalendarMatrix = ({
                         >
                           {day.dayNum}
                         </span>
+                        {day.isToday && (
+                          <span className="mt-0.5 text-[8px] font-extrabold uppercase tracking-widest text-[#9c6b2e]">
+                            Today
+                          </span>
+                        )}
                       </div>
                     </th>
                   ))}
@@ -967,13 +981,14 @@ const AttendanceCalendarMatrix = ({
                             activeCell &&
                             String(activeCell.personId) === String(person.id) &&
                             activeCell.dateStr === day.dateStr;
+                          const canEdit = (day.isToday || allowPastUpdates) && !day.isFuture;
 
                           return (
                             <td
                               key={day.dateStr}
                               className={`p-1.5 text-center border-r border-[#efe9dd] last:border-r-0 ${
                                 day.isToday
-                                  ? "bg-amber-50/30"
+                                  ? "bg-amber-50/50"
                                   : day.isFuture
                                   ? "bg-slate-50/40"
                                   : day.isWeekend
@@ -984,22 +999,26 @@ const AttendanceCalendarMatrix = ({
                               <button
                                 type="button"
                                 onClick={(e) => {
-                                  if (!day.isFuture) {
+                                  if (canEdit) {
                                     handleCellClick(e, person, day);
                                   }
                                 }}
-                                disabled={day.isFuture || isSavingThis}
+                                disabled={!canEdit || isSavingThis}
                                 title={
                                   day.isFuture
                                     ? `${person.name} - ${day.dayName} ${day.dayNum} ${monthLabel} (Future date - Read only)`
-                                    : `${person.name} - ${day.dayName} ${day.dayNum} ${monthLabel}: ${
-                                        config ? config.label : "Click to mark"
+                                    : !day.isToday && !allowPastUpdates
+                                    ? `${person.name} - ${day.dayName} ${day.dayNum} ${monthLabel}: ${
+                                        config ? config.label : "Unmarked"
+                                      } (Past date - Locked, cannot edit)`
+                                    : `${person.name} - Today ${day.dayName} ${day.dayNum} ${monthLabel}: ${
+                                        config ? config.label : "Click to mark/update"
                                       }`
                                 }
                                 className={`h-8 w-8 sm:h-9 sm:w-9 mx-auto rounded-lg flex items-center justify-center text-xs font-bold transition-all relative ${
-                                  day.isFuture
-                                    ? "cursor-not-allowed opacity-35 border border-slate-200/80 bg-slate-100/60 text-slate-300 pointer-events-none select-none"
-                                    : "cursor-pointer transform active:scale-95"
+                                  !canEdit
+                                    ? "cursor-not-allowed select-none"
+                                    : "cursor-pointer transform active:scale-95 hover:scale-105"
                                 } ${
                                   isSelected
                                     ? "ring-2 ring-[#9c6b2e] ring-offset-1"
@@ -1007,9 +1026,9 @@ const AttendanceCalendarMatrix = ({
                                 } ${
                                   config
                                     ? "shadow-2xs"
-                                    : !day.isFuture
+                                    : canEdit
                                     ? "border border-[#e3ddd0] bg-white hover:border-[#9c6b2e]/60 hover:bg-amber-50/40 text-slate-300 hover:text-slate-500"
-                                    : ""
+                                    : "border border-slate-200/50 bg-slate-50/40 text-slate-300"
                                 }`}
                                 style={
                                   config
@@ -1027,11 +1046,15 @@ const AttendanceCalendarMatrix = ({
                                   <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-500" />
                                 ) : config ? (
                                   <config.icon className="h-4 w-4" strokeWidth={2.6} />
-                                ) : !day.isFuture ? (
+                                ) : canEdit ? (
                                   <span className="opacity-0 group-hover:opacity-60 text-xs text-slate-400">
                                     +
                                   </span>
-                                ) : null}
+                                ) : (
+                                  <span className="text-[10px] text-slate-300">
+                                    —
+                                  </span>
+                                )}
                               </button>
                             </td>
                           );

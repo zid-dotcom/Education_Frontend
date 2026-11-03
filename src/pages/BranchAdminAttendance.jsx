@@ -2,14 +2,21 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Calendar,
   CalendarDays,
+  CalendarCheck,
+  CheckCircle2,
   Circle,
+  ClipboardCheck,
+  Clock,
+  History,
   Loader2,
   Menu,
+  RotateCcw,
   Save,
-  Clock,
-  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import AttendanceCalendarMatrix from "../components/common/AttendanceCalendarMatrix";
+import AttendanceSummaryCards from "../components/common/AttendanceSummaryCards";
+import AttendanceStatusBadge, { normalizeAttendanceStatus } from "../components/common/AttendanceStatusBadge";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import BranchAdminSidebar from "../components/layout/BranchAdminSidebar";
@@ -41,15 +48,38 @@ const getToday = () => {
   return new Date(now.getTime() - offset).toISOString().slice(0, 10);
 };
 
-const formatDate = (date, opts) =>
-  date
-    ? new Intl.DateTimeFormat("en-IN", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        ...opts,
-      }).format(new Date(`${date}T00:00:00`))
-    : "Selected date";
+const formatDate = (date, opts) => {
+  if (!date) return "—";
+  try {
+    return new Intl.DateTimeFormat("en-IN", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      ...opts,
+    }).format(new Date(`${date}T00:00:00`));
+  } catch (e) {
+    return date;
+  }
+};
+
+const formatTimestamp = (timestamp) => {
+  if (!timestamp) return "—";
+  try {
+    const d = new Date(timestamp);
+    if (isNaN(d.getTime())) return "—";
+    return d.toLocaleString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch (e) {
+    return "—";
+  }
+};
 
 const statusOptions = [
   { value: "present", label: "Present", dot: "#5c7a5a", text: "#39533a", bg: "#eef2ea" },
@@ -85,6 +115,11 @@ const BranchAdminAttendance = () => {
 
   const handleMatrixSaveStatus = async (personId, dateStr, newStatus, existingRecord) => {
     if (!token) return;
+    const today = getToday();
+    if (dateStr !== today) {
+      setError("Attendance can only be marked or updated for today. Past dates cannot be modified.");
+      return;
+    }
     setSaving(true);
     setError("");
     setSuccess("");
@@ -139,6 +174,7 @@ const BranchAdminAttendance = () => {
         total: Number(data?.total || records.length),
         present: Number(data?.present || 0),
         half_day: Number(data?.half_day || 0),
+        absent: Number(data?.absent || 0),
         leave: Number(data?.leave || 0),
       });
       const selectedRecord = records.find((record) => record.date === date);
@@ -183,18 +219,33 @@ const BranchAdminAttendance = () => {
     [historyAttendance, startDate, endDate],
   );
 
-  const filteredSummary = useMemo(() => filteredAttendance.reduce((summary, record) => {
-    const status = normalizeStatus(record.status);
-    return {
-      ...summary,
-      total: summary.total + 1,
-      present: summary.present + (status === "present" ? 1 : 0),
-      half_day: summary.half_day + (status === "half_day" ? 1 : 0),
-      leave: summary.leave + (status === "leave" ? 1 : 0),
-    };
-  }, { total: 0, present: 0, half_day: 0, leave: 0 }), [filteredAttendance]);
+  const filteredSummary = useMemo(() => {
+    return filteredAttendance.reduce(
+      (summary, record) => {
+        const status = normalizeAttendanceStatus(record.status);
+        summary.total += 1;
+        if (status === "present") summary.present += 1;
+        else if (status === "half_day") summary.half_day += 1;
+        else if (status === "absent") summary.absent += 1;
+        else if (status === "leave") summary.leave += 1;
+        return summary;
+      },
+      { total: 0, present: 0, half_day: 0, absent: 0, leave: 0 }
+    );
+  }, [filteredAttendance]);
 
-  const visibleSummary = startDate || endDate ? filteredSummary : attendanceSummary;
+  const visibleSummary = useMemo(() => {
+    if (filteredAttendance.length > 0 || startDate || endDate) {
+      return filteredSummary;
+    }
+    return {
+      total: attendanceSummary.total || 0,
+      present: attendanceSummary.present || 0,
+      half_day: attendanceSummary.half_day || 0,
+      absent: attendanceSummary.absent || 0,
+      leave: attendanceSummary.leave || 0,
+    };
+  }, [filteredAttendance, startDate, endDate, filteredSummary, attendanceSummary]);
 
   const saveAttendance = async () => {
     if (!token) return;
@@ -367,38 +418,52 @@ const BranchAdminAttendance = () => {
 
           {/* ---- Tab 2: Attendance History ---- */}
           {activeTab === "history" && (
-            <div className="space-y-6">
-              <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div className="space-y-7">
+              {/* Filter & Page Title Header */}
+              <div className="rounded-2xl border border-[#e3ddd0] bg-white p-5 sm:p-6 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-5">
                 <div>
-                  <h2 style={{ ...serif, fontWeight: 500, color: "#17140f" }} className="text-xl sm:text-2xl font-bold">
-                    Attendance History
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-2.5 w-2.5 rounded-full bg-[#9c6b2e]" />
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#9c6b2e]">
+                      Branch Portal Attendance
+                    </span>
+                  </div>
+                  <h2
+                    className="mt-1 text-xl sm:text-2xl font-bold tracking-tight text-slate-900"
+                    style={serif}
+                  >
+                    Personal Attendance History
                   </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {filteredAttendance.length} record{filteredAttendance.length === 1 ? "" : "s"} found
+                  <p className="mt-1 text-xs sm:text-sm text-slate-500">
+                    Administrator daily attendance activity records and status audit log.
                   </p>
                 </div>
-                <div className="flex flex-wrap items-end gap-3">
-                  <label className="flex flex-col gap-1 text-xs text-slate-500 font-semibold">
-                    From
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(event) => setStartDate(event.target.value)}
-                      className="rounded-lg px-3 py-2 text-sm bg-white"
-                      style={{ border: "1px solid #e3ddd0", color: "#1c1a17" }}
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1 text-xs text-slate-500 font-semibold">
-                    To
-                    <input
-                      type="date"
-                      value={endDate}
-                      min={startDate || undefined}
-                      onChange={(event) => setEndDate(event.target.value)}
-                      className="rounded-lg px-3 py-2 text-sm bg-white"
-                      style={{ border: "1px solid #e3ddd0", color: "#1c1a17" }}
-                    />
-                  </label>
+
+                {/* Date Filters Control */}
+                <div className="flex flex-wrap items-center gap-3 bg-[#faf8f4] border border-[#e8e2d5] p-2.5 rounded-xl self-start lg:self-auto">
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
+                      <span className="text-slate-400 font-medium">From:</span>
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(event) => setStartDate(event.target.value)}
+                        className="rounded-lg border border-[#ded8cb] bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 shadow-2xs focus:border-[#9c6b2e] focus:outline-none"
+                      />
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
+                      <span className="text-slate-400 font-medium">To:</span>
+                      <input
+                        type="date"
+                        value={endDate}
+                        min={startDate || undefined}
+                        onChange={(event) => setEndDate(event.target.value)}
+                        className="rounded-lg border border-[#ded8cb] bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 shadow-2xs focus:border-[#9c6b2e] focus:outline-none"
+                      />
+                    </label>
+                  </div>
                   {(startDate || endDate) && (
                     <button
                       type="button"
@@ -406,63 +471,132 @@ const BranchAdminAttendance = () => {
                         setStartDate("");
                         setEndDate("");
                       }}
-                      className="rounded-lg px-3 py-2 text-sm font-semibold transition hover:underline"
-                      style={{ color: "#9c6b2e" }}
+                      className="inline-flex items-center gap-1 rounded-lg bg-white border border-[#ded8cb] px-2.5 py-1.5 text-xs font-bold text-[#9c6b2e] shadow-2xs hover:bg-[#f3ede1] transition-colors cursor-pointer"
+                      title="Clear date filters"
                     >
+                      <RotateCcw className="h-3 w-3" />
                       Clear
                     </button>
                   )}
                 </div>
               </div>
 
-              <div className="overflow-hidden rounded-2xl bg-white shadow-xs" style={{ border: "1px solid #e3ddd0" }}>
+              {/* A. Five Dynamic Summary Cards */}
+              <AttendanceSummaryCards
+                total={visibleSummary.total}
+                present={visibleSummary.present}
+                halfDay={visibleSummary.half_day}
+                absent={visibleSummary.absent}
+                leave={visibleSummary.leave}
+                loading={loading}
+                totalLabel="Total Records"
+              />
+
+              {/* B. Personal Attendance History Table */}
+              <div
+                className="overflow-hidden rounded-2xl bg-white shadow-xs"
+                style={{ border: "1px solid #e3ddd0" }}
+              >
+                {/* Header bar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e8e2d5] bg-[#faf8f4] px-6 py-4.5">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <History className="h-4 w-4 text-[#9c6b2e]" />
+                      <h3
+                        className="text-base font-bold text-slate-900 tracking-tight"
+                        style={serif}
+                      >
+                        Personal Attendance Log
+                      </h3>
+                    </div>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      Chronological history of your daily duty clock-in and attendance records
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full bg-white border border-[#e3ddd0] px-3 py-1 text-xs font-bold text-slate-700 shadow-2xs">
+                    <span className="h-2 w-2 rounded-full bg-[#1e6b37]" />
+                    {filteredAttendance.length}{" "}
+                    {filteredAttendance.length === 1 ? "Record" : "Records"}
+                  </span>
+                </div>
+
+                {/* Table */}
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-left text-sm">
                     <thead>
-                      <tr style={{ borderBottom: "1px solid #e3ddd0", background: "#faf8f4" }}>
-                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">Date</th>
-                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">Status</th>
-                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">Marked at</th>
+                      <tr className="border-b border-[#e8e2d5] bg-[#fbf9f5]">
+                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                          Date
+                        </th>
+                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                          Status
+                        </th>
+                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                          Marked At
+                        </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#efe9dd]">
+                    <tbody className="divide-y divide-[#f1ede4]">
                       {loading ? (
                         <tr>
-                          <td colSpan="3" className="px-6 py-16 text-center text-slate-400">
-                            <Loader2 className="mx-auto h-5 w-5 animate-spin text-[#9c6b2e]" />
+                          <td colSpan="3" className="px-6 py-14 text-center text-slate-400">
+                            <Loader2 className="mx-auto h-6 w-6 animate-spin text-[#9c6b2e]" />
+                            <p className="mt-2 text-xs font-medium text-slate-500">
+                              Loading attendance history...
+                            </p>
                           </td>
                         </tr>
                       ) : filteredAttendance.length === 0 ? (
                         <tr>
-                          <td colSpan="3" className="px-6 py-16 text-center text-sm text-slate-500">
-                            No attendance records in this range yet.
+                          <td colSpan="3" className="px-6 py-14 text-center">
+                            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#f4eee2] text-[#9c6b2e] mb-3">
+                              <ClipboardCheck className="h-6 w-6" />
+                            </div>
+                            <p className="text-sm font-bold text-slate-800">
+                              No attendance records in this range
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {startDate || endDate
+                                ? "No logs match the selected date range. Try clearing or expanding your dates."
+                                : "No personal attendance entries have been recorded yet."}
+                            </p>
+                            {(startDate || endDate) && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setStartDate("");
+                                  setEndDate("");
+                                }}
+                                className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[#e3ddd0] bg-white px-3 py-1.5 text-xs font-bold text-[#9c6b2e] shadow-2xs hover:bg-[#f6f2e9] cursor-pointer"
+                              >
+                                <RotateCcw className="h-3.5 w-3.5" /> Clear Filters
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ) : (
-                        filteredAttendance.map((record) => {
-                          const status = statusFor(record.status);
-                          return (
-                            <tr key={record.id} className="hover:bg-slate-50/70 transition-colors">
-                              <td className="px-6 py-4 font-bold text-slate-900">
-                                {formatDate(record.date)}
-                              </td>
-                              <td className="px-6 py-4">
-                                <span
-                                  className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold"
-                                  style={{ background: status.bg, color: status.text }}
-                                >
-                                  <Circle className="h-2 w-2" fill={status.dot} stroke="none" />
-                                  {status.label}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 text-xs font-medium text-slate-500">
-                                {record.marked_at
-                                  ? new Date(record.marked_at).toLocaleString("en-IN")
-                                  : "—"}
-                              </td>
-                            </tr>
-                          );
-                        })
+                        filteredAttendance.map((record) => (
+                          <tr
+                            key={record.id}
+                            className="hover:bg-[#fcfbf9] transition-colors"
+                          >
+                            <td className="px-6 py-4.5 font-bold text-slate-900 whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4 text-slate-400 shrink-0" />
+                                <span>{formatDate(record.date)}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4.5">
+                              <AttendanceStatusBadge status={record.status} />
+                            </td>
+                            <td className="px-6 py-4.5 text-xs font-medium text-slate-500 whitespace-nowrap">
+                              <div className="flex items-center gap-1.5">
+                                <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                                <span>{formatTimestamp(record.marked_at)}</span>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
                       )}
                     </tbody>
                   </table>

@@ -182,6 +182,11 @@ const BranchAdminStaff = () => {
 
   const handleMatrixSaveStatus = async (staffId, dateStr, newStatus, existingRecord) => {
     if (!token) return;
+    const today = getToday();
+    if (dateStr !== today) {
+      setError("Staff attendance can only be marked or updated for today. Past dates cannot be modified.");
+      return;
+    }
     const member = staff.find((s) => String(s.id) === String(staffId));
     const memberName = member ? member.name : "Staff";
     const cellKey = `${String(staffId)}_${dateStr}`;
@@ -683,39 +688,52 @@ const BranchAdminStaff = () => {
 
           {/* ---- Attendance history ---- */}
           {activeTab === "history" && (
-            <section className="space-y-8">
-              <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+            <section className="space-y-7">
+              {/* Filter & Page Title Header */}
+              <div className="rounded-2xl border border-[#e3ddd0] bg-white p-5 sm:p-6 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-5">
                 <div>
-                  <h2 className="text-xl" style={{ ...serif, fontWeight: 500, color: "#17140f" }}>
-                    Staff attendance records
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-2.5 w-2.5 rounded-full bg-[#9c6b2e]" />
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#9c6b2e]">
+                      Branch Portal Attendance
+                    </span>
+                  </div>
+                  <h2
+                    className="mt-1 text-xl sm:text-2xl font-bold tracking-tight text-slate-900"
+                    style={serif}
+                  >
+                    Staff Attendance History
                   </h2>
-                  <p className="mt-1 text-sm" style={{ color: "#8a8175" }}>
-                    {filteredAttendanceHistory.length} record
-                    {filteredAttendanceHistory.length === 1 ? "" : "s"}
+                  <p className="mt-1 text-xs sm:text-sm text-slate-500">
+                    Showing aggregated staff statistics and complete chronological activity log.
                   </p>
                 </div>
-                <div className="flex flex-wrap items-end gap-3">
-                  <label className="flex flex-col gap-1 text-xs" style={{ color: "#8a8175" }}>
-                    From
-                    <input
-                      type="date"
-                      value={attendanceStartDate}
-                      onChange={(event) => setAttendanceStartDate(event.target.value)}
-                      className="rounded-lg px-3 py-2 text-sm"
-                      style={inputStyle}
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1 text-xs" style={{ color: "#8a8175" }}>
-                    To
-                    <input
-                      type="date"
-                      value={attendanceEndDate}
-                      min={attendanceStartDate || undefined}
-                      onChange={(event) => setAttendanceEndDate(event.target.value)}
-                      className="rounded-lg px-3 py-2 text-sm"
-                      style={inputStyle}
-                    />
-                  </label>
+
+                {/* Date Filters Control */}
+                <div className="flex flex-wrap items-center gap-3 bg-[#faf8f4] border border-[#e8e2d5] p-2.5 rounded-xl self-start lg:self-auto">
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
+                      <span className="text-slate-400 font-medium">From:</span>
+                      <input
+                        type="date"
+                        value={attendanceStartDate}
+                        onChange={(event) => setAttendanceStartDate(event.target.value)}
+                        className="rounded-lg border border-[#ded8cb] bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 shadow-2xs focus:border-[#9c6b2e] focus:outline-none"
+                      />
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
+                      <span className="text-slate-400 font-medium">To:</span>
+                      <input
+                        type="date"
+                        value={attendanceEndDate}
+                        min={attendanceStartDate || undefined}
+                        onChange={(event) => setAttendanceEndDate(event.target.value)}
+                        className="rounded-lg border border-[#ded8cb] bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 shadow-2xs focus:border-[#9c6b2e] focus:outline-none"
+                      />
+                    </label>
+                  </div>
                   {(attendanceStartDate || attendanceEndDate) && (
                     <button
                       type="button"
@@ -723,100 +741,292 @@ const BranchAdminStaff = () => {
                         setAttendanceStartDate("");
                         setAttendanceEndDate("");
                       }}
-                      className={`rounded-lg px-3 py-2 text-sm font-medium ${FOCUS_RING}`}
-                      style={{ color: "#9c6b2e" }}
+                      className="inline-flex items-center gap-1 rounded-lg bg-white border border-[#ded8cb] px-2.5 py-1.5 text-xs font-bold text-[#9c6b2e] shadow-2xs hover:bg-[#f3ede1] transition-colors cursor-pointer"
+                      title="Clear date filters"
                     >
+                      <RotateCcw className="h-3 w-3" />
                       Clear
                     </button>
                   )}
                 </div>
               </div>
 
-              <div className="overflow-hidden rounded-2xl" style={{ background: "#ffffff", border: "1px solid #e3ddd0" }}>
+              {/* A. Five Dynamic Summary Cards */}
+              <AttendanceSummaryCards
+                total={historySummary.total}
+                present={historySummary.present}
+                halfDay={historySummary.half_day}
+                absent={historySummary.absent}
+                leave={historySummary.leave}
+                loading={attendanceLoading}
+                totalLabel="Total Records"
+              />
+
+              {/* B. Staff Attendance Records – Summary Table */}
+              <div
+                className="overflow-hidden rounded-2xl bg-white shadow-xs"
+                style={{ border: "1px solid #e3ddd0" }}
+              >
+                {/* Header bar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e8e2d5] bg-[#faf8f4] px-6 py-4.5">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-[#9c6b2e]" />
+                      <h3
+                        className="text-base font-bold text-slate-900 tracking-tight"
+                        style={serif}
+                      >
+                        Staff Attendance Records
+                      </h3>
+                    </div>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      Aggregated breakdown of present days, half days, and leave per staff member
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full bg-white border border-[#e3ddd0] px-3 py-1 text-xs font-bold text-slate-700 shadow-2xs">
+                    <span className="h-2 w-2 rounded-full bg-[#9c6b2e]" />
+                    {staffAttendanceTotals.length}{" "}
+                    {staffAttendanceTotals.length === 1 ? "Staff Account" : "Staff Accounts"}
+                  </span>
+                </div>
+
+                {/* Table */}
                 <div className="overflow-x-auto">
-                  <table className="min-w-full bg-white text-left text-sm">
+                  <table className="min-w-full text-left text-sm">
                     <thead>
-                      <tr style={{ borderBottom: "1px solid #e3ddd0", background: "#ffffff" }}>
-                        <th className="px-6 py-3 text-xs font-medium" style={{ color: "#8a8175" }}>Staff</th>
-                        <th className="px-6 py-3 text-xs font-medium" style={{ color: "#8a8175" }}>Present days</th>
-                        <th className="px-6 py-3 text-xs font-medium" style={{ color: "#8a8175" }}>Half days</th>
-                        <th className="px-6 py-3 text-xs font-medium" style={{ color: "#8a8175" }}>Leave</th>
+                      <tr className="border-b border-[#e8e2d5] bg-[#fbf9f5]">
+                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                          Staff
+                        </th>
+                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-emerald-800">
+                          Present Days
+                        </th>
+                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-amber-800">
+                          Half Days
+                        </th>
+                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-indigo-800">
+                          Leave
+                        </th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {staffAttendanceTotals.length === 0 ? (
+                    <tbody className="divide-y divide-[#f1ede4]">
+                      {attendanceLoading ? (
                         <tr>
-                          <td colSpan="4" className="px-6 py-14 text-center text-sm" style={{ color: "#a39a8c" }}>
-                            No staff accounts found.
+                          <td colSpan="4" className="px-6 py-12 text-center text-slate-400">
+                            <Loader2 className="mx-auto h-6 w-6 animate-spin text-[#9c6b2e]" />
+                            <p className="mt-2 text-xs font-medium text-slate-500">
+                              Loading staff attendance...
+                            </p>
+                          </td>
+                        </tr>
+                      ) : staffAttendanceTotals.length === 0 ? (
+                        <tr>
+                          <td colSpan="4" className="px-6 py-14 text-center">
+                            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#f4eee2] text-[#9c6b2e] mb-3">
+                              <Users className="h-6 w-6" />
+                            </div>
+                            <p className="text-sm font-bold text-slate-800">No staff accounts found</p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              Add staff accounts under the Staff Accounts tab to track attendance.
+                            </p>
                           </td>
                         </tr>
                       ) : (
-                        staffAttendanceTotals.map((member, index) => (
-                          <tr key={member.id} style={{ borderTop: index === 0 ? "none" : "1px solid #efe9dd" }}>
-                            <td className="px-6 py-4 font-medium" style={{ color: "#17140f" }}>
-                              {member.name}
-                            </td>
-                            <td className="px-6 py-4 font-medium" style={{ color: "#39533a" }}>
-                              {member.presentDays}
-                            </td>
-                            <td className="px-6 py-4 font-medium" style={{ color: "#7a531f" }}>
-                              {member.halfDay}
-                            </td>
-                            <td className="px-6 py-4 font-medium" style={{ color: "#7c3324" }}>
-                              {member.leave}
-                            </td>
-                          </tr>
-                        ))
+                        staffAttendanceTotals.map((member) => {
+                          const initials = (member.name || "S")
+                            .split(" ")
+                            .map((n) => n[0])
+                            .slice(0, 2)
+                            .join("")
+                            .toUpperCase();
+                          return (
+                            <tr
+                              key={member.id}
+                              className="hover:bg-[#fcfbf9] transition-colors"
+                            >
+                              <td className="px-6 py-4.5">
+                                <div className="flex items-center gap-3">
+                                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f5efe4] text-xs font-extrabold text-[#9c6b2e] border border-[#e8dfd0] shadow-2xs">
+                                    {initials}
+                                  </div>
+                                  <div>
+                                    <div className="font-bold text-slate-900 leading-tight">
+                                      {member.name}
+                                    </div>
+                                    <div className="text-xs font-medium text-slate-400">
+                                      #{member.staff_code || member.id}
+                                      {member.email ? ` • ${member.email}` : ""}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4.5">
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e6f7ec] border border-[#a9e6bf] px-3 py-1 text-xs font-extrabold text-[#1e6b37] shadow-2xs">
+                                  <Check className="h-3.5 w-3.5" strokeWidth={2.8} />
+                                  {member.presentDays}{" "}
+                                  {member.presentDays === 1 ? "day" : "days"}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4.5">
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fef7e6] border border-[#fde096] px-3 py-1 text-xs font-extrabold text-[#b45309] shadow-2xs">
+                                  <Clock className="h-3.5 w-3.5" strokeWidth={2.5} />
+                                  {member.halfDay}{" "}
+                                  {member.halfDay === 1 ? "day" : "days"}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4.5">
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#eef2fe] border border-[#b9cbfd] px-3 py-1 text-xs font-extrabold text-[#3730a3] shadow-2xs">
+                                  <CalendarCheck className="h-3.5 w-3.5" strokeWidth={2.5} />
+                                  {member.leave}{" "}
+                                  {member.leave === 1 ? "day" : "days"}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
                 </div>
               </div>
 
-              <div className="overflow-hidden rounded-2xl" style={{ background: "#ffffff", border: "1px solid #e3ddd0" }}>
+              {/* C. Detailed Attendance History Table */}
+              <div
+                className="overflow-hidden rounded-2xl bg-white shadow-xs"
+                style={{ border: "1px solid #e3ddd0" }}
+              >
+                {/* Header bar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e8e2d5] bg-[#faf8f4] px-6 py-4.5">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <History className="h-4 w-4 text-[#9c6b2e]" />
+                      <h3
+                        className="text-base font-bold text-slate-900 tracking-tight"
+                        style={serif}
+                      >
+                        Detailed Attendance History
+                      </h3>
+                    </div>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      Chronological audit log of all marked staff attendances
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full bg-white border border-[#e3ddd0] px-3 py-1 text-xs font-bold text-slate-700 shadow-2xs">
+                    <span className="h-2 w-2 rounded-full bg-[#1e6b37]" />
+                    {filteredAttendanceHistory.length}{" "}
+                    {filteredAttendanceHistory.length === 1 ? "Record" : "Records"}
+                  </span>
+                </div>
+
+                {/* Table */}
                 <div className="overflow-x-auto">
-                  <table className="min-w-full bg-white text-left text-sm">
+                  <table className="min-w-full text-left text-sm">
                     <thead>
-                      <tr style={{ borderBottom: "1px solid #e3ddd0", background: "#ffffff" }}>
-                        <th className="px-6 py-3 text-xs font-medium" style={{ color: "#8a8175" }}>Staff</th>
-                        <th className="px-6 py-3 text-xs font-medium" style={{ color: "#8a8175" }}>Date</th>
-                        <th className="px-6 py-3 text-xs font-medium" style={{ color: "#8a8175" }}>Status</th>
-                        <th className="px-6 py-3 text-xs font-medium" style={{ color: "#8a8175" }}>Marked at</th>
+                      <tr className="border-b border-[#e8e2d5] bg-[#fbf9f5]">
+                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                          Staff
+                        </th>
+                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                          Date
+                        </th>
+                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                          Status
+                        </th>
+                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                          Marked At
+                        </th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {filteredAttendanceHistory.length === 0 ? (
+                    <tbody className="divide-y divide-[#f1ede4]">
+                      {attendanceLoading ? (
                         <tr>
-                          <td colSpan="4" className="px-6 py-14 text-center text-sm" style={{ color: "#a39a8c" }}>
-                            No attendance history found.
+                          <td colSpan="4" className="px-6 py-14 text-center text-slate-400">
+                            <Loader2 className="mx-auto h-6 w-6 animate-spin text-[#9c6b2e]" />
+                            <p className="mt-2 text-xs font-medium text-slate-500">
+                              Loading attendance logs...
+                            </p>
+                          </td>
+                        </tr>
+                      ) : filteredAttendanceHistory.length === 0 ? (
+                        <tr>
+                          <td colSpan="4" className="px-6 py-14 text-center">
+                            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#f4eee2] text-[#9c6b2e] mb-3">
+                              <ClipboardCheck className="h-6 w-6" />
+                            </div>
+                            <p className="text-sm font-bold text-slate-800">
+                              No attendance records found
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {attendanceStartDate || attendanceEndDate
+                                ? "No logs match the selected date range. Try clearing or expanding the date filter."
+                                : "No staff attendance has been recorded yet."}
+                            </p>
+                            {(attendanceStartDate || attendanceEndDate) && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAttendanceStartDate("");
+                                  setAttendanceEndDate("");
+                                }}
+                                className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[#e3ddd0] bg-white px-3 py-1.5 text-xs font-bold text-[#9c6b2e] shadow-2xs hover:bg-[#f6f2e9] cursor-pointer"
+                              >
+                                <RotateCcw className="h-3.5 w-3.5" /> Clear Filters
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ) : (
-                        filteredAttendanceHistory.map((record, index) => {
-                          const meta = statusMeta(record.status);
+                        filteredAttendanceHistory.map((record) => {
+                          const memberObj = staff.find(
+                            (m) => String(m.id) === String(record.staff_id)
+                          );
+                          const staffName =
+                            record.staff_name ||
+                            memberObj?.name ||
+                            `Staff #${memberObj?.staff_code || record.staff_id}`;
+                          const initials = staffName
+                            .split(" ")
+                            .map((n) => n[0])
+                            .slice(0, 2)
+                            .join("")
+                            .toUpperCase();
+
                           return (
-                            <tr key={record.id} style={{ borderTop: index === 0 ? "none" : "1px solid #efe9dd" }}>
-                              <td className="px-6 py-4 font-medium" style={{ color: "#17140f" }}>
-                                {record.staff_name ||
-                                  staff.find((member) => member.id === record.staff_id)?.name ||
-                                  `Staff #${staff.find((member) => member.id === record.staff_id)?.staff_code || record.staff_id}`}
+                            <tr
+                              key={record.id}
+                              className="hover:bg-[#fcfbf9] transition-colors"
+                            >
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#f5efe4] text-[11px] font-extrabold text-[#9c6b2e] border border-[#e8dfd0]">
+                                    {initials}
+                                  </div>
+                                  <div>
+                                    <div className="font-bold text-slate-900 leading-tight">
+                                      {staffName}
+                                    </div>
+                                    <div className="text-[11px] font-medium text-slate-400">
+                                      #{memberObj?.staff_code || record.staff_id}
+                                    </div>
+                                  </div>
+                                </div>
                               </td>
-                              <td className="px-6 py-4" style={{ color: "#8a8175" }}>
-                                {formatAttendanceDate(record.date)}
+                              <td className="px-6 py-4 font-semibold text-slate-700 whitespace-nowrap">
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                                  <span>{formatAttendanceDate(record.date)}</span>
+                                </div>
                               </td>
                               <td className="px-6 py-4">
-                                <span
-                                  className="inline-flex items-center gap-2 text-sm font-medium"
-                                  style={{ color: meta.text }}
-                                >
-                                  <Circle className="h-2 w-2" fill={meta.dot} stroke="none" />
-                                  {record.status}
-                                </span>
+                                <AttendanceStatusBadge status={record.status} />
                               </td>
-                              <td className="px-6 py-4 text-xs" style={{ color: "#a39a8c" }}>
-                                {record.marked_at
-                                  ? new Date(record.marked_at).toLocaleString("en-IN")
-                                  : "—"}
+                              <td className="px-6 py-4 text-xs font-medium text-slate-500 whitespace-nowrap">
+                                <div className="flex items-center gap-1.5">
+                                  <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                                  <span>
+                                    {formatAttendanceTimestamp(record.marked_at)}
+                                  </span>
+                                </div>
                               </td>
                             </tr>
                           );
