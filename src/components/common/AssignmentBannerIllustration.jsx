@@ -9,14 +9,14 @@ import React from 'react';
  * - Executive fountain pen
  * - Warm organic golden shapes & dot accents
  */
-export const AssignmentBannerIllustration = ({ className = "w-full h-auto block align-bottom" }) => {
+export const AssignmentBannerIllustration = ({ className = "w-full h-full block" }) => {
   return (
     <svg
       viewBox="0 0 500 240"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
-      preserveAspectRatio="xMaxYMax meet"
+      preserveAspectRatio="xMaxYMax slice"
     >
       <defs>
         {/* Warm Golden Gradients */}
@@ -66,25 +66,24 @@ export const AssignmentBannerIllustration = ({ className = "w-full h-auto block 
       {/* ========================================================= */}
       {/* 1. BACKGROUND ORGANIC WARM SHAPES & DOTS                  */}
       {/* ========================================================= */}
+      {/* Background Warm Organic Shapes touching (500, 0) top right and (500, 240) bottom right */}
       <path
-        d="M 120 240 C 150 160, 200 120, 280 85 C 360 50, 430 70, 500 50 L 500 240 Z"
+        d="M 40 240 C 100 150, 160 80, 260 40 C 350 4, 430 0, 500 0 L 500 240 Z"
         fill="url(#warmAmberSoft)"
       />
       <path
-        d="M 220 240 C 255 175, 310 135, 375 115 C 435 95, 470 110, 500 95 L 500 240 Z"
+        d="M 140 240 C 200 160, 270 100, 360 60 C 430 30, 480 15, 500 10 L 500 240 Z"
         fill="url(#warmGoldGrad)"
       />
 
-      {/* Subtle Golden Dot Matrix */}
-      <g opacity="0.45" fill="#D99824">
-        <circle cx="280" cy="30" r="2" />
-        <circle cx="292" cy="30" r="2" />
-        <circle cx="304" cy="30" r="2" />
-        <circle cx="286" cy="40" r="2" />
-        <circle cx="298" cy="40" r="2" />
-        <circle cx="310" cy="40" r="2" />
-        <circle cx="292" cy="50" r="2" />
-        <circle cx="304" cy="50" r="2" />
+      {/* Subtle Star Sparkles & Golden Dot Matrix in Sky */}
+      <g fill="#D99824" opacity="0.6">
+        <circle cx="280" cy="18" r="2" />
+        <circle cx="295" cy="18" r="2" />
+        <circle cx="310" cy="18" r="2" />
+        <circle cx="288" cy="28" r="2" />
+        <circle cx="302" cy="28" r="2" />
+        <path d="M 470 16 Q 470 23 462 23 Q 470 23 470 30 Q 470 23 478 23 Q 470 23 470 16 Z" />
       </g>
 
       {/* ========================================================= */}
@@ -153,7 +152,7 @@ export const AssignmentBannerIllustration = ({ className = "w-full h-auto block 
       {/* ========================================================= */}
       {/* 4. GRADUATION CAP (MORTARBOARD - UPPER RIGHT)             */}
       {/* ========================================================= */}
-      <g filter="url(#softShadow)">
+      <g transform="translate(6, -18)" filter="url(#softShadow)">
         {/* Skull Cap Dome */}
         <path d="M 370 85 Q 405 120 440 85 L 440 95 Q 405 130 370 95 Z" fill="#0F172A" />
 

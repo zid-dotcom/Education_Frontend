@@ -2482,13 +2482,13 @@ const StudentDashboard = () => {
           <div className="flex-1 min-h-0 overflow-y-auto pr-1 sm:pr-2 custom-student-scrollbar">
             {/* 3. Welcome Banner (Warm Light Theme) */}
             {/* 3. Welcome Header Banner (Warm Light Theme - Matching Staff Portal) */}
-            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-[#E3DDD0] shadow-sm relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-7">
+            <div className="bg-white rounded-3xl p-4 sm:p-6 border border-[#E3DDD0] shadow-sm relative overflow-hidden flex flex-row items-center justify-between gap-3 sm:gap-4 mb-7">
               {/* Soft warm background gradient glow */}
               <div className="absolute top-0 right-0 w-96 h-full bg-gradient-to-l from-[#FAF8F4] via-[#F1EDE4]/50 to-transparent pointer-events-none" />
 
-              <div className="relative z-10 max-w-lg">
+              <div className="relative z-10 max-w-lg min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                  <h1 className="text-xl sm:text-2xl font-bold text-[#17140F] tracking-tight">
+                  <h1 className="text-base sm:text-2xl font-bold text-[#17140F] tracking-tight">
                     Welcome back, {displayName}! 👋
                   </h1>
                   <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#F1EDE4] text-[#9C6B2E] border border-[#E3DDD0]">
@@ -2501,19 +2501,19 @@ const StudentDashboard = () => {
                 </p>
               </div>
 
-              {/* Conditional Student Character Illustration (Boy / Girl Based on Name) */}
-              <div className="hidden sm:flex items-center justify-center shrink-0 mr-3 sm:mr-8 md:mr-10 relative z-10">
+              {/* Conditional Student Character Illustration (Boy / Girl Based on Name) - Visible on both mobile and desktop */}
+              <div className="flex items-center justify-center shrink-0 mr-1 sm:mr-8 md:mr-10 relative z-10">
                 <div className="relative flex items-center justify-center group cursor-default">
                   {/* Floating decorative elements matching design */}
-                  <div className="absolute -top-1.5 -right-1.5 sm:-top-2 sm:-right-2 md:-top-2.5 md:-right-2.5 h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 rounded-full bg-[#b8863b] shadow-sm flex items-center justify-center text-white z-20">
-                    <GraduationCap className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-4.5 md:w-4.5 text-white stroke-[2.2]" />
+                  <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 md:-top-2.5 md:-right-2.5 h-5 w-5 sm:h-7 sm:w-7 md:h-8 md:w-8 rounded-full bg-[#b8863b] shadow-sm flex items-center justify-center text-white z-20">
+                    <GraduationCap className="h-3 w-3 sm:h-4 sm:w-4 md:h-4.5 md:w-4.5 text-white stroke-[2.2]" />
                   </div>
-                  <div className="absolute bottom-1 -right-1.5 sm:bottom-2 sm:-right-2 md:bottom-2.5 md:-right-2.5 h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 rounded-full bg-[#b8863b] shadow-sm flex items-center justify-center text-white z-20">
-                    <Plus className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 text-white stroke-[2.8]" />
+                  <div className="absolute -bottom-0.5 -right-1 sm:bottom-2 sm:-right-2 md:bottom-2.5 md:-right-2.5 h-4 w-4 sm:h-6 sm:w-6 md:h-7 md:w-7 rounded-full bg-[#b8863b] shadow-sm flex items-center justify-center text-white z-20">
+                    <Plus className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 text-white stroke-[2.8]" />
                   </div>
 
                   {/* Character Illustration Container - Half-portion waist-up focus, no legs */}
-                  <div className="flex h-24 w-24 sm:h-28 sm:w-28 md:h-32 md:w-32 lg:h-[132px] lg:w-[132px] items-center justify-center rounded-2xl sm:rounded-3xl bg-[#FAF8F4] border border-[#E3DDD0] shadow-sm overflow-hidden select-none transition-all duration-300 group-hover:scale-105 group-hover:shadow-md">
+                  <div className="flex h-16 w-16 sm:h-28 sm:w-28 md:h-32 md:w-32 lg:h-[132px] lg:w-[132px] items-center justify-center rounded-2xl sm:rounded-3xl bg-[#FAF8F4] border border-[#E3DDD0] shadow-sm overflow-hidden select-none transition-all duration-300 group-hover:scale-105 group-hover:shadow-md">
                     <img
                       src={studentBannerAvatar}
                       alt={`${studentGender === 'girl' ? 'Girl' : 'Boy'} Student Avatar`}

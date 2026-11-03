@@ -378,17 +378,17 @@ const StudentAssignments = () => {
 
       {/* Hero Banner Matching User Design */}
       <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#FAF6EE] via-[#FDF9F2] to-[#FAF1DF] text-[#17140F] border border-[#ECDDC6] shadow-xs mb-6">
-        <div className="relative z-10 flex flex-col md:flex-row items-center md:items-end justify-between">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-stretch justify-between min-h-[190px] sm:min-h-[210px] md:min-h-[230px]">
           {/* Left Text Content */}
-          <div className="p-6 sm:p-8 md:p-10 max-w-2xl space-y-2.5">
+          <div className="p-6 sm:p-8 md:p-10 max-w-xl lg:max-w-2xl space-y-2.5 z-10 flex flex-col justify-center">
             {/* Pill Badge */}
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3.5 py-1.5 text-[11px] sm:text-xs font-bold text-[#9C6B2E] border border-[#ECD8B5] shadow-2xs">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3.5 py-1.5 text-[11px] sm:text-xs font-bold text-[#9C6B2E] border border-[#ECD8B5] shadow-2xs w-fit">
               <ClipboardList className="h-3.5 w-3.5 text-[#9C6B2E]" />
               <span>Student Coursework & Submissions</span>
             </div>
 
             {/* Title */}
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#17140F] leading-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#17140F] leading-tight">
               My Assignments
             </h1>
 
@@ -396,26 +396,29 @@ const StudentAssignments = () => {
             <p className="text-xs sm:text-sm md:text-base text-[#6B6252] font-medium leading-relaxed max-w-xl">
               Access tasks, submit coursework directly in PDF format, and review evaluation marks and feedback from your instructors.
             </p>
+
+            {/* Left-side Refresh Button */}
+            <div className="pt-1 flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={fetchAssignments}
+                disabled={loading}
+                title="Refresh tasks"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-white/90 border border-[#ECDDC6] px-3.5 py-2 text-xs font-bold text-[#17140F] hover:bg-[#F1EDE4] transition shadow-2xs cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 text-[#9C6B2E] ${loading ? 'animate-spin' : ''}`} />
+                <span>Refresh Tasks</span>
+              </button>
+            </div>
           </div>
 
-          {/* Right SVG Illustration - Fitted flush to bottom and right of banner */}
-          <div className="w-full md:w-auto flex justify-end md:self-end shrink-0 select-none overflow-hidden pr-0 -mb-1">
-            <div className="w-full max-w-[340px] sm:max-w-[420px] md:max-w-[500px] lg:max-w-[560px] xl:max-w-[600px] flex items-end">
-              <AssignmentBannerIllustration className="w-full h-auto block align-bottom" />
+          {/* Right SVG Illustration - Fitted flush to top, bottom and right */}
+          <div className="w-full md:w-auto flex justify-end items-end md:self-stretch shrink-0 select-none overflow-hidden pr-0">
+            <div className="w-full sm:w-[460px] md:w-[480px] lg:w-[540px] xl:w-[600px] h-[190px] sm:h-[220px] md:h-full flex items-end justify-end">
+              <AssignmentBannerIllustration className="w-full h-full block" />
             </div>
           </div>
         </div>
-
-        {/* Unobtrusive Top-Right Refresh Button */}
-        <button
-          type="button"
-          onClick={fetchAssignments}
-          disabled={loading}
-          title="Refresh assignments"
-          className="absolute top-4 right-4 z-20 flex h-8 w-8 items-center justify-center rounded-lg bg-white/85 text-slate-500 border border-[#E3DDD0] shadow-2xs hover:bg-white hover:text-slate-800 transition cursor-pointer disabled:opacity-50"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-        </button>
       </section>
 
       {/* Global Alerts */}

@@ -320,10 +320,10 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
           </div>
         </section>
       ) : (
-        /* PUBLIC VIEW: TOP HERO IMAGE WITH SIMPLE SLIDE DOWN BUTTON */
+        /* PUBLIC VIEW: TOP HERO IMAGE (RESPONSIVE 16/9 ON MOBILE, FULL HERO ON DESKTOP) */
         <section className="w-full relative bg-stone-950 border-b border-stone-200/40 overflow-hidden">
-          {/* Full Desktop View Banner Image Container */}
-          <div className="relative w-full h-[70vh] sm:h-[80vh] lg:h-[calc(100vh-80px)] min-h-[520px] lg:min-h-[640px] overflow-hidden flex items-center justify-center bg-stone-950">
+          {/* Responsive Banner Image Container */}
+          <div className="relative w-full aspect-[16/9] sm:aspect-auto sm:h-[80vh] lg:h-[calc(100vh-80px)] sm:min-h-[520px] lg:min-h-[640px] overflow-hidden flex items-center justify-center bg-stone-950">
             <img
               src={imageUrl}
               alt={title}
@@ -334,8 +334,8 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
               }}
             />
 
-            {/* Simple Slide Down Button */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20">
+            {/* Simple Slide Down Button (Desktop / Tablet only - hidden in mobile view) */}
+            <div className="hidden sm:block absolute bottom-6 left-1/2 -translate-x-1/2 z-20">
               <button
                 type="button"
                 onClick={scrollToDetails}
@@ -355,21 +355,13 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
       <section id="course-details-section" className="bg-white py-8 sm:py-12 scroll-mt-16 sm:scroll-mt-20">
         <div className={studentView ? "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" : "w-full max-w-[1920px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16"}>
           {!studentView && (
-            <div className="mb-6 flex items-center justify-between gap-4">
+            <div className="mb-6 flex items-center">
               <Link
                 to={coursePath}
                 className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition-colors text-slate-500 hover:text-amber-700"
               >
                 <ArrowLeft className="w-4 h-4" /> Back to All Courses
               </Link>
-              <button
-                type="button"
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-[#9C6B2E] hover:text-[#7A501E] transition cursor-pointer"
-                title="Back to top banner"
-              >
-                ↑ View Full Banner
-              </button>
             </div>
           )}
 
@@ -385,7 +377,7 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
                     </span>
                   </div>
 
-                  <h1 className="w-full text-3xl font-extrabold leading-tight tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
+                  <h1 className="w-full text-2xl font-extrabold leading-tight tracking-tight text-slate-950 sm:text-4xl lg:text-5xl break-words">
                     {title}
                   </h1>
 

@@ -372,16 +372,6 @@ export const StudyMaterialsBannerIllustration = ({ className = "w-full h-full bl
       </linearGradient>
     </defs>
 
-    {/* Background Warm Swooshes touching (520, 0) top right and (520, 240) bottom right */}
-    <path
-      d="M 40 240 C 100 150, 160 80, 260 40 C 350 4, 430 0, 520 0 L 520 240 Z"
-      fill="url(#studymat_warmAmberSoft)"
-    />
-    <path
-      d="M 140 240 C 200 160, 270 100, 360 60 C 430 30, 480 15, 520 10 L 520 240 Z"
-      fill="url(#studymat_warmGoldGrad)"
-    />
-
     {/* Subtle ground reflection */}
     <ellipse cx="340" cy="238" rx="150" ry="6" fill="#EADEC9" opacity="0.6" />
 
@@ -742,11 +732,11 @@ export const ReviewsBannerIllustration = ({ className = "w-full h-full block" })
       <line x1="166" y1="130" x2="285" y2="130" stroke="#94A3B8" strokeWidth="2.2" strokeLinecap="round" />
 
       {/* Refined Gold Pill: Verified Student Review */}
-      <g transform="translate(166, 156)">
-        <rect x="0" y="0" width="170" height="26" rx="13" fill="#FAF6EE" stroke="#ECDDC6" strokeWidth="1" />
-        <circle cx="13" cy="13" r="5.5" fill="#D97706" />
-        <path d="M 10.5 13 L 12.2 14.7 L 15.5 11.3" fill="none" stroke="#FFFFFF" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-        <text x="25" y="16.5" fill="#9C6B2E" fontSize="9" fontWeight="800" letterSpacing="0.5" fontFamily="sans-serif">
+      <g transform="translate(162, 156)">
+        <rect x="0" y="0" width="180" height="25" rx="12.5" fill="#FAF6EE" stroke="#ECDDC6" strokeWidth="1" />
+        <circle cx="12.5" cy="12.5" r="5" fill="#D97706" />
+        <path d="M 10 12.5 L 11.7 14.2 L 15 10.8" fill="none" stroke="#FFFFFF" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+        <text x="23" y="15.5" fill="#9C6B2E" fontSize="8" fontWeight="800" letterSpacing="0.25" fontFamily="sans-serif">
           VERIFIED STUDENT REVIEW
         </text>
       </g>
