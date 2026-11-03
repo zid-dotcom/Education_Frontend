@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body { background: #faf8f4; font-family: sans-serif; display: flex; gap: 40px; padding: 50px; }
+.card-wrapper { position: relative; width: 110px; height: 110px; }
+.card {
+  width: 100%;
+  height: 100%;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #faf8f4, #ffffff 60%, #f5efe6);
+  border: 1px solid #e3ddd0;
+  box-shadow: 0 4px 15px -3px rgba(156, 107, 46, 0.12);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.badge-top {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #a3702c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 2px 6px rgba(163, 112, 44, 0.35);
+  z-index: 2;
+}
+.badge-bottom {
+  position: absolute;
+  bottom: 2px;
+  right: -6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #a3702c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  box-shadow: 0 2px 6px rgba(163, 112, 44, 0.35);
+  z-index: 2;
+}
+.avatar-boy {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.75) translateY(14%);
+  transform-origin: top center;
+}
+.avatar-girl {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.65) translateY(10%);
+  transform-origin: top center;
+}
+</style>
+</head>
+<body>
+
+<div class="card-wrapper">
+  <div class="badge-top">🎓</div>
+  <div class="badge-bottom">+</div>
+  <div class="card">
+    <img src="d:/Aurumfx-works/aurum_education/src/assets/boyimage.jpeg" class="avatar-boy" />
+  </div>
+</div>
+
+<div class="card-wrapper">
+  <div class="badge-top">🎓</div>
+  <div class="badge-bottom">+</div>
+  <div class="card">
+    <img src="d:/Aurumfx-works/aurum_education/src/assets/girlimage.jpeg" class="avatar-girl" />
+  </div>
+</div>
+
+</body>
+</html>
+

@@ -378,7 +378,7 @@ const StudentAssignments = () => {
 
       {/* Hero Banner Matching User Design */}
       <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#FAF6EE] via-[#FDF9F2] to-[#FAF1DF] text-[#17140F] border border-[#ECDDC6] shadow-xs mb-6">
-        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between">
+        <div className="relative z-10 flex flex-col md:flex-row items-center md:items-end justify-between">
           {/* Left Text Content */}
           <div className="p-6 sm:p-8 md:p-10 max-w-2xl space-y-2.5">
             {/* Pill Badge */}
@@ -388,7 +388,7 @@ const StudentAssignments = () => {
             </div>
 
             {/* Title */}
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-[#17140F] leading-tight">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#17140F] leading-tight">
               My Assignments
             </h1>
 
@@ -398,10 +398,10 @@ const StudentAssignments = () => {
             </p>
           </div>
 
-          {/* Right SVG Illustration */}
-          <div className="w-full md:w-auto flex justify-end shrink-0 select-none overflow-hidden pr-0 sm:pr-2 md:pr-4">
-            <div className="w-full max-w-[320px] sm:max-w-[400px] md:max-w-[460px] lg:max-w-[500px]">
-              <AssignmentBannerIllustration />
+          {/* Right SVG Illustration - Fitted flush to bottom and right of banner */}
+          <div className="w-full md:w-auto flex justify-end md:self-end shrink-0 select-none overflow-hidden pr-0 -mb-1">
+            <div className="w-full max-w-[340px] sm:max-w-[420px] md:max-w-[500px] lg:max-w-[560px] xl:max-w-[600px] flex items-end">
+              <AssignmentBannerIllustration className="w-full h-auto block align-bottom" />
             </div>
           </div>
         </div>

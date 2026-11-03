@@ -1,10 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   BookOpen,
   Calendar,
   CalendarDays,
+  CalendarCheck,
+  Check,
+  CheckCircle2,
   Circle,
   ClipboardCheck,
+  Clock,
   Edit3,
   History,
   IndianRupee,
@@ -12,10 +16,13 @@ import {
   Mail,
   Phone,
   Plus,
+  RotateCcw,
   Save,
   Trash2,
   UserCheck,
   UserPlus,
+  Users,
+  XCircle,
   Activity,
   Eye,
   EyeOff,
@@ -28,6 +35,8 @@ import BranchAdminSidebar from "../components/layout/BranchAdminSidebar";
 import NavLogoutButton from "../components/common/NavLogoutButton";
 import Toast from "../components/common/Toast";
 import AttendanceCalendarMatrix from "../components/common/AttendanceCalendarMatrix";
+import AttendanceSummaryCards from "../components/common/AttendanceSummaryCards";
+import AttendanceStatusBadge, { normalizeAttendanceStatus } from "../components/common/AttendanceStatusBadge";
 import { getMyCoursesApi } from "../services/branchadmincourses";
 import {
   createBranchStaffApi,
@@ -75,14 +84,37 @@ const getToday = () => {
   return new Date(now.getTime() - offset).toISOString().slice(0, 10);
 };
 
-const formatAttendanceDate = (date) =>
-  date
-    ? new Intl.DateTimeFormat("en-IN", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      }).format(new Date(`${date}T00:00:00`))
-    : "All dates";
+const formatAttendanceDate = (date) => {
+  if (!date) return "—";
+  try {
+    return new Intl.DateTimeFormat("en-IN", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }).format(new Date(`${date}T00:00:00`));
+  } catch (e) {
+    return date;
+  }
+};
+
+const formatAttendanceTimestamp = (timestamp) => {
+  if (!timestamp) return "—";
+  try {
+    const d = new Date(timestamp);
+    if (isNaN(d.getTime())) return "—";
+    return d.toLocaleString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch (e) {
+    return "—";
+  }
+};
 
 const STATUS_META = {
   Present: { dot: "#5c7a5a", text: "#39533a", bg: "#eef2ea" },
@@ -458,31 +490,57 @@ const BranchAdminStaff = () => {
     }
   };
 
-  const filteredAttendanceHistory = attendanceHistory.filter(
-    (record) =>
-      (!attendanceStartDate || record.date >= attendanceStartDate) &&
-      (!attendanceEndDate || record.date <= attendanceEndDate),
-  );
-
-  const staffAttendanceTotals = staff.map((member) => {
-    const records = filteredAttendanceHistory.filter(
-      (record) => record.staff_id === member.id,
+  const filteredAttendanceHistory = useMemo(() => {
+    return attendanceHistory.filter(
+      (record) =>
+        (!attendanceStartDate || record.date >= attendanceStartDate) &&
+        (!attendanceEndDate || record.date <= attendanceEndDate),
     );
-    const present = records.filter(
-      (record) => record.status === "Present",
-    ).length;
-    const halfDay = records.filter(
-      (record) => record.status === "Half Day",
-    ).length;
-    const leave = records.filter((record) => record.status === "Leave").length;
-    return {
-      ...member,
-      present,
-      halfDay,
-      leave,
-      presentDays: present + halfDay * 0.5,
-    };
-  });
+  }, [attendanceHistory, attendanceStartDate, attendanceEndDate]);
+
+  // Dynamic 5-Card metrics for Staff Management Attendance History
+  const historySummary = useMemo(() => {
+    return filteredAttendanceHistory.reduce(
+      (acc, record) => {
+        const s = normalizeAttendanceStatus(record.status);
+        acc.total += 1;
+        if (s === "present") acc.present += 1;
+        else if (s === "half_day") acc.half_day += 1;
+        else if (s === "absent") acc.absent += 1;
+        else if (s === "leave") acc.leave += 1;
+        return acc;
+      },
+      { total: 0, present: 0, half_day: 0, absent: 0, leave: 0 }
+    );
+  }, [filteredAttendanceHistory]);
+
+  const staffAttendanceTotals = useMemo(() => {
+    return staff.map((member) => {
+      const records = filteredAttendanceHistory.filter(
+        (record) => String(record.staff_id) === String(member.id),
+      );
+      const present = records.filter(
+        (record) => normalizeAttendanceStatus(record.status) === "present",
+      ).length;
+      const halfDay = records.filter(
+        (record) => normalizeAttendanceStatus(record.status) === "half_day",
+      ).length;
+      const leave = records.filter(
+        (record) => normalizeAttendanceStatus(record.status) === "leave",
+      ).length;
+      const absent = records.filter(
+        (record) => normalizeAttendanceStatus(record.status) === "absent",
+      ).length;
+      return {
+        ...member,
+        present,
+        halfDay,
+        leave,
+        absent,
+        presentDays: present + halfDay * 0.5,
+      };
+    });
+  }, [staff, filteredAttendanceHistory]);
 
   const serif = { fontFamily: "'Fraunces', ui-serif, Georgia, serif" };
   const sans = { fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" };

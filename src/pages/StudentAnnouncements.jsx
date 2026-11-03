@@ -25,6 +25,7 @@ import {
 import { getMyEnrollmentsApi } from '../services/enrollments';
 import { getCourseImageUrl } from '../services/courses';
 import { useStudentModalBlur } from '../utils/useStudentModalBlur';
+import { AnnouncementsBannerIllustration } from '../components/common/StudentBannerIllustrations';
 
 const useAnnouncementFonts = () => {
   useEffect(() => {
@@ -206,43 +207,42 @@ const StudentAnnouncements = () => {
 
       <div className="w-full space-y-6">
         {/* Header Banner */}
-        <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-r from-[#FAF8F4] via-[#F5EFE6] to-[#FAF8F4] border border-[#E3DDD0] p-6 sm:p-8 text-[#17140F] shadow-sm">
-          <div className="pointer-events-none absolute -right-12 -top-12 h-64 w-64 rounded-full bg-[#9C6B2E]/5 blur-2xl" />
-          <div className="relative z-10 flex flex-col justify-between gap-5 md:flex-row md:items-center">
-            <div className="max-w-2xl space-y-1.5">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-[11px] font-bold text-[#17140F] border border-[#E3DDD0]">
-                <Megaphone className="h-3 w-3 text-[#9C6B2E]" />
+        <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#FAF6EE] via-[#FDF9F2] to-[#FAF1DF] text-[#17140F] border border-[#ECDDC6] shadow-xs mb-6">
+          <div className="relative z-10 flex flex-col md:flex-row md:items-stretch justify-between min-h-[190px] sm:min-h-[210px] md:min-h-[230px]">
+            {/* Left Text Content */}
+            <div className="p-6 sm:p-8 md:p-10 max-w-xl lg:max-w-2xl space-y-2.5 z-10 flex flex-col justify-center">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3.5 py-1.5 text-[11px] sm:text-xs font-bold text-[#9C6B2E] border border-[#ECD8B5] shadow-2xs">
+                <Megaphone className="h-3.5 w-3.5 text-[#9C6B2E]" />
                 <span>Course & Academic Bulletins</span>
               </div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#17140F] leading-tight">
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#17140F] leading-tight">
                 Course Announcements
               </h1>
-              <p className="text-xs sm:text-sm text-[#5B5346] font-normal">
+              <p className="text-xs sm:text-sm md:text-base text-[#6B6252] font-medium leading-relaxed max-w-xl">
                 Stay informed with the latest course notices, schedule changes, exam times, and learning updates from your instructors.
               </p>
+              <div className="pt-1 flex items-center gap-2.5">
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-white/90 border border-[#ECDDC6] px-3.5 py-1.5 text-xs font-bold text-[#17140F]">
+                  <span className="text-[#9C6B2E] font-black">{announcements.length}</span>
+                  <span>Active Updates</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={fetchAnnouncements}
+                  disabled={loading}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-white/90 border border-[#ECDDC6] px-3.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-[#F1EDE4] transition disabled:opacity-50 cursor-pointer"
+                >
+                  <RefreshCw className={`h-3 w-3 text-[#9C6B2E] ${loading ? 'animate-spin' : ''}`} />
+                  <span>Refresh</span>
+                </button>
+              </div>
             </div>
 
-            <div className="flex shrink-0 items-center gap-3 self-start md:self-auto">
-              <div className="flex items-center justify-center rounded-2xl bg-white border border-[#E3DDD0] px-5 py-3 text-center shadow-2xs">
-                <div>
-                  <div className="text-2xl sm:text-3xl font-black text-[#17140F] leading-none">
-                    {announcements.length}
-                  </div>
-                  <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-[#9C6B2E]">
-                    Updates
-                  </div>
-                </div>
+            {/* Right SVG Illustration - Fitted flush to top, bottom and right */}
+            <div className="w-full md:w-auto flex justify-end items-end md:self-stretch shrink-0 select-none overflow-hidden pr-0">
+              <div className="w-full sm:w-[460px] md:w-[480px] lg:w-[540px] xl:w-[600px] h-[190px] sm:h-[220px] md:h-full flex items-end justify-end">
+                <AnnouncementsBannerIllustration className="w-full h-full block" />
               </div>
-
-              <button
-                type="button"
-                onClick={fetchAnnouncements}
-                disabled={loading}
-                className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-[#17140F] border border-[#E3DDD0] shadow-2xs transition hover:bg-[#F1EDE4] disabled:opacity-50 cursor-pointer"
-              >
-                <RefreshCw className={`h-3.5 w-3.5 text-[#9C6B2E] ${loading ? 'animate-spin' : ''}`} />
-                <span>Refresh</span>
-              </button>
             </div>
           </div>
         </section>

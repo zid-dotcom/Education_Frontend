@@ -27,6 +27,7 @@ import {
 import {
   BRANCH_NAV_CONFIG,
   CANONICAL_BACKEND_KEYS,
+  FRONTEND_ID_TO_BACKEND_KEY,
   getDefaultNavSettings,
   normalizeNavSettings,
   sanitizeNavLinksForBackend,
@@ -128,17 +129,27 @@ const SuperAdminBranchNavigation = () => {
     return CANONICAL_BACKEND_KEYS.filter((key) => navSettings[key] !== false).length;
   }, [navSettings]);
 
-  const handleToggle = (backendKey) => {
-    setNavSettings((prev) => ({
-      ...prev,
-      [backendKey]: prev[backendKey] === false ? true : false,
-    }));
+  const handleToggle = (backendKey, itemId) => {
+    setNavSettings((prev) => {
+      const nextVal = prev[backendKey] === false ? true : false;
+      const updated = {
+        ...prev,
+        [backendKey]: nextVal,
+      };
+      if (itemId) {
+        updated[itemId] = nextVal;
+      }
+      return updated;
+    });
   };
 
   const handleEnableAll = () => {
     const allEnabled = {};
     CANONICAL_BACKEND_KEYS.forEach((key) => {
       allEnabled[key] = true;
+    });
+    Object.keys(FRONTEND_ID_TO_BACKEND_KEY).forEach((frontId) => {
+      allEnabled[frontId] = true;
     });
     setNavSettings(allEnabled);
   };
@@ -147,6 +158,9 @@ const SuperAdminBranchNavigation = () => {
     const allDisabled = {};
     CANONICAL_BACKEND_KEYS.forEach((key) => {
       allDisabled[key] = false;
+    });
+    Object.keys(FRONTEND_ID_TO_BACKEND_KEY).forEach((frontId) => {
+      allDisabled[frontId] = false;
     });
     setNavSettings(allDisabled);
   };
@@ -484,6 +498,7 @@ const SuperAdminBranchNavigation = () => {
                               const updated = { ...prev };
                               groupItems.forEach((i) => {
                                 updated[i.backendKey] = true;
+                                if (i.id) updated[i.id] = true;
                               });
                               return updated;
                             });
@@ -504,6 +519,7 @@ const SuperAdminBranchNavigation = () => {
                               const updated = { ...prev };
                               groupItems.forEach((i) => {
                                 updated[i.backendKey] = false;
+                                if (i.id) updated[i.id] = false;
                               });
                               return updated;
                             });
@@ -523,12 +539,14 @@ const SuperAdminBranchNavigation = () => {
                     <div className="grid divide-y divide-slate-100 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 lg:divide-y-0 lg:gap-4 lg:p-6">
                       {groupItems.map((item) => {
                         const Icon = item.icon;
-                        const isEnabled = navSettings[item.backendKey] !== false;
+                        const isEnabled =
+                          navSettings[item.backendKey] !== false &&
+                          navSettings[item.id] !== false;
 
                         return (
                           <div
-                            key={item.backendKey}
-                            onClick={() => handleToggle(item.backendKey)}
+                            key={item.id || item.backendKey}
+                            onClick={() => handleToggle(item.backendKey, item.id)}
                             className={`group relative flex cursor-pointer items-start justify-between rounded-2xl border p-4 transition hover:shadow-md ${
                               isEnabled
                                 ? 'border-[#e3ddd0] bg-white hover:border-[#9c6b2e]/60'
@@ -575,7 +593,7 @@ const SuperAdminBranchNavigation = () => {
                                 aria-label={`Toggle visibility of ${item.label}`}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleToggle(item.backendKey);
+                                  handleToggle(item.backendKey, item.id);
                                 }}
                                 className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#9c6b2e]/30 ${
                                   isEnabled ? 'bg-[#9c6b2e]' : 'bg-slate-300'

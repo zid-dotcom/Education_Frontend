@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Clock, BarChart, ArrowLeft, Send, AlertCircle, Loader2 } from 'lucide-react';
+import { Clock, BarChart, ArrowLeft, Send, AlertCircle, Loader2, ChevronDown } from 'lucide-react';
 import Button from '../components/common/Button';
 import CurriculumAccordion from '../components/courses/CurriculumAccordion';
 import CourseCard from '../components/courses/CourseCard';
@@ -9,7 +9,6 @@ import { createPaymentOrderApi, loadRazorpayScript, verifyPaymentApi } from '../
 import { getPublicBranchesWithCoursesApi } from '../services/branches';
 import { useAuth } from '../context/AuthContext';
 import PaymentSuccessReceiptModal from '../components/common/PaymentSuccessReceiptModal';
-import { calculateGstBreakdown } from '../services/gst';
 
 const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
   const { courseId } = useParams();
@@ -251,6 +250,13 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
     }
   };
 
+  const scrollToDetails = () => {
+    const el = document.getElementById('course-details-section');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   return (
     <div className="bg-white text-slate-900 opacity-0 animate-[detailOpen_0.5s_ease-out_forwards]">
       <style>{`
@@ -314,36 +320,57 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
           </div>
         </section>
       ) : (
-        /* PUBLIC VIEW: TOP HERO IMAGE (FULL WIDTH WITH TOP PORTION IN FULL VIEW) */
-        <section className="w-full overflow-hidden relative bg-stone-900 border-b border-amber-200/40">
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute left-0 top-0 z-10 h-1/2 w-1/3 rounded-br-full bg-gradient-to-r from-amber-300/35 via-orange-200/15 to-transparent blur-3xl"
-          />
-          <div className="relative w-full h-72 sm:h-96 md:h-[440px] lg:h-[520px] xl:h-[560px] overflow-hidden">
+        /* PUBLIC VIEW: TOP HERO IMAGE WITH SIMPLE SLIDE DOWN BUTTON */
+        <section className="w-full relative bg-stone-950 border-b border-stone-200/40 overflow-hidden">
+          {/* Full Desktop View Banner Image Container */}
+          <div className="relative w-full h-[70vh] sm:h-[80vh] lg:h-[calc(100vh-80px)] min-h-[520px] lg:min-h-[640px] overflow-hidden flex items-center justify-center bg-stone-950">
             <img
               src={imageUrl}
               alt={title}
-              className="hero-pop-in block w-full h-full object-cover object-top"
+              className="hero-pop-in block w-full h-full object-cover object-center"
               onError={(e) => {
                 e.target.onerror = null;
                 e.target.src = 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80';
               }}
             />
+
+            {/* Simple Slide Down Button */}
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20">
+              <button
+                type="button"
+                onClick={scrollToDetails}
+                className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/95 hover:bg-white text-stone-800 hover:text-stone-950 text-xs sm:text-sm font-semibold tracking-wide shadow-md hover:shadow-lg backdrop-blur-md border border-stone-200/80 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+                title="Slide down for details"
+                aria-label="Slide down for details"
+              >
+                <span>Slide Down</span>
+                <ChevronDown className="h-4 w-4 text-[#9C6B2E] group-hover:translate-y-0.5 transition-transform" />
+              </button>
+            </div>
           </div>
         </section>
       )}
 
       {/* MAIN CONTENT & SIDEBAR ENROLMENT CARD */}
-      <section className="bg-white py-8 sm:py-12">
+      <section id="course-details-section" className="bg-white py-8 sm:py-12 scroll-mt-16 sm:scroll-mt-20">
         <div className={studentView ? "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" : "w-full max-w-[1920px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16"}>
           {!studentView && (
-            <Link
-              to={coursePath}
-              className="mb-6 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition-colors text-slate-500 hover:text-amber-700"
-            >
-              <ArrowLeft className="w-4 h-4" /> Back to All Courses
-            </Link>
+            <div className="mb-6 flex items-center justify-between gap-4">
+              <Link
+                to={coursePath}
+                className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition-colors text-slate-500 hover:text-amber-700"
+              >
+                <ArrowLeft className="w-4 h-4" /> Back to All Courses
+              </Link>
+              <button
+                type="button"
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-[#9C6B2E] hover:text-[#7A501E] transition cursor-pointer"
+                title="Back to top banner"
+              >
+                ↑ View Full Banner
+              </button>
+            </div>
           )}
 
           <div className="grid grid-cols-1 items-start lg:grid-cols-12 gap-8 lg:gap-10 xl:gap-12">
@@ -452,41 +479,10 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
                     <span className="text-3xl font-black text-slate-950 sm:text-4xl">
                       {priceDisplay}
                     </span>
-                    <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                      Incl. {course.total_gst_percent !== undefined && course.total_gst_percent !== null ? `${course.total_gst_percent}% ` : ''}GST
+                    <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                      Includes GST
                     </span>
                   </div>
-                  {(() => {
-                    const priceNum = Number(course.price || course.fee || 0);
-                    if (priceNum <= 0) return null;
-                    const cgstRate = course.cgst_percent !== undefined && course.cgst_percent !== null ? Number(course.cgst_percent) : 9;
-                    const sgstRate = course.sgst_percent !== undefined && course.sgst_percent !== null ? Number(course.sgst_percent) : 9;
-                    const bd = calculateGstBreakdown(priceNum, cgstRate, sgstRate);
-                    return (
-                      <div className="mt-2.5 rounded-xl bg-stone-50/90 p-2.5 border border-[#e3ddd0] text-xs space-y-1">
-                        <div className="flex justify-between text-slate-600">
-                          <span>Course fee (excl. GST):</span>
-                          <span className="font-semibold text-slate-800">₹{bd.basePrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                        <div className="flex justify-between text-slate-600">
-                          <span>CGST ({bd.cgstPercent}%):</span>
-                          <span className="font-medium text-slate-700">+ ₹{bd.cgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                        <div className="flex justify-between text-slate-600">
-                          <span>SGST ({bd.sgstPercent}%):</span>
-                          <span className="font-medium text-slate-700">+ ₹{bd.sgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                        <div className="flex justify-between text-slate-600 font-medium">
-                          <span>Total GST ({bd.totalGstPercent}%):</span>
-                          <span className="font-semibold text-amber-800">+ ₹{bd.totalGstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                        <div className="flex justify-between pt-1 border-t border-[#e3ddd0] font-bold text-slate-900">
-                          <span>Final Fee:</span>
-                          <span className="text-emerald-700">₹{bd.totalAmount.toLocaleString('en-IN')}</span>
-                        </div>
-                      </div>
-                    );
-                  })()}
                 </div>
 
                 <div className="space-y-3 pt-4 border-t border-slate-100 text-xs font-medium text-slate-700">

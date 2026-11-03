@@ -30,6 +30,7 @@ import {
   MessageCircle,
   MessageSquare,
   Phone,
+  Plus,
   Receipt,
   RefreshCw,
   Search,
@@ -47,6 +48,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import NavLogoutButton from '../components/common/NavLogoutButton';
+import boyImage from '../assets/boyimage.png';
+import girlImage from '../assets/girlimage.png';
+import { getStudentGenderFromName } from '../utils/genderHelper';
 import { getCourseImageUrl } from '../services/courses';
 import { getMyEnrollmentsApi, getEnrollmentInstallmentsApi } from '../services/enrollments';
 import { createPaymentOrderApi, loadRazorpayScript, verifyPaymentApi } from '../services/payments';
@@ -1269,15 +1273,15 @@ const StudentDashboard = () => {
       let pendingDescription = '';
       if (numbers.length === 1) {
         dueTermsText = `${numbers[0]}`;
-        pendingDescription = `Currently installment #${numbers[0]} is pending`;
+        pendingDescription = `Currently installment #${numbers[0]} is Due`;
       } else if (numbers.length > 1) {
         dueTermsText = `${numbers.slice(0, -1).join(', ')} and ${numbers[numbers.length - 1]}`;
-        pendingDescription = `Currently installment #${numbers.slice(0, -1).join(', #')} and #${numbers[numbers.length - 1]} is pending`;
+        pendingDescription = `Currently installment #${numbers.slice(0, -1).join(', #')} and #${numbers[numbers.length - 1]} is Due`;
       } else if (nextUnpaid?.installment_number) {
         dueTermsText = `${nextUnpaid.installment_number}`;
-        pendingDescription = `Currently installment #${nextUnpaid.installment_number} is pending`;
+        pendingDescription = `Currently installment #${nextUnpaid.installment_number} is Due`;
       } else {
-        pendingDescription = 'Currently installment is pending';
+        pendingDescription = 'Currently installment is Due';
       }
 
       const totalDueAmount = dueList.length > 0
@@ -2024,6 +2028,11 @@ const StudentDashboard = () => {
   // Student profile resolution
   const student = enrollments[0]?.student_details || {};
   const displayName = user?.name || student?.name || enrollments[0]?.name || enrollments[0]?.full_name || 'Student';
+  const studentGender = getStudentGenderFromName(
+    displayName,
+    user?.gender || student?.gender || enrollments[0]?.gender || enrollments[0]?.student_details?.gender
+  );
+  const studentBannerAvatar = studentGender === 'girl' ? girlImage : boyImage;
   const studentFirstName = displayName.trim().split(' ')[0] || 'Student';
   const displayEmail = user?.email || student?.email || enrollments[0]?.email || 'Email not available';
   const displayPhone = user?.phone || student?.phone || enrollments[0]?.phone || 'Phone not available';
@@ -2492,21 +2501,29 @@ const StudentDashboard = () => {
                 </p>
               </div>
 
-              {/* 3D-styled Student Animated Emblem (Matching Staff Portal Style) */}
-              <div className="hidden sm:flex items-center justify-center shrink-0 pr-2 sm:pr-4 relative z-10">
+              {/* Conditional Student Character Illustration (Boy / Girl Based on Name) */}
+              <div className="hidden sm:flex items-center justify-center shrink-0 mr-3 sm:mr-8 md:mr-10 relative z-10">
                 <div className="relative flex items-center justify-center group cursor-default">
-                  {/* Floating decorative elements in warm amber & gold theme */}
-                  <div className="absolute -top-2.5 -left-2.5 h-6 w-6 rounded-full bg-gradient-to-tr from-[#9C6B2E] to-[#F4B942] shadow-md shadow-[#9C6B2E]/40 animate-bounce flex items-center justify-center text-white">
-                    <Award className="h-3.5 w-3.5 text-white stroke-[2.2]" />
+                  {/* Floating decorative elements matching design */}
+                  <div className="absolute -top-1.5 -right-1.5 sm:-top-2 sm:-right-2 md:-top-2.5 md:-right-2.5 h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 rounded-full bg-[#b8863b] shadow-sm flex items-center justify-center text-white z-20">
+                    <GraduationCap className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-4.5 md:w-4.5 text-white stroke-[2.2]" />
                   </div>
-                  <div className="absolute -bottom-1.5 -right-1.5 h-4 w-4 rounded-full bg-[#F4B942] shadow-md shadow-[#F4B942]/30 animate-pulse" />
-                  <div className="absolute top-1/2 -right-4 h-5 w-5 rounded-full bg-[#9C6B2E] shadow-md shadow-[#9C6B2E]/30 flex items-center justify-center text-[10px] font-black text-white">
-                    ★
+                  <div className="absolute bottom-1 -right-1.5 sm:bottom-2 sm:-right-2 md:bottom-2.5 md:-right-2.5 h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 rounded-full bg-[#b8863b] shadow-sm flex items-center justify-center text-white z-20">
+                    <Plus className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 text-white stroke-[2.8]" />
                   </div>
 
-                  {/* Center Floating Student Emblem */}
-                  <div className="flex h-20 w-20 sm:h-22 sm:w-22 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FAF8F4] via-[#F1EDE4] to-[#FAF8F4] backdrop-blur-md border border-[#E3DDD0] shadow-lg shadow-[#9C6B2E]/10 transform hover:rotate-3 hover:scale-105 transition-all duration-300">
-                    <GraduationCap className="h-10 w-10 sm:h-12 sm:w-12 text-[#9C6B2E] drop-shadow-sm transition-transform duration-300 group-hover:scale-110" />
+                  {/* Character Illustration Container - Half-portion waist-up focus, no legs */}
+                  <div className="flex h-24 w-24 sm:h-28 sm:w-28 md:h-32 md:w-32 lg:h-[132px] lg:w-[132px] items-center justify-center rounded-2xl sm:rounded-3xl bg-[#FAF8F4] border border-[#E3DDD0] shadow-sm overflow-hidden select-none transition-all duration-300 group-hover:scale-105 group-hover:shadow-md">
+                    <img
+                      src={studentBannerAvatar}
+                      alt={`${studentGender === 'girl' ? 'Girl' : 'Boy'} Student Avatar`}
+                      className="w-full h-full object-cover select-none pointer-events-none transition-transform duration-300"
+                      style={
+                        studentGender === 'girl'
+                          ? { transform: 'scale(1.7) translateY(8%)', transformOrigin: 'top center' }
+                          : { transform: 'scale(1.8) translateY(14%)', transformOrigin: 'top center' }
+                      }
+                    />
                   </div>
                 </div>
               </div>
@@ -2541,8 +2558,8 @@ const StudentDashboard = () => {
                       <p className="text-xs sm:text-sm font-bold text-red-600 flex items-center gap-1.5">
                         {nextDueInstallment.pendingDescription || (
                           nextDueInstallment.dueTermsText
-                            ? `Currently installment #${nextDueInstallment.dueTermsText} is pending`
-                            : `Currently installment #${nextDueInstallment.installmentNumber || 1} is pending`
+                            ? `Currently installment #${nextDueInstallment.dueTermsText} is Due`
+                            : `Currently installment #${nextDueInstallment.installmentNumber || 1} is Due`
                         )}
                       </p>
                     </div>

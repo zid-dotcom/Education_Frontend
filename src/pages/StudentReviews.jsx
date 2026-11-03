@@ -19,6 +19,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { createStudentReviewApi, getStudentReviewsApi } from '../services/reviews';
 import { getMyEnrollmentsApi } from '../services/enrollments';
+import { ReviewsBannerIllustration } from '../components/common/StudentBannerIllustrations';
 
 const useReviewFonts = () => {
   useEffect(() => {
@@ -228,60 +229,52 @@ const StudentReviews = () => {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto pb-12 space-y-6 font-['Plus_Jakarta_Sans',sans-serif] text-slate-800">
+    <div className="w-full pb-12 space-y-6 font-['Plus_Jakarta_Sans',sans-serif] text-slate-800">
       {/* 1. Header Banner */}
-      <header className="rounded-2xl border border-[#E3DDD0] bg-white p-6 sm:p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-1.5 max-w-2xl">
-            <span className="inline-flex items-center rounded-full bg-[#FAF4EA] px-3 py-1 text-[11px] font-bold text-[#9C6B2E] border border-[#E3DDD0]">
+      <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#FAF6EE] via-[#FDF9F2] to-[#FAF1DF] text-[#17140F] border border-[#ECDDC6] shadow-xs mb-6">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-stretch justify-between min-h-[190px] sm:min-h-[210px] md:min-h-[230px]">
+          {/* Left Text Content */}
+          <div className="p-6 sm:p-8 md:p-10 max-w-xl lg:max-w-2xl space-y-2.5 z-10 flex flex-col justify-center">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3.5 py-1.5 text-[11px] sm:text-xs font-bold text-[#9C6B2E] border border-[#ECD8B5] shadow-2xs">
+              <Star className="h-3.5 w-3.5 text-[#9C6B2E] fill-[#9C6B2E]" />
               <span>Student Experience & Feedback</span>
             </span>
-            <h1 className="text-xl sm:text-2xl font-bold text-[#17140F] tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#17140F] leading-tight">
               Course Reviews
             </h1>
-            <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+            <p className="text-xs sm:text-sm md:text-base text-[#6B6252] font-medium leading-relaxed max-w-xl">
               Rate your learning journey, provide valuable feedback for your enrolled courses, and view all your shared testimonials.
             </p>
+            <div className="pt-1 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => fetchData(true)}
+                disabled={refreshing}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[#ECDDC6] bg-white/90 px-3.5 py-2 text-xs font-bold text-stone-700 hover:bg-[#F1EDE4] transition cursor-pointer"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin text-[#9C6B2E]' : ''}`} />
+                <span>Refresh</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleOpenModal()}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#9C6B2E] px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#855923] transition cursor-pointer"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Write a Review</span>
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => fetchData(true)}
-              disabled={refreshing}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[#E3DDD0] bg-[#FAF8F4] px-3.5 py-2.5 text-xs font-semibold text-stone-700 hover:bg-[#F1EDE4] transition cursor-pointer"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin text-[#9C6B2E]' : ''}`} />
-              <span>Refresh</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleOpenModal()}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#9C6B2E] px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-[#855923] transition cursor-pointer"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Write a Review</span>
-            </button>
+          {/* Right SVG Illustration - Fitted flush to top, bottom and right */}
+          <div className="w-full md:w-auto flex justify-end items-end md:self-stretch shrink-0 select-none overflow-hidden pr-0">
+            <div className="w-full sm:w-[460px] md:w-[480px] lg:w-[540px] xl:w-[600px] h-[190px] sm:h-[220px] md:h-full flex items-end justify-end">
+              <ReviewsBannerIllustration className="w-full h-full block" />
+            </div>
           </div>
         </div>
-
-        {/* Success Alert Banner */}
-        {successMsg && (
-          <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/90 p-3 text-xs font-medium text-emerald-800 animate-fadeIn">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-            <span>{successMsg}</span>
-          </div>
-        )}
-
-        {/* Error Alert Banner */}
-        {error && (
-          <div className="mt-4 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50/90 p-3 text-xs font-medium text-rose-800 animate-fadeIn">
-            <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-      </header>
+      </section>
 
       {/* 2. Overview Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

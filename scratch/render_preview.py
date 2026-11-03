@@ -1,0 +1,376 @@
+import re
+
+reviews_svg = '''
+<svg
+  viewBox="0 0 500 240"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  preserveAspectRatio="xMaxYMax meet"
+>
+  <defs>
+    <linearGradient id="rev_warmGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#FDE6B0" stopOpacity="0.85" />
+      <stop offset="100%" stopColor="#F5B942" stopOpacity="0.75" />
+    </linearGradient>
+
+    <linearGradient id="rev_warmAmberSoft" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stopColor="#FCF0D6" stopOpacity="0.95" />
+      <stop offset="100%" stopColor="#F9CB65" stopOpacity="0.55" />
+    </linearGradient>
+
+    <linearGradient id="rev_gold3D_1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#FFF4D0" />
+      <stop offset="50%" stopColor="#F5B942" />
+      <stop offset="100%" stopColor="#C98616" />
+    </linearGradient>
+
+    <linearGradient id="rev_gold3D_2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stopColor="#EAB338" />
+      <stop offset="100%" stopColor="#9C640C" />
+    </linearGradient>
+
+    <linearGradient id="rev_navyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#1E293B" />
+      <stop offset="100%" stopColor="#0F172A" />
+    </linearGradient>
+
+    <filter id="rev_softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" floodColor="#8B5E1E" floodOpacity="0.12" />
+    </filter>
+
+    <filter id="rev_glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  {/* Background Warm Organic Shapes */}
+  <path
+    d="M 120 240 C 150 160, 200 120, 280 85 C 360 50, 430 70, 500 50 L 500 240 Z"
+    fill="url(#rev_warmAmberSoft)"
+  />
+  <path
+    d="M 220 240 C 255 175, 310 135, 375 115 C 435 95, 470 110, 500 95 L 500 240 Z"
+    fill="url(#rev_warmGoldGrad)"
+  />
+
+  {/* Subtle Star Sparkles in Sky */}
+  <g fill="#D99824" opacity="0.6">
+    <path d="M 170 30 Q 170 40 160 40 Q 170 40 170 50 Q 170 40 180 40 Q 170 40 170 30 Z" />
+    <path d="M 465 50 Q 465 57 458 57 Q 465 57 465 64 Q 465 57 472 57 Q 465 57 465 50 Z" />
+    <path d="M 335 25 Q 335 30 330 30 Q 335 30 335 35 Q 335 30 340 30 Q 335 30 335 25 Z" />
+  </g>
+
+  {/* Subtle Golden Dot Matrix */}
+  <g opacity="0.35" fill="#D99824">
+    <circle cx="280" cy="28" r="2" />
+    <circle cx="292" cy="28" r="2" />
+    <circle cx="304" cy="28" r="2" />
+    <circle cx="286" cy="38" r="2" />
+    <circle cx="298" cy="38" r="2" />
+  </g>
+
+  {/* LAYER 1: Secondary Testimonial Card in Background (Tilted) */}
+  <g transform="rotate(7 310 145)" filter="url(#rev_softShadow)" opacity="0.85">
+    <rect x="205" y="75" width="180" height="135" rx="16" fill="#FFFDF8" stroke="#ECDDC6" strokeWidth="1.2" />
+    <circle cx="230" cy="100" r="10" fill="#E2E8F0" />
+    <rect x="248" y="96" width="60" height="7" rx="3.5" fill="#CBD5E1" />
+    <line x1="225" y1="125" x2="355" y2="125" stroke="#E2E8F0" strokeWidth="2" strokeLinecap="round" />
+    <line x1="225" y1="138" x2="335" y2="138" stroke="#E2E8F0" strokeWidth="2" strokeLinecap="round" />
+  </g>
+
+  {/* LAYER 2: Primary Crisp Testimonial Review Card */}
+  <g transform="rotate(-4 250 120)" filter="url(#rev_softShadow)">
+    {/* Card Body */}
+    <rect x="155" y="42" width="200" height="162" rx="16" fill="#FFFFFF" stroke="#ECDDC6" strokeWidth="1.2" />
+
+    {/* Student Profile Header */}
+    <g transform="translate(172, 58)">
+      {/* Avatar Circle with Gold Border */}
+      <circle cx="16" cy="16" r="16" fill="url(#rev_navyGrad)" />
+      <circle cx="16" cy="16" r="15" fill="none" stroke="url(#rev_gold3D_1)" strokeWidth="1.5" />
+      {/* Student Icon Silhouette */}
+      <circle cx="16" cy="12" r="5" fill="#F4B942" />
+      <path d="M 8 26 C 8 21 11 19 16 19 C 21 19 24 21 24 26 Z" fill="#F4B942" />
+
+      {/* Student Meta Details */}
+      <rect x="40" y="7" width="58" height="6" rx="3" fill="#0F172A" />
+      <rect x="40" y="17" width="42" height="4" rx="2" fill="#9C6B2E" opacity="0.8" />
+
+      {/* 5 Dimensional Golden Stars inside Header */}
+      <g transform="translate(102, 9)">
+        {[0, 13, 26, 39, 52].map((offset, idx) => (
+          <path
+            key={idx}
+            d={`M ${offset + 5} 0 L ${offset + 6.6} 3.4 L ${offset + 10} 3.9 L ${offset + 7.5} 6.4 L ${offset + 8.1} 10 L ${offset + 5} 8.3 L ${offset + 1.9} 10 L ${offset + 2.5} 6.4 L ${offset} 3.9 L ${offset + 3.4} 3.4 Z`}
+            fill="url(#rev_gold3D_1)"
+            stroke="#C98616"
+            strokeWidth="0.4"
+          />
+        ))}
+      </g>
+    </g>
+
+    {/* Elegant Gold Opening Quote Mark */}
+    <text x="172" y="112" fill="#EAB338" fontSize="28" fontFamily="Georgia, serif" fontWeight="900" opacity="0.9">“</text>
+
+    {/* Realistic Review Feedback Text Lines */}
+    <line x1="174" y1="120" x2="334" y2="120" stroke="#0F172A" strokeWidth="2.5" strokeLinecap="round" />
+    <line x1="174" y1="132" x2="320" y2="132" stroke="#64748B" strokeWidth="2" strokeLinecap="round" />
+    <line x1="174" y1="144" x2="285" y2="144" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" />
+
+    {/* Refined Gold Pill: Course Completed / Verified Review */}
+    <g transform="translate(174, 162)">
+      <rect x="0" y="0" width="158" height="24" rx="12" fill="#FAF6EE" stroke="#ECDDC6" strokeWidth="1" />
+      {/* Mini Gold Badge Icon */}
+      <circle cx="12" cy="12" r="5" fill="#D97706" />
+      <path d="M 9.5 12 L 11.2 13.7 L 14.5 10.3" fill="none" stroke="#FFFFFF" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+      <text x="23" y="15" fill="#9C6B2E" fontSize="8.5" fontWeight="800" letterSpacing="0.5" fontFamily="sans-serif">
+        VERIFIED STUDENT REVIEW
+      </text>
+    </g>
+  </g>
+
+  {/* LAYER 3: Large 3D Faceted Golden Star Trophy (Upper Right) */}
+  <g transform="translate(365, 35)" filter="url(#rev_softShadow)">
+    {/* Subtle Star Ambient Glow */}
+    <circle cx="50" cy="50" r="42" fill="#FDE6B0" opacity="0.4" />
+
+    {/* 3D Faceted 5-Point Star */}
+    {/* Facet Light / Shadow paths from center (50,50) */}
+    {/* Point 1 (Top: 50, 8) */}
+    <polygon points="50,50 50,8 63,35" fill="#FFEAA8" />
+    <polygon points="50,50 50,8 37,35" fill="#F5B942" />
+
+    {/* Point 2 (Right Top: 92, 38) */}
+    <polygon points="50,50 92,38 67,58" fill="#F5B942" />
+    <polygon points="50,50 92,38 63,35" fill="#FFEAA8" />
+
+    {/* Point 3 (Right Bottom: 76, 88) */}
+    <polygon points="50,50 76,88 50,68" fill="#C98616" />
+    <polygon points="50,50 76,88 67,58" fill="#EAB338" />
+
+    {/* Point 4 (Left Bottom: 24, 88) */}
+    <polygon points="50,50 24,88 33,58" fill="#C98616" />
+    <polygon points="50,50 24,88 50,68" fill="#9C640C" />
+
+    {/* Point 5 (Left Top: 8, 38) */}
+    <polygon points="50,50 8,38 37,35" fill="#FFEAA8" />
+    <polygon points="50,50 8,38 33,58" fill="#EAB338" />
+
+    {/* Star Crisp Edge Contour */}
+    <polygon
+      points="50,8 63,35 92,38 67,58 76,88 50,68 24,88 33,58 8,38 37,35"
+      fill="none"
+      stroke="#B47818"
+      strokeWidth="1.2"
+      strokeLinejoin="round"
+    />
+  </g>
+
+  {/* LAYER 4: Prestigious Aurum Rating Seal (Lower Right, Flush to Bottom) */}
+  <g transform="translate(372, 125)" filter="url(#rev_softShadow)">
+    {/* Silk Ribbon Tails hanging down to floor */}
+    <path d="M 32 60 L 22 108 L 40 98 L 48 108 L 44 60 Z" fill="#9C6B2E" />
+    <path d="M 48 60 L 56 108 L 68 98 L 78 108 L 68 60 Z" fill="#B47818" />
+
+    {/* Outer Scalloped Gold Medallion Rim */}
+    <circle cx="50" cy="50" r="42" fill="url(#rev_gold3D_1)" stroke="#B47818" strokeWidth="1.5" />
+    <circle cx="50" cy="50" r="37" fill="#FFFFFF" />
+    <circle cx="50" cy="50" r="34" fill="url(#rev_navyGrad)" />
+
+    {/* Rating Inside Medallion */}
+    {/* Micro Star */}
+    <path
+      d="M 50 26 L 52 30 L 56 30.5 L 53 33.5 L 53.8 37.5 L 50 35.5 L 46.2 37.5 L 47 33.5 L 44 30.5 L 48 30 Z"
+      fill="#F5B942"
+    />
+    <text x="50" y="55" textAnchor="middle" fill="#FFFFFF" fontSize="17" fontWeight="900" fontFamily="sans-serif">
+      5.0
+    </text>
+    <text x="50" y="67" textAnchor="middle" fill="#F4B942" fontSize="7" fontWeight="800" letterSpacing="1" fontFamily="sans-serif">
+      RATING
+    </text>
+  </g>
+</svg>
+'''
+
+enquiries_svg = '''
+<svg
+  viewBox="0 0 500 240"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  preserveAspectRatio="xMaxYMax meet"
+>
+  <defs>
+    <linearGradient id="enq_warmGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#FDE6B0" stopOpacity="0.85" />
+      <stop offset="100%" stopColor="#F5B942" stopOpacity="0.75" />
+    </linearGradient>
+
+    <linearGradient id="enq_warmAmberSoft" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stopColor="#FCF0D6" stopOpacity="0.95" />
+      <stop offset="100%" stopColor="#F9CB65" stopOpacity="0.55" />
+    </linearGradient>
+
+    <linearGradient id="enq_goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#FFE494" />
+      <stop offset="50%" stopColor="#EAB338" />
+      <stop offset="100%" stopColor="#B47818" />
+    </linearGradient>
+
+    <linearGradient id="enq_navyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#1E293B" />
+      <stop offset="100%" stopColor="#0F172A" />
+    </linearGradient>
+
+    <linearGradient id="enq_penGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#334155" />
+      <stop offset="50%" stopColor="#0F172A" />
+      <stop offset="100%" stopColor="#1E293B" />
+    </linearGradient>
+
+    <filter id="enq_softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" floodColor="#8B5E1E" floodOpacity="0.12" />
+    </filter>
+  </defs>
+
+  {/* Background Warm Organic Shapes */}
+  <path
+    d="M 120 240 C 150 160, 200 120, 280 85 C 360 50, 430 70, 500 50 L 500 240 Z"
+    fill="url(#enq_warmAmberSoft)"
+  />
+  <path
+    d="M 220 240 C 255 175, 310 135, 375 115 C 435 95, 470 110, 500 95 L 500 240 Z"
+    fill="url(#enq_warmGoldGrad)"
+  />
+
+  {/* Subtle Star Sparkles */}
+  <g fill="#D99824" opacity="0.6">
+    <path d="M 175 35 Q 175 42 168 42 Q 175 42 175 49 Q 175 42 182 42 Q 175 42 175 35 Z" />
+    <path d="M 460 70 Q 460 76 454 76 Q 460 76 460 82 Q 460 76 466 76 Q 460 76 460 70 Z" />
+  </g>
+
+  {/* Subtle Golden Dot Matrix */}
+  <g opacity="0.35" fill="#D99824">
+    <circle cx="280" cy="28" r="2" />
+    <circle cx="292" cy="28" r="2" />
+    <circle cx="304" cy="28" r="2" />
+    <circle cx="286" cy="38" r="2" />
+    <circle cx="298" cy="38" r="2" />
+  </g>
+
+  {/* LAYER 1: Background Dossier Folder / Consultation Portfolio */}
+  <g transform="rotate(6 295 130)" filter="url(#enq_softShadow)" opacity="0.9">
+    <rect x="195" y="65" width="180" height="150" rx="14" fill="#FAF1DF" stroke="#ECDDC6" strokeWidth="1.2" />
+    <rect x="215" y="80" width="80" height="6" rx="3" fill="#ECDDC6" />
+    <line x1="215" y1="102" x2="345" y2="102" stroke="#ECDDC6" strokeWidth="2" strokeLinecap="round" />
+    <line x1="215" y1="116" x2="320" y2="116" stroke="#ECDDC6" strokeWidth="2" strokeLinecap="round" />
+  </g>
+
+  {/* LAYER 2: Primary Official Admission Enquiry Sheet */}
+  <g transform="rotate(-3 245 120)" filter="url(#enq_softShadow)">
+    {/* Clean White Sheet */}
+    <rect x="150" y="38" width="200" height="175" rx="16" fill="#FFFFFF" stroke="#ECDDC6" strokeWidth="1.2" />
+
+    {/* Top Header Strip with Aurum Dark Navy & Gold */}
+    <path d="M 150 54 C 150 45 157 38 166 38 L 334 38 C 343 38 350 45 350 54 L 350 72 L 150 72 Z" fill="url(#enq_navyGrad)" />
+    
+    {/* Header Title Text & Gold Dot */}
+    <circle cx="168" cy="55" r="4" fill="url(#enq_goldGrad)" />
+    <text x="180" y="58" fill="#FDE6B0" fontSize="9" fontWeight="800" letterSpacing="0.8" fontFamily="sans-serif">
+      STUDENT ADMISSION ENQUIRY
+    </text>
+
+    {/* Subject & Query Fields inside Card */}
+    <g transform="translate(168, 86)">
+      {/* Field 1: Category Tag */}
+      <rect x="0" y="0" width="70" height="16" rx="8" fill="#FAF6EE" stroke="#ECDDC6" strokeWidth="0.8" />
+      <text x="35" y="11" textAnchor="middle" fill="#9C6B2E" fontSize="7.5" fontWeight="700">COURSE INFO</text>
+
+      {/* Field 2: Date / Status Pill */}
+      <rect x="76" y="0" width="62" height="16" rx="8" fill="#FAF6EE" stroke="#ECDDC6" strokeWidth="0.8" />
+      <text x="107" y="11" textAnchor="middle" fill="#5C5549" fontSize="7.5" fontWeight="600">DIRECT DESK</text>
+
+      {/* Inquiry Content Lines */}
+      <line x1="0" y1="30" x2="164" y2="30" stroke="#0F172A" strokeWidth="2.5" strokeLinecap="round" />
+      <line x1="0" y1="42" x2="152" y2="42" stroke="#64748B" strokeWidth="2" strokeLinecap="round" />
+      <line x1="0" y1="54" x2="160" y2="54" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" />
+      <line x1="0" y1="66" x2="120" y2="66" stroke="#CBD5E1" strokeWidth="2" strokeLinecap="round" />
+
+      {/* Fast Resolution Guarantee Badge */}
+      <g transform="translate(0, 84)">
+        <rect x="0" y="0" width="164" height="26" rx="13" fill="#FAF6EE" stroke="#ECDDC6" strokeWidth="1" />
+        {/* Golden Spark / Star */}
+        <circle cx="13" cy="13" r="6" fill="#D97706" />
+        <path d="M 13 9 L 14.2 11.8 L 17 13 L 14.2 14.2 L 13 17 L 11.8 14.2 L 9 13 L 11.8 11.8 Z" fill="#FFFFFF" />
+        <text x="26" y="16.5" fill="#9C6B2E" fontSize="8" fontWeight="800" letterSpacing="0.4" fontFamily="sans-serif">
+          OFFICIAL COUNSELING TEAM
+        </text>
+      </g>
+    </g>
+  </g>
+
+  {/* LAYER 3: Diagonal Flight Path & Golden Origami Paper Plane (Upper Right) */}
+  {/* Elegant dashed trajectory curve */}
+  <path
+    d="M 330 115 C 360 85, 385 55, 420 40"
+    fill="none"
+    stroke="#EAB338"
+    strokeWidth="1.5"
+    strokeDasharray="4 4"
+    opacity="0.75"
+  />
+
+  {/* Modern 3D Golden Origami Airplane */}
+  <g transform="translate(400, 18) rotate(18)" filter="url(#enq_softShadow)">
+    {/* Main Wings & Body */}
+    <polygon points="10,48 68,12 45,78 35,52" fill="url(#enq_goldGrad)" stroke="#B47818" strokeWidth="1" />
+    <polygon points="10,48 35,52 68,12" fill="#FFEAA8" />
+    <polygon points="35,52 40,70 45,60" fill="#9C640C" />
+  </g>
+
+  {/* LAYER 4: Elegant Consultation Speech Bubble (Center-Right) */}
+  <g transform="translate(345, 68)" filter="url(#enq_softShadow)">
+    <rect x="0" y="0" width="112" height="52" rx="16" fill="url(#enq_navyGrad)" stroke="#334155" strokeWidth="1" />
+    {/* Tail pointer */}
+    <polygon points="18,50 10,64 28,50" fill="#0F172A" />
+
+    {/* Sparkle icon */}
+    <circle cx="22" cy="26" r="10" fill="url(#enq_goldGrad)" />
+    <text x="22" y="30" textAnchor="middle" fill="#0F172A" fontSize="12" fontWeight="900">?</text>
+
+    {/* Message snippet */}
+    <rect x="40" y="18" width="55" height="5" rx="2.5" fill="#FFFFFF" />
+    <rect x="40" y="28" width="42" height="4" rx="2" fill="#94A3B8" />
+  </g>
+
+  {/* LAYER 5: Sleek Executive Fountain Pen Resting at Bottom (Grounds the banner, flush) */}
+  <g transform="translate(330, 182) rotate(-8)" filter="url(#enq_softShadow)">
+    {/* Pen Barrel */}
+    <rect x="25" y="12" width="115" height="14" rx="7" fill="url(#enq_penGrad)" stroke="#0F172A" strokeWidth="1" />
+
+    {/* Gold Accent Rings */}
+    <rect x="45" y="12" width="5" height="14" fill="url(#enq_goldGrad)" />
+    <rect x="120" y="12" width="4" height="14" fill="url(#enq_goldGrad)" />
+
+    {/* Gold Pocket Clip */}
+    <rect x="48" y="9" width="35" height="3" rx="1.5" fill="url(#enq_goldGrad)" />
+    <circle cx="83" cy="10.5" r="2.5" fill="url(#enq_goldGrad)" />
+
+    {/* Pen Nib (Gold) */}
+    <polygon points="25,13 8,19 25,25" fill="url(#enq_goldGrad)" stroke="#B47818" strokeWidth="0.8" />
+    <line x1="25" y1="19" x2="12" y2="19" stroke="#9C640C" strokeWidth="0.8" />
+    <circle cx="18" cy="19" r="1.2" fill="#0F172A" />
+  </g>
+</svg>
+'''
+
+html_content = open('scratch/test-banner-redesign.html', encoding='utf-8').read()
+
+html_content = html_content.replace('<div class="illustration-section" id="reviews-slot"></div>', f'<div class="illustration-section" id="reviews-slot">{reviews_svg}</div>')
+html_content = html_content.replace('<div class="illustration-section" id="enquiries-slot"></div>', f'<div class="illustration-section" id="enquiries-slot">{enquiries_svg}</div>')
+
+open('scratch/test-banner-redesign.html', 'w', encoding='utf-8').write(html_content)
+print("Updated scratch/test-banner-redesign.html successfully")
+

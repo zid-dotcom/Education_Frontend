@@ -9,14 +9,14 @@ import React from 'react';
  * - Executive fountain pen
  * - Warm organic golden shapes & dot accents
  */
-export const AssignmentBannerIllustration = ({ className = "w-full h-auto" }) => {
+export const AssignmentBannerIllustration = ({ className = "w-full h-auto block align-bottom" }) => {
   return (
     <svg
       viewBox="0 0 500 240"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
-      preserveAspectRatio="xMidYMid meet"
+      preserveAspectRatio="xMaxYMax meet"
     >
       <defs>
         {/* Warm Golden Gradients */}

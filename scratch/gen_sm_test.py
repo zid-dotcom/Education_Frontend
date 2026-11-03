@@ -1,0 +1,258 @@
+import re
+
+# Let's design the exact Study Materials Illustration from the reference image
+study_svg = '''
+<svg
+  viewBox="0 0 540 240"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  preserveAspectRatio="xMaxYMax meet"
+>
+  <defs>
+    {/* Warm Golden Swoosh Gradients */}
+    <linearGradient id="sm_warmGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#FDE6B0" stopOpacity="0.85" />
+      <stop offset="100%" stopColor="#F5B942" stopOpacity="0.75" />
+    </linearGradient>
+
+    <linearGradient id="sm_warmAmberSoft" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stopColor="#FCF0D6" stopOpacity="0.95" />
+      <stop offset="100%" stopColor="#F9CB65" stopOpacity="0.55" />
+    </linearGradient>
+
+    {/* Folder Yellow 3D Gradients */}
+    <linearGradient id="sm_folderBody" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stopColor="#FCD34D" />
+      <stop offset="100%" stopColor="#F59E0B" />
+    </linearGradient>
+
+    <linearGradient id="sm_folderFront" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#FDE68A" />
+      <stop offset="40%" stopColor="#F59E0B" />
+      <stop offset="100%" stopColor="#D97706" />
+    </linearGradient>
+
+    {/* Blue Book Gradient */}
+    <linearGradient id="sm_blueBook" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#3B82F6" />
+      <stop offset="100%" stopColor="#1D4ED8" />
+    </linearGradient>
+
+    {/* Black Book Gradient */}
+    <linearGradient id="sm_blackBook" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#334155" />
+      <stop offset="100%" stopColor="#0F172A" />
+    </linearGradient>
+
+    {/* Red PDF Icon 3D Gradient */}
+    <linearGradient id="sm_redPdf" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#F87171" />
+      <stop offset="50%" stopColor="#EF4444" />
+      <stop offset="100%" stopColor="#B91C1C" />
+    </linearGradient>
+
+    {/* Green Download Badge 3D Gradient */}
+    <linearGradient id="sm_greenDownload" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#34D399" />
+      <stop offset="50%" stopColor="#10B981" />
+      <stop offset="100%" stopColor="#047857" />
+    </linearGradient>
+
+    <filter id="sm_softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" floodColor="#8B5E1E" floodOpacity="0.14" />
+    </filter>
+
+    <filter id="sm_deepShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="12" stdDeviation="12" floodColor="#0F172A" floodOpacity="0.22" />
+    </filter>
+
+    <filter id="sm_badgeShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" floodColor="#047857" floodOpacity="0.28" />
+    </filter>
+  </defs>
+
+  {/* Background Warm Swooshes matching reference image */}
+  <path
+    d="M 100 240 C 140 150, 180 110, 260 70 C 340 30, 440 60, 540 20 L 540 240 Z"
+    fill="url(#sm_warmAmberSoft)"
+  />
+  <path
+    d="M 210 240 C 250 170, 320 120, 400 90 C 470 65, 500 80, 540 60 L 540 240 Z"
+    fill="url(#sm_warmGoldGrad)"
+  />
+
+  {/* Floor subtle shadow reflection underneath elements */}
+  <ellipse cx="380" cy="228" rx="145" ry="10" fill="#EADEC9" opacity="0.6" />
+
+  {/* ======================================================== */}
+  {/* 1. STACK OF TWO BOOKS (ON THE LEFT OF FOLDER)            */}
+  {/* ======================================================== */}
+  <g transform="translate(135, 140)" filter="url(#sm_softShadow)">
+    {/* Bottom Book: Dark Navy / Charcoal */}
+    <g transform="translate(0, 40)">
+      {/* Book Cover Base */}
+      <rect x="0" y="0" width="120" height="24" rx="4" fill="url(#sm_blackBook)" />
+      {/* Spine highlight */}
+      <rect x="0" y="0" width="10" height="24" rx="2" fill="#1E293B" />
+      {/* White Pages */}
+      <rect x="10" y="3" width="106" height="18" rx="2" fill="#FFFFFF" />
+      {/* Page lines */}
+      <line x1="14" y1="8" x2="112" y2="8" stroke="#E2E8F0" strokeWidth="1" />
+      <line x1="14" y1="12" x2="112" y2="12" stroke="#E2E8F0" strokeWidth="1" />
+      <line x1="14" y1="16" x2="112" y2="16" stroke="#E2E8F0" strokeWidth="1" />
+    </g>
+
+    {/* Top Book: Cobalt Blue */}
+    <g transform="translate(10, 14)">
+      {/* Book Cover Base */}
+      <rect x="0" y="0" width="112" height="24" rx="4" fill="url(#sm_blueBook)" />
+      {/* Spine highlight */}
+      <rect x="0" y="0" width="9" height="24" rx="2" fill="#60A5FA" opacity="0.6" />
+      {/* White Pages */}
+      <rect x="9" y="3" width="99" height="18" rx="2" fill="#FFFFFF" />
+      {/* Page lines */}
+      <line x1="13" y1="8" x2="104" y2="8" stroke="#E2E8F0" strokeWidth="1" />
+      <line x1="13" y1="12" x2="104" y2="12" stroke="#E2E8F0" strokeWidth="1" />
+      <line x1="13" y1="16" x2="104" y2="16" stroke="#E2E8F0" strokeWidth="1" />
+    </g>
+  </g>
+
+  {/* ======================================================== */}
+  {/* 2. LARGE 3D GOLDEN FOLDER WITH FORMAT TABS & PAPER       */}
+  {/* ======================================================== */}
+  <g transform="translate(255, 30)" filter="url(#sm_deepShadow)">
+    {/* Folder Back Wall */}
+    <rect x="25" y="45" width="170" height="145" rx="16" fill="url(#sm_folderBody)" />
+
+    {/* 4 FORMAT TABS ON TOP OF WHITE PAPER */}
+    {/* Tab 1: PDF (Blue) */}
+    <g transform="translate(38, 14)">
+      <rect x="0" y="0" width="30" height="24" rx="6" fill="#2563EB" />
+      <rect x="0" y="10" width="30" height="14" fill="#2563EB" />
+      <text x="15" y="14" textAnchor="middle" fill="#FFFFFF" fontSize="8.5" fontWeight="900" fontFamily="sans-serif">PDF</text>
+    </g>
+
+    {/* Tab 2: PPT (Orange/Red) */}
+    <g transform="translate(72, 14)">
+      <rect x="0" y="0" width="30" height="24" rx="6" fill="#EA580C" />
+      <rect x="0" y="10" width="30" height="14" fill="#EA580C" />
+      <text x="15" y="14" textAnchor="middle" fill="#FFFFFF" fontSize="8.5" fontWeight="900" fontFamily="sans-serif">PPT</text>
+    </g>
+
+    {/* Tab 3: DOC (Purple/Indigo) */}
+    <g transform="translate(106, 14)">
+      <rect x="0" y="0" width="30" height="24" rx="6" fill="#4F46E5" />
+      <rect x="0" y="10" width="30" height="14" fill="#4F46E5" />
+      <text x="15" y="14" textAnchor="middle" fill="#FFFFFF" fontSize="8.5" fontWeight="900" fontFamily="sans-serif">DOC</text>
+    </g>
+
+    {/* Tab 4: XLS (Green) */}
+    <g transform="translate(140, 14)">
+      <rect x="0" y="0" width="30" height="24" rx="6" fill="#16A34A" />
+      <rect x="0" y="10" width="30" height="14" fill="#16A34A" />
+      <text x="15" y="14" textAnchor="middle" fill="#FFFFFF" fontSize="8.5" fontWeight="900" fontFamily="sans-serif">XLS</text>
+    </g>
+
+    {/* White Paper Inside Folder */}
+    <g transform="translate(35, 32)">
+      <rect x="0" y="0" width="138" height="110" rx="8" fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="1" />
+      {/* Subtle lines on paper representing text content */}
+      <line x1="16" y1="20" x2="122" y2="20" stroke="#94A3B8" strokeWidth="4" strokeLinecap="round" />
+      <line x1="16" y1="32" x2="114" y2="32" stroke="#CBD5E1" strokeWidth="3" strokeLinecap="round" />
+      <line x1="16" y1="44" x2="118" y2="44" stroke="#CBD5E1" strokeWidth="3" strokeLinecap="round" />
+      <line x1="16" y1="56" x2="105" y2="56" stroke="#CBD5E1" strokeWidth="3" strokeLinecap="round" />
+      <line x1="16" y1="68" x2="90" y2="68" stroke="#CBD5E1" strokeWidth="3" strokeLinecap="round" />
+    </g>
+
+    {/* Folder Front Flap (3D Angled Forward) */}
+    <path
+      d="M 20 75 Q 15 78 15 88 L 22 188 Q 24 195 32 195 L 180 195 Q 188 195 190 188 L 198 88 Q 200 78 190 75 L 125 75 Q 115 75 110 82 L 105 88 Q 100 92 92 92 L 28 92 Q 22 92 20 75 Z"
+      fill="url(#sm_folderFront)"
+      stroke="#D97706"
+      strokeWidth="1"
+    />
+    {/* Inner shadow/highlight on folder rim */}
+    <path
+      d="M 23 93 L 92 93 Q 100 93 105 89 L 110 83 Q 115 76 125 76 L 189 76"
+      stroke="#FEF3C7"
+      strokeWidth="1.5"
+      fill="none"
+    />
+  </g>
+
+  {/* ======================================================== */}
+  {/* 3. 3D RED PDF ICON BLOCK (BOTTOM RIGHT OF FOLDER)        */}
+  {/* ======================================================== */}
+  <g transform="translate(425, 135)" filter="url(#sm_deepShadow)">
+    {/* Red Document Body */}
+    <rect x="0" y="0" width="68" height="82" rx="12" fill="url(#sm_redPdf)" />
+    
+    {/* Top Right Folded Corner Accent */}
+    <path d="M 46 0 L 68 22 L 46 22 Z" fill="#DC2626" opacity="0.6" />
+    <path d="M 46 0 L 46 22 L 68 22" fill="#FCA5A5" opacity="0.7" />
+
+    {/* "PDF" Bold Text on Red Tile */}
+    <text
+      x="34"
+      y="54"
+      textAnchor="middle"
+      fill="#FFFFFF"
+      fontSize="19"
+      fontWeight="900"
+      fontFamily="sans-serif"
+      letterSpacing="0.8"
+    >
+      PDF
+    </text>
+  </g>
+
+  {/* ======================================================== */}
+  {/* 4. FLOATING GREEN DOWNLOAD BADGE (UPPER RIGHT)           */}
+  {/* ======================================================== */}
+  <g transform="translate(450, 75)" filter="url(#sm_badgeShadow)">
+    {/* Emerald Circle */}
+    <circle cx="28" cy="28" r="26" fill="url(#sm_greenDownload)" stroke="#FFFFFF" strokeWidth="2.5" />
+
+    {/* Crisp White Download Arrow & Tray */}
+    {/* Arrow Stem */}
+    <line x1="28" y1="16" x2="28" y2="30" stroke="#FFFFFF" strokeWidth="3.5" strokeLinecap="round" />
+    {/* Arrow Head */}
+    <path d="M 21 25 L 28 32 L 35 25" fill="none" stroke="#FFFFFF" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+    {/* Download Tray Base */}
+    <line x1="18" y1="38" x2="38" y2="38" stroke="#FFFFFF" strokeWidth="3.5" strokeLinecap="round" />
+  </g>
+</svg>
+'''
+
+test_html = f'''
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body {{ background: #f1ede4; padding: 40px; font-family: sans-serif; }}
+    .container {{ width: 880px; background: linear-gradient(to right, #FAF6EE, #FDF9F2, #FAF1DF); border: 1px solid #ECDDC6; border-radius: 24px; display: flex; justify-content: space-between; overflow: hidden; }}
+    .left {{ padding: 36px; max-width: 50%; }}
+    .right {{ width: 500px; display: flex; align-items: flex-end; justify-content: flex-end; margin-bottom: -1px; }}
+    svg {{ width: 100%; height: auto; display: block; }}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="left">
+      <span style="background: white; border: 1px solid #ECDDC6; color: #9C6B2E; padding: 4px 12px; border-radius: 12px; font-weight: bold; font-size: 11px;">Academic Resources</span>
+      <h1 style="font-size: 28px; font-weight: bold; margin: 12px 0 8px 0; color: #17140F;">Study Materials & Notes</h1>
+      <p style="font-size: 13px; color: #6B6252; margin: 0 0 16px 0; line-height: 1.5;">Access and download verified course PDFs, lecture presentations, and reference guides provided by your faculty.</p>
+      <button style="background: white; border: 1px solid #ECDDC6; padding: 8px 16px; border-radius: 12px; font-weight: bold; font-size: 12px; cursor: pointer;">↻ Refresh Materials</button>
+    </div>
+    <div class="right">
+      {study_svg}
+    </div>
+  </div>
+</body>
+</html>
+'''
+
+open('scratch/test_sm.html', 'w', encoding='utf-8').write(test_html)
+print('Saved scratch/test_sm.html')
+

@@ -7,10 +7,10 @@ const Footer = ({ onOpenApplyModal }) => {
   return (
     <footer className="bg-[#18181B] text-slate-300 pt-16 pb-8 border-t border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8 pb-12 border-b border-slate-800/80">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-12 pb-12 border-b border-slate-800/80">
           
           {/* COLUMN 1: BRAND INFO */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="md:col-span-2 lg:col-span-2 space-y-4">
             <Link to="/" className="inline-flex items-center gap-3">
               <img src={logoImage} alt="Aurum FX logo" className="h-12 w-12 object-contain sm:h-14 sm:w-14" />
               <span className="flex items-baseline whitespace-nowrap font-black tracking-tight" aria-label="Aurum FX Academy">
@@ -41,20 +41,17 @@ const Footer = ({ onOpenApplyModal }) => {
             </div>
           </div>
 
-          {/* COLUMN 2: NAVIGATION & ACADEMIES */}
+          {/* COLUMN 2: NAVBAR PAGES */}
           <div>
             <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
-              Academies
+              Navigation
             </h4>
-            <ul className="space-y-2 text-xs text-slate-300 font-medium">
+            <ul className="space-y-2.5 text-xs text-slate-300 font-medium">
               <li>
-                <Link to="/courses" className="hover:text-[#FBBF24] transition-colors">Fashion Designing Institute</Link>
+                <Link to="/" className="hover:text-[#FBBF24] transition-colors">Home</Link>
               </li>
               <li>
-                <Link to="/courses" className="hover:text-[#FBBF24] transition-colors">Computer Training Institute</Link>
-              </li>
-              <li>
-                <Link to="/courses" className="hover:text-[#FBBF24] transition-colors">Hospitality Management Institute</Link>
+                <Link to="/courses" className="hover:text-[#FBBF24] transition-colors">Courses</Link>
               </li>
               <li>
                 <Link to="/about" className="hover:text-[#FBBF24] transition-colors">About Us</Link>
@@ -73,7 +70,7 @@ const Footer = ({ onOpenApplyModal }) => {
             <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
               Help
             </h4>
-            <ul className="space-y-2 text-xs text-slate-300 font-medium">
+            <ul className="space-y-2.5 text-xs text-slate-300 font-medium">
               <li>
                 <Link to="/admissions" className="hover:text-[#FBBF24] transition-colors">FAQ</Link>
               </li>
@@ -86,21 +83,6 @@ const Footer = ({ onOpenApplyModal }) => {
               <li>
                 <Link to="/privacy-policy" className="hover:text-[#FBBF24] transition-colors">Privacy Policy</Link>
               </li>
-            </ul>
-          </div>
-
-          {/* COLUMN 4: PARTNER */}
-          <div>
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
-              Partner
-            </h4>
-            <ul className="space-y-2 text-xs text-slate-300 font-medium">
-              <li>Decoding</li>
-              <li>Google Career</li>
-              <li>AWS educate</li>
-              <li>Edu</li>
-              <li>Coursera</li>
-              <li>RevoU</li>
             </ul>
           </div>
 

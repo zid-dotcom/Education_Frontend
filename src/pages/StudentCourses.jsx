@@ -3,6 +3,7 @@ import { BookOpen, Loader2, Search, GraduationCap } from 'lucide-react';
 import CourseCard from '../components/courses/CourseCard';
 import BranchCourseSelector from '../components/courses/BranchCourseSelector';
 import { getPublicBranchesWithCoursesApi } from '../services/branches';
+import { CoursesBannerIllustration } from '../components/common/StudentBannerIllustrations';
 
 // Loads the display + body typefaces once, if they aren't already on the page.
 const useCatalogFonts = () => {
@@ -69,36 +70,40 @@ const StudentCourses = () => {
   }, [courses, searchQuery, selectedCategory]);
 
   return (
-    <div className="w-full max-w-6xl mx-auto pb-10 space-y-6 font-['Plus_Jakarta_Sans',sans-serif]">
-      {/* 1. Header Banner */}
-      <header className="rounded-2xl border border-[#E3DDD0] bg-white p-6 sm:p-8 shadow-[0_8px_25px_rgba(0,0,0,0.03)]">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="max-w-2xl space-y-1.5">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F1EDE4] px-3 py-1 text-[11px] font-bold text-[#9C6B2E] border border-[#E3DDD0]">
-              <BookOpen className="h-3 w-3 text-[#9C6B2E]" />
+    <div className="w-full pb-10 space-y-6 font-['Plus_Jakarta_Sans',sans-serif]">
+      {/* 1. Hero Banner Matching System Style */}
+      <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#FAF6EE] via-[#FDF9F2] to-[#FAF1DF] text-[#17140F] border border-[#ECDDC6] shadow-xs mb-6">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-stretch justify-between min-h-[190px] sm:min-h-[210px] md:min-h-[230px]">
+          {/* Left Text Content */}
+          <div className="p-6 sm:p-8 md:p-10 max-w-xl lg:max-w-2xl space-y-2.5 z-10 flex flex-col justify-center">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3.5 py-1.5 text-[11px] sm:text-xs font-bold text-[#9C6B2E] border border-[#ECD8B5] shadow-2xs">
+              <BookOpen className="h-3.5 w-3.5 text-[#9C6B2E]" />
               <span>Academic Programs & Courses</span>
             </span>
-            <h1 className="text-xl sm:text-2xl font-bold text-[#17140F] tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#17140F] leading-tight">
               Find your next course
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 font-normal">
+            <p className="text-xs sm:text-sm md:text-base text-[#6B6252] font-medium leading-relaxed max-w-xl">
               Explore programs open for enrollment and step into a course to review its curriculum, fee, and next steps.
             </p>
+            {totalCourses > 0 && (
+              <div className="pt-1">
+                <span className="inline-flex items-center gap-2 rounded-xl bg-white/90 border border-[#ECDDC6] px-3.5 py-1.5 text-xs font-bold text-[#17140F]">
+                  <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>{totalCourses} Courses open for enrollment</span>
+                </span>
+              </div>
+            )}
           </div>
 
-          <div className="flex shrink-0 items-center gap-4 rounded-2xl border border-[#E3DDD0] bg-[#FAF8F4] px-5 py-4">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F1EDE4] text-[#9C6B2E]">
-              <GraduationCap className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="text-2xl font-black text-slate-900">
-                {totalCourses}
-              </div>
-              <div className="text-xs font-semibold text-slate-400">Courses open for enrollment</div>
+          {/* Right SVG Illustration - Fitted flush to top, bottom and right */}
+          <div className="w-full md:w-auto flex justify-end items-end md:self-stretch shrink-0 select-none overflow-hidden pr-0">
+            <div className="w-full sm:w-[460px] md:w-[480px] lg:w-[540px] xl:w-[600px] h-[190px] sm:h-[220px] md:h-full flex items-end justify-end">
+              <CoursesBannerIllustration className="w-full h-full block" />
             </div>
           </div>
         </div>
-      </header>
+      </section>
 
       {/* 2. Choose Branch Selector */}
       <section className="w-full">

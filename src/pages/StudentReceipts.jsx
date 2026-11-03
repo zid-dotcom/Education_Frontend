@@ -24,6 +24,7 @@ import {
   getStudentReceiptsApi,
 } from "../services/payments";
 import OfficialReceiptVoucherCard from "../components/common/OfficialReceiptVoucherCard";
+import { ReceiptsBannerIllustration } from "../components/common/StudentBannerIllustrations";
 
 const serif = { fontFamily: "'Fraunces', ui-serif, Georgia, serif" };
 const sans = { fontFamily: "'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif" };
@@ -903,37 +904,47 @@ export default function StudentReceipts() {
   return (
     <div className="space-y-6" style={sans}>
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#e3ddd0] pb-6">
-        <div>
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#9c6b2e]">
-            Student Financial Records
-          </span>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#17140F] leading-tight">
-            Payment Receipts
-          </h1>
-          <p className="mt-1 text-xs text-[#8a8175]">
-            View and download official fee receipts for all online and branch-recorded payments.
-          </p>
-        </div>
+      <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#FAF6EE] via-[#FDF9F2] to-[#FAF1DF] text-[#17140F] border border-[#ECDDC6] shadow-xs mb-6">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-stretch justify-between min-h-[190px] sm:min-h-[210px] md:min-h-[230px]">
+          {/* Left Text Content */}
+          <div className="p-6 sm:p-8 md:p-10 max-w-xl lg:max-w-2xl space-y-2.5 z-10 flex flex-col justify-center">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3.5 py-1.5 text-[11px] sm:text-xs font-bold text-[#9C6B2E] border border-[#ECD8B5] shadow-2xs">
+              <Receipt className="h-3.5 w-3.5 text-[#9C6B2E]" />
+              <span>Student Financial Records</span>
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#17140F] leading-tight">
+              Payment Receipts
+            </h1>
+            <p className="text-xs sm:text-sm md:text-base text-[#6B6252] font-medium leading-relaxed max-w-xl">
+              View and download official fee receipts for all online and branch-recorded payments.
+            </p>
+            <div className="pt-1 flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => fetchReceipts(true)}
+                disabled={refreshing}
+                className="flex items-center gap-1.5 rounded-xl border border-[#ECDDC6] bg-white/90 px-3.5 py-2 text-xs font-bold text-slate-700 shadow-2xs transition hover:bg-[#faf8f4] disabled:opacity-50 cursor-pointer"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 text-[#9c6b2e] ${refreshing ? "animate-spin" : ""}`} />
+                <span>Refresh</span>
+              </button>
+              <Link
+                to="/student-dashboard"
+                className="flex items-center gap-1.5 rounded-xl bg-[#17140f] px-3.5 py-2 text-xs font-bold text-[#f4b942] shadow-2xs transition hover:bg-slate-800"
+              >
+                <span>Back to Dashboard</span>
+              </Link>
+            </div>
+          </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => fetchReceipts(true)}
-            disabled={refreshing}
-            className="flex items-center gap-1.5 rounded-xl border border-[#e3ddd0] bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-2xs transition hover:bg-[#faf8f4] disabled:opacity-50"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 text-[#9c6b2e] ${refreshing ? "animate-spin" : ""}`} />
-            <span>Refresh</span>
-          </button>
-          <Link
-            to="/student-dashboard"
-            className="flex items-center gap-1.5 rounded-xl bg-[#17140f] px-3.5 py-2 text-xs font-bold text-[#f4b942] shadow-2xs transition hover:bg-slate-800"
-          >
-            <span>Back to Dashboard</span>
-          </Link>
+          {/* Right SVG Illustration - Fitted flush to top, bottom and right */}
+          <div className="w-full md:w-auto flex justify-end items-end md:self-stretch shrink-0 select-none overflow-hidden pr-0">
+            <div className="w-full sm:w-[460px] md:w-[480px] lg:w-[540px] xl:w-[600px] h-[190px] sm:h-[220px] md:h-full flex items-end justify-end">
+              <ReceiptsBannerIllustration className="w-full h-full block" />
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
 
       {/* Alerts */}
       {error && (
