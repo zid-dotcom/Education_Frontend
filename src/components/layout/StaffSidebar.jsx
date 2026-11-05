@@ -15,6 +15,7 @@ import {
   Building2,
   MessageSquare,
   FolderDown,
+  CalendarCheck,
 } from 'lucide-react';
 import logoImage from '../../assets/logo.png';
 import { getStaffUnreadCountApi } from '../../services/studentStaffMessages';
@@ -22,6 +23,7 @@ import { getStaffSuperAdminUnreadCountApi } from '../../services/staffSuperAdmin
 
 export const STAFF_NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/staff/dashboard', folder: 'Overview' },
+  { id: 'attendance', label: 'My Attendance', icon: CalendarCheck, path: '/staff/attendance', folder: 'Overview' },
   { id: 'courses', label: 'My Courses & Students', icon: BookOpen, path: '/staff/courses', folder: 'Academics' },
   { id: 'assignments', label: 'Assignments', icon: FileText, path: '/staff/assignments', folder: 'Academics' },
   { id: 'study_materials', label: 'Study Materials', icon: FolderDown, path: '/staff/study-materials', folder: 'Academics' },

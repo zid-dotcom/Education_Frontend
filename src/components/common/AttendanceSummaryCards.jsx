@@ -5,17 +5,20 @@ import {
   Clock,
   XCircle,
   CalendarCheck,
+  CalendarDays,
+  Briefcase,
 } from "lucide-react";
 
 /**
- * Modern 5-Card Dynamic Attendance Summary Strip
- * Inspired by the Monthly Attendance Calendar color palette & design system.
+ * Modern Dynamic Attendance Summary Strip
  * Cards:
  * 1. Total Records (Cream / Neutral)
  * 2. Present (Green)
  * 3. Half Day (Amber)
  * 4. Absent (Red)
  * 5. Leave (Blue)
+ * 6. Working Days (Slate / Navy - optional)
+ * 7. Total Holidays (Amber / Warm Gold - optional)
  */
 const AttendanceSummaryCards = ({
   total = 0,
@@ -23,6 +26,8 @@ const AttendanceSummaryCards = ({
   halfDay = 0,
   absent = 0,
   leave = 0,
+  totalWorkingDays,
+  totalHolidays,
   loading = false,
   totalLabel = "Total Records",
 }) => {
@@ -42,7 +47,7 @@ const AttendanceSummaryCards = ({
     },
     {
       id: "present",
-      label: "Present",
+      label: "Present days",
       value: present,
       subtext: "Full duty marked",
       icon: CheckCircle2,
@@ -68,7 +73,7 @@ const AttendanceSummaryCards = ({
     },
     {
       id: "absent",
-      label: "Absent",
+      label: "Absent days",
       value: absent,
       subtext: "Unrecorded / absent",
       icon: XCircle,
@@ -81,22 +86,63 @@ const AttendanceSummaryCards = ({
     },
     {
       id: "leave",
-      label: "Leave",
+      label: "Leave days",
       value: leave,
       subtext: "Approved leave",
       icon: CalendarCheck,
-      bg: "bg-[#eff6ff]",
-      border: "border-[#bfdbfe]",
-      iconBg: "bg-[#dbeafe]",
-      iconColor: "text-[#2563eb]",
-      textColor: "text-[#1e3a8a]",
-      accentBorder: "#3b82f6",
+      bg: "bg-[#fef2f2]",
+      border: "border-[#fecaca]",
+      iconBg: "bg-[#fee2e2]",
+      iconColor: "text-[#dc2626]",
+      textColor: "text-[#7f1d1d]",
+      accentBorder: "#ef4444",
     },
+    ...(totalWorkingDays !== undefined && totalWorkingDays !== null
+      ? [
+          {
+            id: "working_days",
+            label: "Working Days",
+            value: totalWorkingDays,
+            subtext: "Official duty days",
+            icon: Briefcase,
+            bg: "bg-[#f8fafc]",
+            border: "border-[#cbd5e1]",
+            iconBg: "bg-[#e2e8f0]",
+            iconColor: "text-[#334155]",
+            textColor: "text-[#0f172a]",
+            accentBorder: "#64748b",
+          },
+        ]
+      : []),
+    ...(totalHolidays !== undefined && totalHolidays !== null
+      ? [
+          {
+            id: "total_holidays",
+            label: "Total Holidays",
+            value: totalHolidays,
+            subtext: "Declared closures",
+            icon: CalendarDays,
+            bg: "bg-[#faf5ec]",
+            border: "border-[#ebd8b6]",
+            iconBg: "bg-[#f5ebd8]",
+            iconColor: "text-[#9c6b2e]",
+            textColor: "text-[#784f1b]",
+            accentBorder: "#9c6b2e",
+          },
+        ]
+      : []),
   ];
+
+  const gridClass =
+    cards.length >= 7
+      ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-3.5"
+      : cards.length === 6
+      ? "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 sm:gap-4"
+      : "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4";
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
+      <div className={gridClass}>
         {cards.map((c) => (
           <div
             key={c.id}
@@ -117,7 +163,7 @@ const AttendanceSummaryCards = ({
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
+    <div className={gridClass}>
       {cards.map((card) => {
         const Icon = card.icon;
         return (

@@ -21,6 +21,7 @@ import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
 import NavLogoutButton from "../components/common/NavLogoutButton";
 import { getSuperAdminExpensesApi } from '../services/expenses';
 import { getBranchesApi } from '../services/adminbranches';
+import { getDefaultFromDate, getDefaultToDate } from '../utils/dateFilters';
 
 const useDisplayFonts = () => {
   useEffect(() => {
@@ -130,9 +131,9 @@ export default function SuperAdminExpenses() {
   const [error, setError] = useState('');
 
   // Date filters
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
-  const [activePreset, setActivePreset] = useState('all');
+  const [fromDate, setFromDate] = useState(getDefaultFromDate);
+  const [toDate, setToDate] = useState(getDefaultToDate);
+  const [activePreset, setActivePreset] = useState('month');
   const [dateError, setDateError] = useState('');
 
   // Search filter
@@ -167,6 +168,26 @@ export default function SuperAdminExpenses() {
     return map;
   }, [branches]);
 
+  const extractList = (data) => {
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.expenses)) return data.expenses;
+    if (Array.isArray(data?.records)) return data.records;
+    if (Array.isArray(data?.items)) return data.items;
+    if (Array.isArray(data?.data)) return data.data;
+    if (Array.isArray(data?.results)) return data.results;
+    if (Array.isArray(data?.branch_expenses)) return data.branch_expenses;
+    if (data && typeof data === 'object') {
+      if (Array.isArray(data.branches)) {
+        return data.branches.flatMap((b) => b.expenses || b.records || []);
+      }
+      const vals = Object.values(data);
+      if (vals.some((v) => Array.isArray(v))) {
+        return vals.filter((v) => Array.isArray(v)).flat();
+      }
+    }
+    return [];
+  };
+
   // Load expenses from API
   const loadExpenses = useCallback(
     async (showFullLoader = false) => {
@@ -189,16 +210,35 @@ export default function SuperAdminExpenses() {
         if (toDate) filters.to_date = toDate;
 
         const data = await getSuperAdminExpensesApi(filters, token);
+        let list = extractList(data);
 
-        const list = Array.isArray(data)
-          ? data
-          : Array.isArray(data?.expenses)
-          ? data.expenses
-          : Array.isArray(data?.items)
-          ? data.items
-          : Array.isArray(data?.data)
-          ? data.data
-          : [];
+        // If global all-branches query returns empty and branches exist, query branches in parallel as fallback
+        if (list.length === 0 && (!selectedBranchId || selectedBranchId === 'all') && branches.length > 0) {
+          const branchResults = await Promise.allSettled(
+            branches.map((b) => {
+              const bId = b.id ?? b.branch_id;
+              return getSuperAdminExpensesApi({ ...filters, branch_id: bId }, token);
+            })
+          );
+          const combined = [];
+          branchResults.forEach((res, idx) => {
+            if (res.status === 'fulfilled') {
+              const bExpenses = extractList(res.value);
+              const bId = branches[idx]?.id ?? branches[idx]?.branch_id;
+              const bName = branches[idx]?.name || branches[idx]?.branch_name;
+              bExpenses.forEach((item) => {
+                combined.push({
+                  ...item,
+                  branch_id: item.branch_id || bId,
+                  branch_name: item.branch_name || bName,
+                });
+              });
+            }
+          });
+          if (combined.length > 0) {
+            list = combined;
+          }
+        }
 
         setExpenses(list);
       } catch (err) {
@@ -208,7 +248,7 @@ export default function SuperAdminExpenses() {
         setRefreshing(false);
       }
     },
-    [token, selectedBranchId, fromDate, toDate]
+    [token, selectedBranchId, fromDate, toDate, branches]
   );
 
   useEffect(() => {
@@ -226,12 +266,9 @@ export default function SuperAdminExpenses() {
     } else if (preset === 'week') {
       setFromDate(getDateDaysAgo(7));
       setToDate(today);
-    } else if (preset === 'month') {
-      setFromDate(getMonthStartStr());
-      setToDate(today);
     } else {
-      setFromDate('');
-      setToDate('');
+      setFromDate(getDefaultFromDate());
+      setToDate(getDefaultToDate());
     }
   };
 
@@ -243,9 +280,23 @@ export default function SuperAdminExpenses() {
 
   // Filtered expenses
   const filteredExpenses = useMemo(() => {
-    if (!searchQuery.trim()) return expenses;
+    let list = expenses;
+
+    // Client-side date filter safeguard
+    if (fromDate || toDate) {
+      list = list.filter((e) => {
+        const rawDate = e.date || e.expense_date || e.created_at || e.timestamp || e.marked_at || '';
+        const d = String(rawDate).slice(0, 10);
+        if (!d) return true;
+        if (fromDate && d < fromDate) return false;
+        if (toDate && d > toDate) return false;
+        return true;
+      });
+    }
+
+    if (!searchQuery.trim()) return list;
     const q = searchQuery.toLowerCase().trim();
-    return expenses.filter((e) => {
+    return list.filter((e) => {
       const itemText = (e.item || e.title || e.name || '').toLowerCase();
       const costText = String(e.cost || e.amount || '');
       const branchName = (
@@ -255,19 +306,19 @@ export default function SuperAdminExpenses() {
       ).toLowerCase();
       return itemText.includes(q) || costText.includes(q) || branchName.includes(q);
     });
-  }, [expenses, searchQuery, branchMap]);
+  }, [expenses, fromDate, toDate, searchQuery, branchMap]);
 
   // Summary Metrics
   const metrics = useMemo(() => {
-    const count = expenses.length;
-    const total = expenses.reduce((sum, e) => sum + (Number(e.cost ?? e.amount) || 0), 0);
+    const count = filteredExpenses.length;
+    const total = filteredExpenses.reduce((sum, e) => sum + (Number(e.cost ?? e.amount) || 0), 0);
     const average = count > 0 ? total / count : 0;
 
     let highestAmount = 0;
     let highestItem = null;
 
     const branchTotals = {};
-    expenses.forEach((e) => {
+    filteredExpenses.forEach((e) => {
       const c = Number(e.cost ?? e.amount) || 0;
       if (c > highestAmount) {
         highestAmount = c;
@@ -288,12 +339,12 @@ export default function SuperAdminExpenses() {
       activeBranchesCount,
       branchTotals,
     };
-  }, [expenses]);
+  }, [filteredExpenses]);
 
 
   return (
     <div
-      className="min-h-screen md:flex"
+      className="min-h-screen md:flex max-w-full overflow-x-hidden"
       style={{ ...sans, background: '#faf8f4', color: '#17140f' }}
     >
       <style>{PAGE_CSS}</style>
@@ -306,7 +357,7 @@ export default function SuperAdminExpenses() {
         activePage="expenses"
       />
 
-      <main className="min-w-0 flex-1">
+      <main className="min-w-0 flex-1 max-w-full overflow-x-hidden">
         {/* Header */}
         <header
           className="sticky top-0 z-20 hidden md:flex h-[92px] items-center justify-between border-b px-6 backdrop-blur-md sm:px-10 shrink-0"
@@ -351,7 +402,7 @@ export default function SuperAdminExpenses() {
         </header>
 
         {/* Content */}
-        <div className="mx-auto max-w-7xl px-6 py-8 sm:px-10 space-y-7">
+        <div className="w-full px-4 py-6 sm:px-8 sm:py-8 lg:px-10 space-y-7">
           {/* Error Banner */}
           {error && (
             <div
@@ -491,25 +542,25 @@ export default function SuperAdminExpenses() {
 
           {/* Filters Bar */}
           <section
-            className="sa-rise rounded-2xl p-5 sm:p-6"
+            className="sa-rise rounded-2xl p-4 sm:p-6"
             style={{
               background: '#ffffff',
               border: '1px solid #e3ddd0',
               animationDelay: '200ms',
             }}
           >
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between w-full min-w-0">
               {/* Branch Selector */}
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <label className="text-xs font-bold text-[#8a8175] uppercase tracking-wider">
+              <div className="flex flex-col sm:flex-row flex-wrap sm:items-center gap-3 w-full sm:w-auto min-w-0">
+                <div className="flex items-center gap-2 w-full sm:w-auto min-w-0">
+                  <label className="text-xs font-bold text-[#8a8175] uppercase tracking-wider shrink-0">
                     Branch:
                   </label>
-                  <div className="relative">
+                  <div className="relative flex-1 sm:flex-initial min-w-0 w-full sm:w-64 max-w-full">
                     <select
                       value={selectedBranchId}
                       onChange={(e) => setSelectedBranchId(e.target.value)}
-                      className="appearance-none rounded-xl border border-[#e3ddd0] bg-[#faf8f4] py-2 pl-3.5 pr-9 text-xs font-semibold text-slate-900 outline-none transition focus:border-[#9c6b2e] focus:bg-white focus:ring-1 focus:ring-[#9c6b2e]"
+                      className="w-full min-w-0 appearance-none rounded-xl border border-[#e3ddd0] bg-[#faf8f4] py-2 pl-3.5 pr-9 text-xs font-semibold text-slate-900 outline-none transition focus:border-[#9c6b2e] focus:bg-white focus:ring-1 focus:ring-[#9c6b2e] truncate"
                     >
                       <option value="all">All Branches (Global)</option>
                       {branches.map((b) => {
@@ -526,9 +577,8 @@ export default function SuperAdminExpenses() {
                 </div>
 
                 {/* Quick Date Presets */}
-                <div className="flex items-center gap-1.5 pl-2 border-l border-[#e3ddd0]">
+                <div className="flex flex-wrap items-center gap-1.5 sm:pl-2 sm:border-l sm:border-[#e3ddd0]">
                   {[
-                    { id: 'all', label: 'All Dates' },
                     { id: 'today', label: 'Today' },
                     { id: 'week', label: '7 Days' },
                     { id: 'month', label: 'This Month' },
@@ -553,33 +603,33 @@ export default function SuperAdminExpenses() {
               </div>
 
               {/* Date Pickers */}
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <label className="text-xs font-semibold text-[#8a8175]">From:</label>
+              <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2.5 sm:gap-3">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <label className="text-xs font-semibold text-[#8a8175] shrink-0">From:</label>
                   <input
                     type="date"
                     value={fromDate}
                     onChange={(e) => handleCustomDateChange('from', e.target.value)}
-                    className="rounded-xl border border-[#e3ddd0] bg-[#faf8f4] px-3 py-1.5 text-xs font-medium text-slate-800 outline-none transition focus:border-[#9c6b2e] focus:bg-white focus:ring-1 focus:ring-[#9c6b2e]"
+                    className="flex-1 sm:flex-initial rounded-xl border border-[#e3ddd0] bg-[#faf8f4] px-3 py-1.5 text-xs font-medium text-slate-800 outline-none transition focus:border-[#9c6b2e] focus:bg-white focus:ring-1 focus:ring-[#9c6b2e]"
                   />
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <label className="text-xs font-semibold text-[#8a8175]">To:</label>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <label className="text-xs font-semibold text-[#8a8175] shrink-0">To:</label>
                   <input
                     type="date"
                     value={toDate}
                     onChange={(e) => handleCustomDateChange('to', e.target.value)}
-                    className="rounded-xl border border-[#e3ddd0] bg-[#faf8f4] px-3 py-1.5 text-xs font-medium text-slate-800 outline-none transition focus:border-[#9c6b2e] focus:bg-white focus:ring-1 focus:ring-[#9c6b2e]"
+                    className="flex-1 sm:flex-initial rounded-xl border border-[#e3ddd0] bg-[#faf8f4] px-3 py-1.5 text-xs font-medium text-slate-800 outline-none transition focus:border-[#9c6b2e] focus:bg-white focus:ring-1 focus:ring-[#9c6b2e]"
                   />
                 </div>
 
-                {(fromDate || toDate || selectedBranchId !== 'all') && (
+                {(fromDate !== getDefaultFromDate() || toDate !== getDefaultToDate() || selectedBranchId !== 'all') && (
                   <button
                     type="button"
                     onClick={() => {
                       setSelectedBranchId('all');
-                      applyPreset('all');
+                      applyPreset('month');
                     }}
                     className="text-xs font-semibold text-[#9c6b2e] underline hover:opacity-80"
                   >

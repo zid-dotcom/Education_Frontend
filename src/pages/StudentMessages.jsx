@@ -13,7 +13,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { MessagesBannerIllustration } from '../components/common/StudentBannerIllustrations';
+import messagingIllustration from '../assets/Modern Messaging Workspace Illustration.png';
 import {
   sendStudentMessageApi,
   getStudentConversationsApi,
@@ -363,20 +363,33 @@ const StudentMessages = () => {
           </div>
 
           {/* Conversations List */}
-          <div className="flex-1 overflow-y-auto divide-y divide-[#E3DDD0] custom-student-scrollbar">
+          <div className="flex-1 overflow-y-auto divide-y divide-[#E3DDD0] custom-student-scrollbar flex flex-col">
             {loadingConversations ? (
-              <div className="p-8 text-center text-[#8A8175] text-xs flex flex-col items-center justify-center gap-2">
+              <div className="flex-1 p-8 text-center text-[#8A8175] text-xs flex flex-col items-center justify-center gap-2">
                 <Loader2 className="h-6 w-6 text-[#9C6B2E] animate-spin" />
                 <span>Loading conversations...</span>
               </div>
             ) : filteredConversations.length === 0 ? (
-              <div className="p-8 text-center text-[#8A8175] text-xs space-y-2">
-                <div className="h-12 w-12 rounded-2xl bg-[#F1EDE4] text-[#9C6B2E] mx-auto flex items-center justify-center">
+              <div className="flex-1 p-6 sm:p-8 text-center text-[#8A8175] text-xs space-y-3 flex flex-col items-center justify-center my-auto min-h-[280px]">
+                {/* On mobile screens (< lg), show the modern messaging illustration prominently */}
+                <div className="w-52 sm:w-64 max-w-full mb-1 flex items-center justify-center lg:hidden">
+                  <img
+                    src={messagingIllustration}
+                    alt="Modern Messaging Workspace Illustration"
+                    className="w-full h-auto max-h-52 object-contain block drop-shadow-sm select-none pointer-events-none mx-auto"
+                  />
+                </div>
+                {/* On desktop screens (>= lg), show the compact badge since the right pane displays the large illustration */}
+                <div className="hidden lg:flex h-12 w-12 rounded-2xl bg-[#F1EDE4] text-[#9C6B2E] mx-auto items-center justify-center mb-1 shadow-2xs">
                   <MessageSquare className="h-6 w-6" />
                 </div>
-                <p className="font-bold text-[#17140F]">No active conversations</p>
-                <p className="text-[11px] text-[#5B5346] max-w-[200px] mx-auto">
-                  Messages between you and your course faculty will appear here.
+                <p className="font-bold text-[#17140F] text-sm">
+                  {searchQuery ? 'No matching conversations' : 'No active conversations'}
+                </p>
+                <p className="text-xs text-[#5B5346] max-w-[240px] mx-auto leading-relaxed">
+                  {searchQuery
+                    ? `No message threads match "${searchQuery}". Try a different keyword.`
+                    : 'Messages between you and your course faculty will appear here.'}
                 </p>
               </div>
             ) : (
@@ -619,8 +632,12 @@ const StudentMessages = () => {
           ) : (
             /* Clean Empty State: Select conversation with Thematic Illustration */
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-[#8A8175] space-y-3 bg-[#FAF8F4]">
-              <div className="w-64 max-w-full mb-2">
-                <MessagesBannerIllustration className="w-full h-auto block" />
+              <div className="w-64 sm:w-80 max-w-full mb-2 flex items-center justify-center">
+                <img
+                  src={messagingIllustration}
+                  alt="Modern Messaging Workspace Illustration"
+                  className="w-full h-auto max-h-64 object-contain block drop-shadow-sm select-none pointer-events-none"
+                />
               </div>
               <h3 className="font-extrabold text-[#17140F] text-base">Select a conversation</h3>
               <p className="text-xs text-[#5B5346] max-w-sm">

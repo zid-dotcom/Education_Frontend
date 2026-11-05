@@ -179,7 +179,7 @@ const SuperAdminPurchases = () => {
 
   return (
     <div
-      className="min-h-screen md:flex"
+      className="min-h-screen md:flex max-w-full overflow-x-hidden"
       style={{
         fontFamily: "'Inter', system-ui, sans-serif",
         background: '#faf8f4',
@@ -196,7 +196,7 @@ const SuperAdminPurchases = () => {
         activePage="purchases"
       />
 
-      <main className="min-w-0 flex-1">
+      <main className="min-w-0 flex-1 max-w-full overflow-x-hidden">
         <header
           className="hidden md:flex items-center justify-between border-b px-6 py-5 sm:px-10"
           style={{ borderColor: '#e3ddd0', background: '#ffffff' }}
@@ -214,21 +214,23 @@ const SuperAdminPurchases = () => {
             >
               Purchases & Approvals
             </h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => loadPurchases(activeTab, selectedBranchId)}
+              className="rounded-lg p-2 hover:bg-[#f1ede4]"
+              title="Refresh purchases"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}
+                style={{ color: '#9c6b2e' }}
+              />
+            </button>
             <NavLogoutButton redirectTo="/super-admin/login" />
           </div>
-          <button
-            onClick={() => loadPurchases(activeTab, selectedBranchId)}
-            className="rounded-lg p-2 hover:bg-[#f1ede4]"
-            title="Refresh purchases"
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}
-              style={{ color: '#9c6b2e' }}
-            />
-          </button>
         </header>
 
-        <div className="mx-auto max-w-7xl px-6 py-8 sm:px-10 space-y-6">
+        <div className="w-full px-4 py-6 sm:px-8 sm:py-8 lg:px-10 space-y-6">
           {error && (
             <div
               className="rounded-xl px-4 py-3 text-sm font-medium"
@@ -256,11 +258,11 @@ const SuperAdminPurchases = () => {
 
           {/* Filter Bar: Branch selection + Tabs */}
           <div
-            className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-white border shadow-2xs"
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl bg-white border shadow-2xs max-w-full min-w-0"
             style={{ borderColor: '#e3ddd0' }}
           >
             {/* Tabs */}
-            <div className="flex gap-1">
+            <div className="flex gap-1.5 overflow-x-auto pb-1 max-w-full min-w-0">
               {TABS.map(({ id, label, icon: Icon }) => {
                 const isActive = activeTab === id;
                 const count = tabCounts[id] ?? 0;
@@ -268,7 +270,7 @@ const SuperAdminPurchases = () => {
                   <button
                     key={id}
                     onClick={() => setActiveTab(id)}
-                    className="flex items-center gap-2 relative px-4 py-2 text-sm font-semibold rounded-xl transition cursor-pointer"
+                    className="flex items-center gap-1.5 sm:gap-2 shrink-0 relative px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold rounded-xl transition cursor-pointer"
                     style={{
                       background: isActive ? '#9c6b2e' : '#faf8f4',
                       color: isActive ? '#ffffff' : '#7a5220',
@@ -277,7 +279,7 @@ const SuperAdminPurchases = () => {
                     <Icon className="h-4 w-4" />
                     <span>{label}</span>
                     <span
-                      className="ml-1 px-2 py-0.5 text-xs font-bold rounded-full transition"
+                      className="ml-1 px-1.5 sm:px-2 py-0.5 text-[11px] sm:text-xs font-bold rounded-full transition"
                       style={{
                         background: isActive ? 'rgba(255,255,255,0.25)' : '#e3ddd0',
                         color: isActive ? '#ffffff' : '#7a5220',
@@ -291,13 +293,13 @@ const SuperAdminPurchases = () => {
             </div>
 
             {/* Branch Filter dropdown */}
-            <div className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-stone-500" />
-              <div className="relative">
+            <div className="flex items-center gap-2 w-full sm:w-auto min-w-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-[#f1ede4]">
+              <Building2 className="h-4 w-4 text-stone-500 shrink-0" />
+              <div className="relative flex-1 sm:flex-initial min-w-0 w-full sm:w-56 max-w-full">
                 <select
                   value={selectedBranchId}
                   onChange={(e) => setSelectedBranchId(e.target.value)}
-                  className="appearance-none rounded-xl border pl-3 pr-8 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#9c6b2e] bg-stone-50"
+                  className="w-full appearance-none rounded-xl border pl-3 pr-8 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#9c6b2e] bg-stone-50 truncate"
                   style={{ borderColor: '#e3ddd0', color: '#17140f' }}
                 >
                   <option value="">All Branches</option>

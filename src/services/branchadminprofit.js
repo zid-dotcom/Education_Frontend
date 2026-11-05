@@ -16,14 +16,27 @@ export async function getBranchAdminProfitApi(token, dateOrRange = null) {
   if (typeof dateOrRange === 'string') {
     query = `?date=${encodeURIComponent(dateOrRange)}`;
   } else if (dateOrRange && typeof dateOrRange === 'object') {
+    let { fromDate, toDate, date } = dateOrRange;
+    if (fromDate && toDate && fromDate > toDate) {
+      const tmp = fromDate;
+      fromDate = toDate;
+      toDate = tmp;
+    }
     const params = new URLSearchParams();
-    if (dateOrRange.fromDate && dateOrRange.toDate && dateOrRange.fromDate === dateOrRange.toDate) {
-      params.append('date', dateOrRange.fromDate);
+    if (fromDate && toDate && fromDate === toDate) {
+      params.append('date', fromDate);
+      params.append('from_date', fromDate);
+      params.append('to_date', fromDate);
     } else {
-      if (dateOrRange.fromDate) params.append('from_date', dateOrRange.fromDate);
-      if (dateOrRange.toDate) params.append('to_date', dateOrRange.toDate);
-      if (dateOrRange.date) params.append('date', dateOrRange.date);
-      else if (dateOrRange.fromDate) params.append('date', dateOrRange.fromDate);
+      if (fromDate) {
+        params.append('from_date', fromDate);
+        params.append('date_from', fromDate);
+      }
+      if (toDate) {
+        params.append('to_date', toDate);
+        params.append('date_to', toDate);
+      }
+      if (date) params.append('date', date);
     }
     const qs = params.toString();
     query = qs ? `?${qs}` : '';

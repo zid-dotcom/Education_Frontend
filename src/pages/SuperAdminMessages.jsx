@@ -396,7 +396,7 @@ const SuperAdminMessages = () => {
 
   return (
     <div
-      className="h-screen w-full overflow-hidden md:flex"
+      className="flex flex-col md:flex-row h-screen w-full overflow-hidden max-w-full"
       style={{
         fontFamily: "'Inter', system-ui, sans-serif",
         background: '#faf8f4',
@@ -681,7 +681,15 @@ const SuperAdminMessages = () => {
                   className="px-6 py-3.5 border-b shrink-0 bg-white flex items-center justify-between shadow-2xs"
                   style={{ borderColor: '#e3ddd0' }}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setActiveMobileView('list')}
+                      className="rounded-lg p-1.5 md:hidden hover:bg-slate-100 text-slate-600"
+                      aria-label="Back to conversations list"
+                    >
+                      <ChevronLeft className="h-5 w-5 text-[#9c6b2e]" />
+                    </button>
                     <div
                       className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold text-white shadow-xs"
                       style={{ background: '#17140f' }}

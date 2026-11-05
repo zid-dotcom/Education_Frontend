@@ -66,15 +66,20 @@ const NAV_GROUPS = [
     label: 'Overview',
     items: [
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/super-admin/dashboard' },
-      { id: 'branch-overview', label: 'Branch Overview', icon: TrendingUp, path: '/super-admin/branch-overview' },
     ],
   },
   {
     label: 'Branches',
     items: [
+      { id: 'branch-overview', label: 'Branch Overview', icon: TrendingUp, path: '/super-admin/branch-overview' },
       { id: 'branches', label: 'Branches', icon: Building2, path: '/admin/branches' },
       { id: 'branch-admins', label: 'Branch Admins', icon: Users, path: '/admin/branch-admins' },
       { id: 'navigation-settings', label: 'Branch Navigation', icon: SlidersHorizontal, path: '/super-admin/navigation-settings' },
+      { id: 'profit', label: 'Branch Revenue', icon: IndianRupee, path: '/super-admin/profit' },
+      { id: 'expenses', label: 'Branch Expenses', icon: TrendingDown, path: '/super-admin/expenses' },
+      { id: 'attendance', label: 'Branch Attendance', icon: CalendarCheck, path: '/super-admin/attendance' },
+      { id: 'branch-announcements', label: 'Branch Announcements', icon: Megaphone, path: '/super-admin/announcements' },
+      { id: 'messages', label: 'Branch Admin Messages', icon: MessageSquare, path: '/super-admin/messages' },
     ],
   },
   {
@@ -91,6 +96,8 @@ const NAV_GROUPS = [
     items: [
       { id: 'students', label: 'All Students', icon: Users, path: '/super-admin/students' },
       { id: 'due-students', label: 'Due Students', icon: AlertCircle, path: '/super-admin/due-students' },
+      { id: 'receipts', label: 'Student Receipts', icon: Receipt, path: '/super-admin/receipts' },
+      { id: 'enquiries', label: 'Enquiries', icon: MessageCircle, path: '/super-admin/enquiries' },
     ],
   },
   {
@@ -99,31 +106,14 @@ const NAV_GROUPS = [
       { id: 'staff', label: 'Staff', icon: UserPlus, path: '/super-admin/staff' },
       { id: 'staff-verification', label: 'Staff Verification', icon: ShieldCheck, path: '/super-admin/staff-verification' },
       { id: 'staff-monitoring', label: 'Staff Monitoring', icon: Activity, path: '/super-admin/staff-monitoring' },
-      { id: 'attendance', label: 'Attendance', icon: CalendarCheck, path: '/super-admin/attendance' },
+      { id: 'staff-messages', label: 'Staff Messages', icon: Users, path: '/super-admin/staff-messages' },
     ],
   },
   {
-    label: 'Finance',
-    items: [
-      { id: 'profit', label: 'Branch Revenue', icon: IndianRupee, path: '/super-admin/profit' },
-      { id: 'expenses', label: 'Branch Expenses', icon: TrendingDown, path: '/super-admin/expenses' },
-      { id: 'receipts', label: 'Student Receipts', icon: Receipt, path: '/super-admin/receipts' },
-      { id: 'gst-settings', label: 'GST Settings', icon: Percent, path: '/super-admin/gst-settings' },
-    ],
-  },
-  {
-    label: 'Communication',
+    label: 'Settings & Account',
     items: [
       { id: 'global-announcements', label: 'Global Announcements', icon: Bell, path: '/admin/announcements' },
-      { id: 'branch-announcements', label: 'Branch Announcements', icon: Megaphone, path: '/super-admin/announcements' },
-      { id: 'messages', label: 'Branch Admin Messages', icon: MessageSquare, path: '/super-admin/messages' },
-      { id: 'staff-messages', label: 'Staff Messages', icon: Users, path: '/super-admin/staff-messages' },
-      { id: 'enquiries', label: 'Enquiries', icon: MessageCircle, path: '/super-admin/enquiries' },
-    ],
-  },
-  {
-    label: 'Account',
-    items: [
+      { id: 'gst-settings', label: 'GST Settings', icon: Percent, path: '/super-admin/gst-settings' },
       { id: 'change-password', label: 'Change Password', icon: KeyRound, path: '/admin/change-password' },
     ],
   },
@@ -306,9 +296,12 @@ const SuperAdminSidebar = ({
         />
       )}
 
+      {/* Desktop spacer to preserve layout flow beside the fixed sidebar */}
+      <div className="hidden md:block w-64 shrink-0" aria-hidden="true" />
+
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col transition-transform duration-300 md:sticky md:top-0 md:h-screen md:max-h-screen md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col transition-transform duration-300 md:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
         style={{

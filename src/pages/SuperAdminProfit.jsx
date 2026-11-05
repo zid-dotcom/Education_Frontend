@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ChevronDown, IndianRupee, Loader2, RefreshCw, TrendingUp, Users, AlertCircle, X, CreditCard,
-  Calendar, GraduationCap, MapPin, Mail, Phone, BookOpen, Receipt, Banknote, Smartphone
+  Calendar, GraduationCap, MapPin, Mail, Phone, BookOpen, Receipt, Banknote, Smartphone, RotateCcw
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
@@ -11,6 +11,7 @@ import {
   getSuperAdminProfitBranchesApi,
   getSuperAdminBranchProfitApi,
 } from '../services/superadmin';
+import { getDefaultFromDate, getDefaultToDate } from '../utils/dateFilters';
 
 const PAGE_CSS = `
 @keyframes sa-rise { from { opacity:0; transform:translateY(16px) scale(.97); } to { opacity:1; transform:translateY(0) scale(1); } }
@@ -48,22 +49,32 @@ const getStatusBadge = (status) => {
   );
 };
 
+const getToday = () => {
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60000;
+  return new Date(now.getTime() - offset).toISOString().slice(0, 10);
+};
+
 const formatDate = (dateString) => {
   if (!dateString) return '—';
   return new Date(dateString).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
-const getPaymentDate = (enr, fromDateStr, toDateStr) => {
-  if (Array.isArray(enr.installments)) {
-    const matchingInst = enr.installments.find(i => 
-      (i.paid_date && i.paid_date >= fromDateStr && i.paid_date <= toDateStr) ||
-      i.paid_date === fromDateStr
-    );
-    if (matchingInst) return matchingInst.paid_date;
+// Check whether a payment transaction or installment is successful (not failed, pending, due, or cancelled)
+const isSuccessfulPayment = (item) => {
+  if (!item) return false;
+  const rawStatus = String(item.status || item.payment_status || item.transaction_status || '').trim().toLowerCase();
+  const failedStatuses = ['failed', 'failure', 'cancelled', 'canceled', 'pending', 'due', 'rejected', 'unpaid', 'refunded', 'reversed'];
+  if (failedStatuses.includes(rawStatus)) {
+    return false;
   }
-  if (enr.payment_date) return enr.payment_date;
-  if (enr.paid_at) return enr.paid_at;
-  return fromDateStr;
+  const successStatuses = ['paid', 'success', 'successful', 'completed', 'approved', 'captured'];
+  const amt = Number(item.amount ?? item.paid_amount ?? item.paid ?? 0);
+  if (successStatuses.includes(rawStatus)) {
+    return amt > 0;
+  }
+  const hasPaidDate = Boolean(item.paid_date || item.paid_at || item.payment_date);
+  return hasPaidDate && amt > 0;
 };
 
 // Strict enrollment-first matching helper for payment records
@@ -107,13 +118,127 @@ const getEnrollmentPayments = (enrollment, rootProfit) => {
       if (!studentMatch) return;
     }
 
-    const key = p.payment_id || p.id || `${p.installment_number}_${p.amount}_${p.payment_date || idx}`;
+    const key = p.payment_id || p.transaction_id || p.id || `${p.installment_number}_${p.amount}_${p.payment_date || idx}`;
     if (!uniqueMap.has(key)) {
       uniqueMap.set(key, p);
     }
   });
 
   return Array.from(uniqueMap.values());
+};
+
+// Retrieve all successful payment transactions belonging to this enrollment, sorted latest first
+const getEnrollmentSuccessfulTransactions = (enrollment, rootProfit) => {
+  if (!enrollment) return [];
+  const txList = [];
+  const seenKeys = new Set();
+
+  const addTx = (t, defaultType = 'payment') => {
+    if (!t || !isSuccessfulPayment(t)) return;
+    const amt = Number(t.paid_amount ?? t.amount ?? t.paid ?? 0);
+    if (amt <= 0) return;
+
+    const dateStr = String(t.payment_date || t.paid_date || t.paid_at || t.created_at || t.date || '').slice(0, 10);
+    const instNum = Number(t.installment_number ?? 0);
+    const key = t.payment_id || t.transaction_id || t.id || `${instNum}_${amt}_${dateStr}`;
+    if (seenKeys.has(key)) return;
+    seenKeys.add(key);
+
+    txList.push({
+      id: key,
+      amount: amt,
+      payment_date: dateStr,
+      raw_date: t.payment_date || t.paid_date || t.paid_at || t.created_at || t.date || '',
+      installment_number: instNum,
+      status: t.status || t.payment_status || 'paid',
+      type: defaultType,
+      raw: t,
+    });
+  };
+
+  // 1. Transactions matching this enrollment
+  const payments = getEnrollmentPayments(enrollment, rootProfit);
+  payments.forEach((p) => addTx(p, 'payment'));
+
+  // 2. Installments belonging to this enrollment
+  if (Array.isArray(enrollment.installments)) {
+    enrollment.installments.forEach((inst, idx) => {
+      addTx({
+        ...inst,
+        installment_number: inst.installment_number ?? idx + 1,
+        paid_amount: inst.paid_amount ?? inst.paid ?? inst.amount,
+      }, 'installment');
+    });
+  }
+
+  // Sort descending by date (latest first), then installment_number descending
+  txList.sort((a, b) => {
+    const da = a.raw_date || a.payment_date || '';
+    const db = b.raw_date || b.payment_date || '';
+    if (da && db && da !== db) return db.localeCompare(da);
+    if (da && !db) return -1;
+    if (!da && db) return 1;
+    return (b.installment_number || 0) - (a.installment_number || 0);
+  });
+
+  return txList;
+};
+
+// Get the latest successful transaction for an enrollment
+const getLatestSuccessfulTransaction = (enrollment, rootProfit, fromDateStr = '', toDateStr = '') => {
+  const txList = getEnrollmentSuccessfulTransactions(enrollment, rootProfit);
+  if (txList.length === 0) return null;
+
+  if (fromDateStr || toDateStr) {
+    const inRange = txList.filter((t) => {
+      const d = t.payment_date;
+      if (!d) return false;
+      if (fromDateStr && d < fromDateStr) return false;
+      if (toDateStr && d > toDateStr) return false;
+      return true;
+    });
+    if (inRange.length > 0) return inRange[0];
+  }
+
+  return txList[0];
+};
+
+// Calculate Last Paid: amount of the latest successful payment transaction
+const getLastPaidAmount = (enrollment, rootProfit, fromDateStr = '', toDateStr = '') => {
+  if (!enrollment) return 0;
+  const latestTx = getLatestSuccessfulTransaction(enrollment, rootProfit, fromDateStr, toDateStr);
+  if (latestTx && latestTx.amount > 0) {
+    return latestTx.amount;
+  }
+
+  // Fallback to explicit single-transaction amount fields (NEVER total_paid or total_fee)
+  if (enrollment.last_paid_amount !== undefined && enrollment.last_paid_amount !== null && Number(enrollment.last_paid_amount) > 0) {
+    return Number(enrollment.last_paid_amount);
+  }
+  if (enrollment.last_payment_amount !== undefined && enrollment.last_payment_amount !== null && Number(enrollment.last_payment_amount) > 0) {
+    return Number(enrollment.last_payment_amount);
+  }
+  if (enrollment.recent_payment_amount !== undefined && enrollment.recent_payment_amount !== null && Number(enrollment.recent_payment_amount) > 0) {
+    return Number(enrollment.recent_payment_amount);
+  }
+  // Single installment full payment
+  if (Number(enrollment.installment_count) === 1 && Number(enrollment.total_paid) > 0) {
+    return Number(enrollment.total_paid);
+  }
+
+  return 0;
+};
+
+// Date of the latest successful payment transaction
+const getPaymentDate = (enrollment, rootProfit, fromDateStr = '', toDateStr = '') => {
+  if (!enrollment) return '';
+  const latestTx = getLatestSuccessfulTransaction(enrollment, rootProfit, fromDateStr, toDateStr);
+  if (latestTx && latestTx.payment_date) {
+    return latestTx.payment_date;
+  }
+  const rawDate = enrollment.payment_date || enrollment.paid_at || enrollment.paid_date || enrollment.created_at || enrollment.date || enrollment.enrollment_date;
+  if (rawDate) return String(rawDate).slice(0, 10);
+  return '';
 };
 
 const SuperAdminProfit = () => {
@@ -127,9 +252,9 @@ const SuperAdminProfit = () => {
   const [loading, setLoading] = useState(true);
   const [profitLoading, setProfitLoading] = useState(false);
   
-  const todayStr = new Date().toISOString().split('T')[0];
-  const [fromDate, setFromDate] = useState(todayStr);
-  const [toDate, setToDate] = useState(todayStr);
+  const [fromDate, setFromDate] = useState(getDefaultFromDate);
+  const [toDate, setToDate] = useState(getDefaultToDate);
+  const activeRequestIdRef = useRef(0);
   const [dateError, setDateError] = useState('');
   const [error, setError] = useState('');
   
@@ -142,6 +267,9 @@ const SuperAdminProfit = () => {
       .then((data) => {
         const list = Array.isArray(data) ? data : (data?.branches ?? []);
         setBranches(list);
+        if (list.length > 0) {
+          setSelectedBranchId((prev) => prev || String(list[0].id ?? list[0].branch_id));
+        }
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -156,13 +284,24 @@ const SuperAdminProfit = () => {
     setDateError('');
     setProfitLoading(true);
     setError('');
+
+    const requestId = ++activeRequestIdRef.current;
     
     getSuperAdminBranchProfitApi(branchId, token, { fromDate: from, toDate: to })
       .then((data) => {
+        if (requestId !== activeRequestIdRef.current) return;
         setTodayProfit(data);
       })
-      .catch((err) => setError(err.message))
-      .finally(() => setProfitLoading(false));
+      .catch((err) => {
+        if (requestId === activeRequestIdRef.current) {
+          setError(err.message);
+        }
+      })
+      .finally(() => {
+        if (requestId === activeRequestIdRef.current) {
+          setProfitLoading(false);
+        }
+      });
   };
 
   useEffect(() => {
@@ -176,13 +315,42 @@ const SuperAdminProfit = () => {
     }
   }, [selectedBranchId, fromDate, toDate, token]);
 
-  const enrollments = Array.isArray(todayProfit?.enrollments)
+  const rawEnrollments = Array.isArray(todayProfit?.enrollments)
     ? todayProfit.enrollments
     : Array.isArray(todayProfit?.payments)
     ? todayProfit.payments
     : Array.isArray(todayProfit?.recent_payments)
     ? todayProfit.recent_payments
     : [];
+
+  const enrollments = useMemo(() => {
+    if (!fromDate && !toDate) return rawEnrollments;
+
+    return rawEnrollments.filter((enr) => {
+      // 1. Check if enrollment has any successful transaction within [fromDate, toDate]
+      const txList = getEnrollmentSuccessfulTransactions(enr, todayProfit);
+      if (txList.length > 0) {
+        const hasTxInRange = txList.some((t) => {
+          const d = t.payment_date;
+          if (!d) return false;
+          if (fromDate && d < fromDate) return false;
+          if (toDate && d > toDate) return false;
+          return true;
+        });
+        if (hasTxInRange) return true;
+      }
+
+      // 2. Check the enrollment's payment / record date
+      const pDate = getPaymentDate(enr, todayProfit, fromDate, toDate);
+      if (pDate) {
+        if (fromDate && pDate < fromDate) return false;
+        if (toDate && pDate > toDate) return false;
+        return true;
+      }
+
+      return false;
+    });
+  }, [rawEnrollments, fromDate, toDate, todayProfit]);
   
   const totalReceived =
     todayProfit?.total_received ??
@@ -291,11 +459,11 @@ const SuperAdminProfit = () => {
   })();
 
   return (
-    <div className="min-h-screen md:flex" style={{ fontFamily: "'Inter', system-ui, sans-serif", background: '#faf8f4', color: '#17140f' }}>
+    <div className="min-h-screen md:flex max-w-full overflow-x-hidden" style={{ fontFamily: "'Inter', system-ui, sans-serif", background: '#faf8f4', color: '#17140f' }}>
       <style>{PAGE_CSS}</style>
       <SuperAdminSidebar user={user} navigate={navigate} logout={logout} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} activePage="profit" />
 
-      <main className="min-w-0 flex-1">
+      <main className="min-w-0 flex-1 max-w-full overflow-x-hidden">
         <header className="hidden md:flex items-center justify-between border-b px-6 py-5 sm:px-10" style={{ borderColor: '#e3ddd0', background: '#ffffff' }}>
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#9c6b2e' }}>Super Admin</p>
@@ -327,7 +495,7 @@ const SuperAdminProfit = () => {
           </div>
         </header>
 
-        <div className="mx-auto max-w-7xl px-6 py-8 sm:px-10 space-y-6">
+        <div className="w-full px-4 py-6 sm:px-8 sm:py-8 space-y-6">
           {error && (
             <div className="rounded-xl px-4 py-4 text-sm font-medium flex items-center justify-between" style={{ background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }}>
               <div className="flex items-center gap-2">
@@ -358,12 +526,12 @@ const SuperAdminProfit = () => {
           ) : (
             <>
               {/* Filters */}
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium" style={{ color: '#5b5346' }}>Branch:</label>
-                  <div className="relative">
+              <div className="flex flex-col sm:flex-row flex-wrap sm:items-center gap-3 sm:gap-4">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <label className="text-sm font-medium shrink-0" style={{ color: '#5b5346' }}>Branch:</label>
+                  <div className="relative flex-1 sm:flex-initial min-w-0 max-w-full">
                     <select value={selectedBranchId} onChange={(e) => setSelectedBranchId(e.target.value)}
-                      className="appearance-none rounded-xl border pl-4 pr-9 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#9c6b2e]"
+                      className="w-full appearance-none rounded-xl border pl-4 pr-9 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#9c6b2e] truncate"
                       style={{ borderColor: '#e3ddd0', background: '#ffffff', color: '#17140f' }}>
                       <option value="" disabled>Please select a branch</option>
                       {branches.map(b => <option key={b.id ?? b.branch_id} value={String(b.id ?? b.branch_id)}>{b.name || b.branch_name}</option>)}
@@ -372,19 +540,61 @@ const SuperAdminProfit = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium" style={{ color: '#5b5346' }}>From Date:</label>
-                  <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)}
-                    className="rounded-xl border px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#9c6b2e]"
-                    style={{ borderColor: dateError ? '#ef4444' : '#e3ddd0', background: '#ffffff', color: '#17140f' }} />
+                <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto min-w-0">
+                  <div className="flex items-center gap-2 w-full sm:w-auto min-w-0">
+                    <label className="text-sm font-medium shrink-0" style={{ color: '#5b5346' }}>From Date:</label>
+                    <input
+                      type="date"
+                      value={fromDate}
+                      max={toDate || undefined}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFromDate(val);
+                        setDateError('');
+                        if (val && toDate && val > toDate) {
+                          setToDate(val);
+                        }
+                      }}
+                      className="flex-1 sm:flex-initial rounded-xl border px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#9c6b2e] min-w-0 sm:max-w-[155px]"
+                      style={{ borderColor: dateError ? '#ef4444' : '#e3ddd0', background: '#ffffff', color: '#17140f' }}
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto min-w-0">
+                    <label className="text-sm font-medium shrink-0" style={{ color: '#5b5346' }}>To Date:</label>
+                    <input
+                      type="date"
+                      value={toDate}
+                      min={fromDate || undefined}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setToDate(val);
+                        setDateError('');
+                        if (val && fromDate && val < fromDate) {
+                          setFromDate(val);
+                        }
+                      }}
+                      className="rounded-xl border px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#9c6b2e] max-w-[155px]"
+                      style={{ borderColor: dateError ? '#ef4444' : '#e3ddd0', background: '#ffffff', color: '#17140f' }}
+                    />
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium" style={{ color: '#5b5346' }}>To Date:</label>
-                  <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)}
-                    className="rounded-xl border px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#9c6b2e]"
-                    style={{ borderColor: dateError ? '#ef4444' : '#e3ddd0', background: '#ffffff', color: '#17140f' }} />
-                </div>
+                {(fromDate !== getDefaultFromDate() || toDate !== getDefaultToDate()) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFromDate(getDefaultFromDate());
+                      setToDate(getDefaultToDate());
+                      setDateError('');
+                    }}
+                    className="inline-flex items-center gap-1 rounded-xl border border-[#ded8cb] bg-white px-3 py-1.5 text-xs font-bold text-[#9c6b2e] hover:bg-[#f3ede1] transition cursor-pointer shadow-2xs"
+                    title="Reset date filters to default month range"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    Reset
+                  </button>
+                )}
               </div>
 
               {profitLoading ? (
@@ -458,39 +668,47 @@ const SuperAdminProfit = () => {
                         <table className="w-full text-sm whitespace-nowrap">
                           <thead>
                             <tr style={{ background: '#faf8f4', borderBottom: '1px solid #e3ddd0' }}>
-                              {['Student', 'Course', 'Total Fee', 'Paid Today', 'Total Paid', 'Balance', 'Installments', 'Status', 'Date', 'Action'].map(h => (
+                              {['Student', 'Course', 'Total Fee', 'Last Paid', 'Total Paid', 'Balance', 'Installments', 'Status', 'Date', 'Action'].map(h => (
                                 <th key={h} className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider" style={{ color: '#a39a8c' }}>{h}</th>
                               ))}
                             </tr>
                           </thead>
                           <tbody>
-                            {enrollments.map((enr, i) => (
-                              <tr key={enr.enrollment_id ?? i} className="transition hover:bg-sky-50" style={{ borderBottom: '1px solid #f1ede4' }}>
-                                <td className="px-5 py-3 font-medium">{enr.name || '—'}</td>
-                                <td className="px-5 py-3" style={{ color: '#5b5346' }}>{enr.course_title || '—'}</td>
-                                <td className="px-5 py-3 font-medium" style={{ color: '#17140f' }}>{fmt(enr.total_fee)}</td>
-                                <td className="px-5 py-3 font-semibold" style={{ color: '#10b981' }}>{fmt(enr.amount_paid_on_date)}</td>
-                                <td className="px-5 py-3" style={{ color: '#5b5346' }}>{fmt(enr.total_paid)}</td>
-                                <td className="px-5 py-3 font-medium" style={{ color: Number(enr.balance_amount) > 0 ? '#ef4444' : '#5b5346' }}>
-                                  {fmt(enr.balance_amount)}
-                                </td>
-                                <td className="px-5 py-3" style={{ color: '#5b5346' }}>
-                                  {enr.paid_installment_count ?? 0} / {enr.installment_count ?? 0}
-                                </td>
-                                <td className="px-5 py-3">{getStatusBadge(enr.status)}</td>
-                                <td className="px-5 py-3 text-xs" style={{ color: '#5b5346' }}>
-                                  {formatDate(getPaymentDate(enr, fromDate, toDate))}
-                                </td>
-                                <td className="px-5 py-3">
-                                  <button
-                                    onClick={() => setSelectedEnrollment(enr)}
-                                    className="text-xs font-bold text-sky-600 hover:text-sky-800 underline"
-                                  >
-                                    View Details
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
+                            {enrollments.map((enr, i) => {
+                              const totalFee = enr.total_fee ?? enr.course_fee ?? 0;
+                              const totalPaid = enr.total_paid ?? enr.amount_paid ?? 0;
+                              const balance = enr.balance_amount !== undefined ? enr.balance_amount : (Number(totalFee) - Number(totalPaid));
+                              const lastPaid = getLastPaidAmount(enr, todayProfit, fromDate, toDate);
+                              const paymentDate = getPaymentDate(enr, todayProfit, fromDate, toDate);
+
+                              return (
+                                <tr key={enr.enrollment_id ?? i} className="transition hover:bg-sky-50" style={{ borderBottom: '1px solid #f1ede4' }}>
+                                  <td className="px-5 py-3 font-medium">{enr.name || '—'}</td>
+                                  <td className="px-5 py-3" style={{ color: '#5b5346' }}>{enr.course_title || '—'}</td>
+                                  <td className="px-5 py-3 font-medium" style={{ color: '#17140f' }}>{fmt(totalFee)}</td>
+                                  <td className="px-5 py-3 font-semibold" style={{ color: '#10b981' }}>{fmt(lastPaid)}</td>
+                                  <td className="px-5 py-3" style={{ color: '#5b5346' }}>{fmt(totalPaid)}</td>
+                                  <td className="px-5 py-3 font-medium" style={{ color: Number(balance) > 0 ? '#ef4444' : '#5b5346' }}>
+                                    {fmt(balance)}
+                                  </td>
+                                  <td className="px-5 py-3" style={{ color: '#5b5346' }}>
+                                    {enr.paid_installment_count ?? 0} / {enr.installment_count ?? 0}
+                                  </td>
+                                  <td className="px-5 py-3">{getStatusBadge(enr.status)}</td>
+                                  <td className="px-5 py-3 text-xs" style={{ color: '#5b5346' }}>
+                                    {formatDate(paymentDate)}
+                                  </td>
+                                  <td className="px-5 py-3">
+                                    <button
+                                      onClick={() => setSelectedEnrollment(enr)}
+                                      className="text-xs font-bold text-sky-600 hover:text-sky-800 underline"
+                                    >
+                                      View Details
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -563,8 +781,8 @@ const SuperAdminProfit = () => {
                       <span className="font-bold text-base">{fmt(selectedEnrollment.total_paid)}</span>
                     </div>
                     <div className="flex justify-between items-center p-2 bg-sky-50 text-sky-800 rounded-lg">
-                      <span className="font-medium">Paid Today:</span>
-                      <span className="font-bold text-base">{fmt(selectedEnrollment.amount_paid_on_date)}</span>
+                      <span className="font-medium">Last Paid:</span>
+                      <span className="font-bold text-base">{fmt(getLastPaidAmount(selectedEnrollment, todayProfit, fromDate, toDate))}</span>
                     </div>
                     <div className="flex justify-between items-center p-2 bg-rose-50 text-rose-800 rounded-lg">
                       <span className="font-medium">Balance:</span>

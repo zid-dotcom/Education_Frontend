@@ -62,11 +62,21 @@ export async function createBranchAdminExpenseApi(payload, token) {
  */
 export async function getBranchAdminExpensesApi(filters = {}, token) {
   const params = new URLSearchParams();
-  const from = filters.from_date || filters.fromDate;
-  const to = filters.to_date || filters.toDate;
+  const from = filters.from_date || filters.fromDate || filters.date_from;
+  const to = filters.to_date || filters.toDate || filters.date_to;
 
-  if (from) params.append('from_date', from);
-  if (to) params.append('to_date', to);
+  if (from) {
+    params.append('from_date', from);
+    params.append('date_from', from);
+    params.append('start_date', from);
+    params.append('fromDate', from);
+  }
+  if (to) {
+    params.append('to_date', to);
+    params.append('date_to', to);
+    params.append('end_date', to);
+    params.append('toDate', to);
+  }
 
   const query = params.toString() ? `?${params.toString()}` : '';
   const response = await fetch(`${API_BASE_URL}/branch-admin/expenses${query}`, {
@@ -80,20 +90,30 @@ export async function getBranchAdminExpensesApi(filters = {}, token) {
 /**
  * Super Admin: View expenses across branches, or filter by branch_id and dates.
  * GET /super-admin/expenses?branch_id=ID&from_date=YYYY-MM-DD&to_date=YYYY-MM-DD
- * @param {{ branch_id?: number|string, branchId?: number|string, from_date?: string, to_date?: string, fromDate?: string, toDate?: string }} [filters]
+ * @param {{ branch_id?: number|string, branchId?: number|string, from_date?: string, to_date?: string, fromDate?: string, toDate?: string, date_from?: string, date_to?: string }} [filters]
  * @param {string} token
  */
 export async function getSuperAdminExpensesApi(filters = {}, token) {
   const params = new URLSearchParams();
   const branchId = filters.branch_id || filters.branchId;
-  const from = filters.from_date || filters.fromDate;
-  const to = filters.to_date || filters.toDate;
+  const from = filters.from_date || filters.fromDate || filters.date_from;
+  const to = filters.to_date || filters.toDate || filters.date_to;
 
   if (branchId && branchId !== 'all') {
     params.append('branch_id', String(branchId));
   }
-  if (from) params.append('from_date', from);
-  if (to) params.append('to_date', to);
+  if (from) {
+    params.append('from_date', from);
+    params.append('date_from', from);
+    params.append('start_date', from);
+    params.append('fromDate', from);
+  }
+  if (to) {
+    params.append('to_date', to);
+    params.append('date_to', to);
+    params.append('end_date', to);
+    params.append('toDate', to);
+  }
 
   const query = params.toString() ? `?${params.toString()}` : '';
   const response = await fetch(`${API_BASE_URL}/super-admin/expenses${query}`, {

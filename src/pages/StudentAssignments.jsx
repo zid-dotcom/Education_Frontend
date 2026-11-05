@@ -28,7 +28,7 @@ import {
   submitStudentAssignmentApi,
 } from '../services/studentassignments';
 import { useStudentModalBlur } from '../utils/useStudentModalBlur';
-import { AssignmentBannerIllustration } from '../components/common/AssignmentBannerIllustration';
+import assignmentImage from '../assets/assignment.png';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -412,10 +412,14 @@ const StudentAssignments = () => {
             </div>
           </div>
 
-          {/* Right SVG Illustration - Fitted flush to top, bottom and right */}
+          {/* Right assignments illustration */}
           <div className="w-full md:w-auto flex justify-end items-end md:self-stretch shrink-0 select-none overflow-hidden pr-0">
-            <div className="w-full sm:w-[460px] md:w-[480px] lg:w-[540px] xl:w-[600px] h-[190px] sm:h-[220px] md:h-full flex items-end justify-end">
-              <AssignmentBannerIllustration className="w-full h-full block" />
+            <div className="w-full sm:w-[460px] md:w-[480px] lg:w-[540px] xl:w-[600px] h-[190px] sm:h-[220px] md:h-full flex items-end justify-center md:justify-end">
+              <img
+                src={assignmentImage}
+                alt="Student assignment"
+                className="w-full h-full object-contain object-right-bottom block"
+              />
             </div>
           </div>
         </div>

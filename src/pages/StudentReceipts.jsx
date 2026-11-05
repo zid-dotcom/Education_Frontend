@@ -24,7 +24,7 @@ import {
   getStudentReceiptsApi,
 } from "../services/payments";
 import OfficialReceiptVoucherCard from "../components/common/OfficialReceiptVoucherCard";
-import { ReceiptsBannerIllustration } from "../components/common/StudentBannerIllustrations";
+import receiptImage from "../assets/receipt.png";
 
 const serif = { fontFamily: "'Fraunces', ui-serif, Georgia, serif" };
 const sans = { fontFamily: "'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif" };
@@ -902,10 +902,16 @@ export default function StudentReceipts() {
   }, [receipts]);
 
   return (
-    <div className="space-y-6" style={sans}>
+    <div className="space-y-6 opacity-0 animate-[pageFadeIn_0.4s_ease-out_forwards]" style={sans}>
+      <style>{`
+        @keyframes pageFadeIn {
+          0% { opacity: 0; transform: translateY(14px) scale(0.985); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `}</style>
       {/* Header Banner */}
       <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#FAF6EE] via-[#FDF9F2] to-[#FAF1DF] text-[#17140F] border border-[#ECDDC6] shadow-xs mb-6">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-stretch justify-between min-h-[190px] sm:min-h-[210px] md:min-h-[230px]">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-stretch justify-between min-h-[220px] sm:min-h-[250px] md:min-h-[235px]">
           {/* Left Text Content */}
           <div className="p-6 sm:p-8 md:p-10 max-w-xl lg:max-w-2xl space-y-2.5 z-10 flex flex-col justify-center">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3.5 py-1.5 text-[11px] sm:text-xs font-bold text-[#9C6B2E] border border-[#ECD8B5] shadow-2xs">
@@ -937,10 +943,14 @@ export default function StudentReceipts() {
             </div>
           </div>
 
-          {/* Right SVG Illustration - Fitted flush to top, bottom and right */}
+          {/* Right payment receipts illustration */}
           <div className="w-full md:w-auto flex justify-end items-end md:self-stretch shrink-0 select-none overflow-hidden pr-0">
-            <div className="w-full sm:w-[460px] md:w-[480px] lg:w-[540px] xl:w-[600px] h-[190px] sm:h-[220px] md:h-full flex items-end justify-end">
-              <ReceiptsBannerIllustration className="w-full h-full block" />
+            <div className="w-full sm:w-[460px] md:w-[480px] lg:w-[540px] xl:w-[600px] h-[220px] sm:h-[250px] md:h-full flex items-center justify-center md:justify-end">
+              <img
+                src={receiptImage}
+                alt="Payment receipt"
+                className="relative right-0 md:right-8 w-[74%] h-[68%] object-contain object-center md:object-right-bottom block"
+              />
             </div>
           </div>
         </div>

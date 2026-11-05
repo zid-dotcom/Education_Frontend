@@ -336,7 +336,7 @@ const SuperAdminEnquiries = () => {
 
   return (
     <div
-      className="min-h-screen md:flex"
+      className="min-h-screen md:flex max-w-full overflow-x-hidden"
       style={{ ...sans, background: '#faf8f4', color: '#17140f' }}
     >
       <style>{PAGE_CSS}</style>
@@ -349,13 +349,13 @@ const SuperAdminEnquiries = () => {
         activePage="enquiries"
       />
 
-      <main className="min-w-0 flex-1 flex flex-col">
+      <main className="min-w-0 flex-1 flex flex-col max-w-full overflow-x-hidden">
         {/* Page Top Header - Centered */}
         <header
           className="hidden md:block sticky top-0 z-20 w-full border-b"
           style={{ borderColor: '#e3ddd0', background: '#ffffff' }}
         >
-          <div className="mx-auto max-w-7xl px-6 py-5 sm:px-10 flex items-center justify-between">
+          <div className="w-full px-6 py-5 sm:px-10 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -392,7 +392,7 @@ const SuperAdminEnquiries = () => {
         </header>
 
         {/* Content Body - Centered */}
-        <div className="w-full max-w-7xl mx-auto px-6 py-8 sm:px-10 space-y-6">
+        <div className="w-full px-4 py-6 sm:px-8 sm:py-8 lg:px-10 space-y-6">
           {error && (
             <div
               className="rounded-2xl px-4 py-3 text-sm font-medium flex items-center justify-between"

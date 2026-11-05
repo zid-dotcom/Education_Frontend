@@ -1049,7 +1049,7 @@ const SuperAdminStaffVerification = () => {
 
   return (
     <div
-      className="min-h-screen md:flex"
+      className="min-h-screen md:flex max-w-full overflow-x-hidden"
       style={{
         fontFamily: "'Inter', system-ui, sans-serif",
         background: '#faf8f4',
@@ -1068,7 +1068,7 @@ const SuperAdminStaffVerification = () => {
         activePage="staff-verification"
       />
 
-      <main className="min-w-0 flex-1">
+      <main className="min-w-0 flex-1 max-w-full overflow-x-hidden">
         {/* HEADER */}
         <header
           className="hidden md:flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b px-6 py-5 sm:px-10"
@@ -1109,7 +1109,7 @@ const SuperAdminStaffVerification = () => {
         </header>
 
         {/* CONTENT WRAPPER */}
-        <div className="mx-auto max-w-7xl px-6 py-8 sm:px-10 space-y-6">
+        <div className="w-full px-4 py-6 sm:px-8 sm:py-8 lg:px-10 space-y-6">
 
           {/* ALERT MESSAGES */}
           {error && (
@@ -1137,7 +1137,7 @@ const SuperAdminStaffVerification = () => {
           )}
 
           {/* METRIC CARDS */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div
               onClick={() => setStatusTab('PENDING')}
               className={`p-5 rounded-2xl border bg-white cursor-pointer transition-all ${
@@ -1216,11 +1216,11 @@ const SuperAdminStaffVerification = () => {
 
           {/* CONTROLS BAR: TABS, SEARCH & BRANCH FILTER */}
           <div
-            className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 p-4 rounded-2xl border bg-white shadow-xs"
+            className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 p-4 rounded-2xl border bg-white shadow-xs max-w-full min-w-0"
             style={{ borderColor: '#e3ddd0' }}
           >
             {/* TABS */}
-            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#faf8f4] border border-[#e3ddd0] shrink-0">
+            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#faf8f4] border border-[#e3ddd0] shrink-0 overflow-x-auto max-w-full min-w-0">
               <button
                 onClick={() => setStatusTab('PENDING')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
@@ -1265,14 +1265,14 @@ const SuperAdminStaffVerification = () => {
             </div>
 
             {/* SEARCH AND BRANCH SELECTOR */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 lg:max-w-xl lg:ml-auto">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 lg:max-w-xl lg:ml-auto min-w-0 max-w-full">
               {/* Branch filter */}
               {branchOptions.length > 0 && (
-                <div className="relative min-w-[200px]">
+                <div className="relative w-full sm:min-w-[200px] min-w-0 max-w-full">
                   <select
                     value={selectedBranchId}
                     onChange={(e) => setSelectedBranchId(e.target.value)}
-                    className="w-full appearance-none rounded-xl border bg-white px-3.5 py-2.5 text-xs font-bold text-slate-800 transition focus:outline-none focus:ring-2 focus:ring-[#9c6b2e]/30 cursor-pointer"
+                    className="w-full appearance-none rounded-xl border bg-white px-3.5 py-2.5 text-xs font-bold text-slate-800 transition focus:outline-none focus:ring-2 focus:ring-[#9c6b2e]/30 cursor-pointer truncate"
                     style={{ borderColor: '#d9cdb5' }}
                   >
                     <option value="all">All Branches</option>

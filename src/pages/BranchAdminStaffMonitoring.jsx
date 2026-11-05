@@ -465,7 +465,7 @@ const BranchAdminStaffMonitoring = () => {
         </header>
 
         {/* Content Body */}
-        <div className="p-6 sm:p-8 space-y-6 max-w-7xl mx-auto">
+        <div className="p-3.5 sm:p-8 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
           {/* Error Banner */}
           {error && (
             <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs font-semibold text-rose-800 flex items-center justify-between gap-3 ba-fade">
@@ -483,23 +483,23 @@ const BranchAdminStaffMonitoring = () => {
           )}
 
           {/* 1. Four Interactive Summary Filter Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {/* Card 1: Total Staff -> Show All */}
             <button
               type="button"
               onClick={() => setSelectedKycFilter('all')}
-              className={`text-left rounded-2xl border p-4 shadow-2xs transition-all cursor-pointer ba-rise ${
+              className={`text-left rounded-2xl border p-3.5 sm:p-4 shadow-2xs transition-all cursor-pointer ba-rise ${
                 selectedKycFilter === 'all'
                   ? 'border-[#9C6B2E] bg-[#FAF8F4] ring-2 ring-[#9C6B2E]/20'
                   : 'border-[#E3DDD0] bg-white hover:border-[#9C6B2E]/40'
               }`}
             >
               <div className="flex items-center justify-between text-[#8A8175] mb-1">
-                <span className="text-[11px] font-bold uppercase tracking-wider">Total Staff</span>
+                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Total Staff</span>
                 <Users className="h-4 w-4 text-[#9C6B2E]" />
               </div>
-              <p className="text-2xl font-bold text-[#17140F]">{branchStats.total}</p>
-              <p className="text-[10px] text-slate-400 mt-0.5">
+              <p className="text-xl sm:text-2xl font-bold text-[#17140F]">{branchStats.total}</p>
+              <p className="text-[10px] text-slate-400 mt-0.5 truncate">
                 {selectedKycFilter === 'all' ? '● Showing all staff' : 'Click to show all'}
               </p>
             </button>
@@ -508,18 +508,18 @@ const BranchAdminStaffMonitoring = () => {
             <button
               type="button"
               onClick={() => setSelectedKycFilter('approved')}
-              className={`text-left rounded-2xl border p-4 shadow-2xs transition-all cursor-pointer ba-rise ${
+              className={`text-left rounded-2xl border p-3.5 sm:p-4 shadow-2xs transition-all cursor-pointer ba-rise ${
                 selectedKycFilter === 'approved'
                   ? 'border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/20'
                   : 'border-[#E3DDD0] bg-white hover:border-emerald-300'
               }`}
             >
               <div className="flex items-center justify-between text-[#8A8175] mb-1">
-                <span className="text-[11px] font-bold uppercase tracking-wider">KYC Approved</span>
+                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">KYC Approved</span>
                 <CheckCircle className="h-4 w-4 text-emerald-600" />
               </div>
-              <p className="text-2xl font-bold text-emerald-700">{branchStats.approved}</p>
-              <p className="text-[10px] text-emerald-600/70 mt-0.5">
+              <p className="text-xl sm:text-2xl font-bold text-emerald-700">{branchStats.approved}</p>
+              <p className="text-[10px] text-emerald-600/70 mt-0.5 truncate">
                 {selectedKycFilter === 'approved' ? '● Showing approved' : 'Click to filter approved'}
               </p>
             </button>
@@ -528,18 +528,18 @@ const BranchAdminStaffMonitoring = () => {
             <button
               type="button"
               onClick={() => setSelectedKycFilter('pending')}
-              className={`text-left rounded-2xl border p-4 shadow-2xs transition-all cursor-pointer ba-rise ${
+              className={`text-left rounded-2xl border p-3.5 sm:p-4 shadow-2xs transition-all cursor-pointer ba-rise ${
                 selectedKycFilter === 'pending'
                   ? 'border-amber-500 bg-amber-50/40 ring-2 ring-amber-500/20'
                   : 'border-[#E3DDD0] bg-white hover:border-amber-300'
               }`}
             >
               <div className="flex items-center justify-between text-[#8A8175] mb-1">
-                <span className="text-[11px] font-bold uppercase tracking-wider">KYC Pending</span>
+                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">KYC Pending</span>
                 <AlertCircle className="h-4 w-4 text-amber-600" />
               </div>
-              <p className="text-2xl font-bold text-amber-700">{branchStats.pending}</p>
-              <p className="text-[10px] text-amber-600/70 mt-0.5">
+              <p className="text-xl sm:text-2xl font-bold text-amber-700">{branchStats.pending}</p>
+              <p className="text-[10px] text-amber-600/70 mt-0.5 truncate">
                 {selectedKycFilter === 'pending' ? '● Showing pending' : 'Click to filter pending'}
               </p>
             </button>
@@ -548,25 +548,25 @@ const BranchAdminStaffMonitoring = () => {
             <button
               type="button"
               onClick={() => setSelectedKycFilter('rejected')}
-              className={`text-left rounded-2xl border p-4 shadow-2xs transition-all cursor-pointer ba-rise ${
+              className={`text-left rounded-2xl border p-3.5 sm:p-4 shadow-2xs transition-all cursor-pointer ba-rise ${
                 selectedKycFilter === 'rejected'
                   ? 'border-rose-500 bg-rose-50/40 ring-2 ring-rose-500/20'
                   : 'border-[#E3DDD0] bg-white hover:border-rose-300'
               }`}
             >
               <div className="flex items-center justify-between text-[#8A8175] mb-1">
-                <span className="text-[11px] font-bold uppercase tracking-wider">KYC Rejected</span>
+                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">KYC Rejected</span>
                 <XCircle className="h-4 w-4 text-rose-600" />
               </div>
-              <p className="text-2xl font-bold text-rose-700">{branchStats.rejected}</p>
-              <p className="text-[10px] text-rose-600/70 mt-0.5">
+              <p className="text-xl sm:text-2xl font-bold text-rose-700">{branchStats.rejected}</p>
+              <p className="text-[10px] text-rose-600/70 mt-0.5 truncate">
                 {selectedKycFilter === 'rejected' ? '● Showing rejected' : 'Click to filter rejected'}
               </p>
             </button>
           </div>
 
           {/* Search & Actions Bar */}
-          <div className="rounded-2xl border border-[#E3DDD0] bg-white p-4 sm:p-5 shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+          <div className="rounded-2xl border border-[#E3DDD0] bg-white p-3.5 sm:p-5 shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
             <div className="relative flex-1 sm:max-w-md">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
               <input
@@ -593,7 +593,7 @@ const BranchAdminStaffMonitoring = () => {
 
           {/* Staff Table */}
           <div className="rounded-2xl border border-[#E3DDD0] bg-white shadow-2xs overflow-hidden">
-            <div className="flex items-center justify-between border-b border-[#E3DDD0] bg-[#FAF8F4]/80 px-6 py-4">
+            <div className="flex items-center justify-between border-b border-[#E3DDD0] bg-[#FAF8F4]/80 px-4 sm:px-6 py-3.5 sm:py-4">
               <div>
                 <h2 className="text-sm font-bold text-[#17140F]">Branch Staff Monitoring</h2>
                 <p className="text-[11px] text-[#8A8175]">
@@ -795,29 +795,29 @@ const BranchAdminStaffMonitoring = () => {
       {selectedStaffDetail &&
         createPortal(
           <div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-slate-900/60 backdrop-blur-sm ba-fade"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-6 bg-slate-900/60 backdrop-blur-sm ba-fade overflow-y-auto"
             onClick={() => setSelectedStaffDetail(null)}
           >
             <div
-              className="relative w-full max-w-4xl bg-white rounded-3xl border border-[#E3DDD0] shadow-2xl flex flex-col max-h-[92vh] overflow-hidden ba-rise"
+              className="relative w-full max-w-4xl bg-white rounded-2xl sm:rounded-3xl border border-[#E3DDD0] shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[90vh] overflow-hidden ba-rise my-auto"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}
-              <div className="flex items-start justify-between p-6 pb-4 border-b border-[#E3DDD0] bg-white shrink-0">
-                <div className="flex items-center gap-3.5">
-                  <div className="h-12 w-12 rounded-2xl bg-[#F1EDE4] text-[#9C6B2E] border border-[#E3DDD0] flex items-center justify-center font-bold text-base shrink-0">
+              <div className="flex items-start justify-between p-4 sm:p-6 pb-3 sm:pb-4 border-b border-[#E3DDD0] bg-white shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-[#F1EDE4] text-[#9C6B2E] border border-[#E3DDD0] flex items-center justify-center font-bold text-sm sm:text-base shrink-0">
                     {(selectedStaffDetail.name || selectedStaffDetail.staff_name || 'S').charAt(0).toUpperCase()}
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-base font-bold text-[#17140F]">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-sm sm:text-base font-bold text-[#17140F] truncate">
                         {selectedStaffDetail.name || selectedStaffDetail.staff_name || 'Staff Member'}
                       </h3>
                       <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
                         {selectedStaffDetail.staff_code || (selectedStaffDetail.id ? `STF-${selectedStaffDetail.id}` : 'Staff')}
                       </span>
                     </div>
-                    <p className="text-xs text-[#8A8175] mt-1 flex items-center gap-1.5 flex-wrap">
+                    <p className="text-xs text-[#8A8175] mt-0.5 sm:mt-1 flex items-center gap-1.5 flex-wrap">
                       <span>{selectedStaffDetail.designation || 'Faculty Instructor'}</span>
                       <span>•</span>
                       <span className="font-semibold text-slate-800 flex items-center gap-1">
@@ -836,309 +836,482 @@ const BranchAdminStaffMonitoring = () => {
                 <button
                   type="button"
                   onClick={() => setSelectedStaffDetail(null)}
-                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-[#F1EDE4] transition cursor-pointer"
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-[#F1EDE4] transition cursor-pointer shrink-0"
                   aria-label="Close"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
 
-              {/* Staff Information Overview: Structural Table Format */}
-              <div className="px-6 pt-4 pb-3 bg-white shrink-0">
-                <div className="rounded-2xl border border-[#E3DDD0] bg-white overflow-hidden shadow-xs">
-                  <div className="overflow-x-auto custom-staff-scrollbar">
-                    <table className="w-full text-left border-collapse min-w-[680px]">
-                      <tbody>
-                        {/* Row 1: Full Name & Staff ID */}
-                        <tr className="border-b border-[#E3DDD0]">
-                          <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
-                            Full Name
-                          </th>
-                          <td className="w-[32%] bg-white text-xs font-bold text-slate-900 px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
-                            {selectedStaffDetail.name || selectedStaffDetail.staff_name || '—'}
-                          </td>
-                          <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
-                            Staff ID / Code
-                          </th>
-                          <td className="w-[32%] bg-white text-xs font-mono font-semibold text-slate-800 px-3.5 py-2.5 align-middle">
-                            <span className="inline-block bg-[#FAF8F4] px-2 py-0.5 rounded border border-[#E3DDD0]/80">
-                              {selectedStaffDetail.staff_code || (selectedStaffDetail.id ? `STF-${selectedStaffDetail.id}` : '—')}
-                            </span>
-                          </td>
-                        </tr>
-
-                        {/* Row 2: Account Status & KYC Status */}
-                        <tr className="border-b border-[#E3DDD0]">
-                          <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
-                            Account Status
-                          </th>
-                          <td className="w-[32%] bg-white text-xs font-semibold px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
-                            <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-lg border capitalize ${
-                              String(selectedStaffDetail.status).toLowerCase() === 'active'
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                : 'bg-slate-100 text-slate-700 border-slate-200'
-                            }`}>
-                              <span className={`h-1.5 w-1.5 rounded-full ${
-                                String(selectedStaffDetail.status).toLowerCase() === 'active' ? 'bg-emerald-500' : 'bg-slate-400'
-                              }`} />
-                              {selectedStaffDetail.status || 'Active'}
-                            </span>
-                          </td>
-                          <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
-                            KYC Verification
-                          </th>
-                          <td className="w-[32%] bg-white text-xs font-semibold px-3.5 py-2.5 align-middle">
-                            <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-lg border ${
-                              modalKycStatus === 'approved'
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                : modalKycStatus === 'rejected'
-                                ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                : 'bg-amber-50 text-amber-700 border-amber-200'
-                            }`}>
-                              {modalKycStatus === 'approved' && <CheckCircle className="h-3 w-3" />}
-                              {modalKycStatus === 'rejected' && <XCircle className="h-3 w-3" />}
-                              {modalKycStatus === 'pending' && <AlertCircle className="h-3 w-3" />}
-                              <span className="capitalize">{modalKycStatus}</span>
-                            </span>
-                          </td>
-                        </tr>
-
-                        {/* Row 3: Salary & Date Joined */}
-                        <tr className="border-b border-[#E3DDD0]">
-                          <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
-                            Monthly Salary
-                          </th>
-                          <td className="w-[32%] bg-white text-xs font-semibold px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
-                            <div className="flex items-center gap-2">
-                              <span className="inline-flex items-center gap-1 font-bold text-xs text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200 font-mono">
-                                <IndianRupee className="h-3.5 w-3.5 text-emerald-600" />
-                                {formatSalary(selectedStaffDetail.salary ?? selectedStaffDetail.monthly_salary ?? selectedStaffDetail.basic_salary).replace('₹', '')}
+              {/* Scrollable Container containing Staff Info, Sticky Tabs Bar, and Tab Content */}
+              <div className="overflow-y-auto flex-1 min-h-0 custom-staff-scrollbar bg-white flex flex-col">
+                {/* Staff Information Overview */}
+                <div className="p-3 sm:px-6 sm:pt-4 sm:pb-3 bg-white shrink-0">
+                  {/* Desktop / Tablet view: 4-column Structural Table */}
+                  <div className="hidden sm:block rounded-2xl border border-[#E3DDD0] bg-white overflow-hidden shadow-xs">
+                    <div className="overflow-x-auto custom-staff-scrollbar">
+                      <table className="w-full text-left border-collapse min-w-[680px]">
+                        <tbody>
+                          {/* Row 1: Full Name & Staff ID */}
+                          <tr className="border-b border-[#E3DDD0]">
+                            <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
+                              Full Name
+                            </th>
+                            <td className="w-[32%] bg-white text-xs font-bold text-slate-900 px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
+                              {selectedStaffDetail.name || selectedStaffDetail.staff_name || '—'}
+                            </td>
+                            <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
+                              Staff ID / Code
+                            </th>
+                            <td className="w-[32%] bg-white text-xs font-mono font-semibold text-slate-800 px-3.5 py-2.5 align-middle">
+                              <span className="inline-block bg-[#FAF8F4] px-2 py-0.5 rounded border border-[#E3DDD0]/80">
+                                {selectedStaffDetail.staff_code || (selectedStaffDetail.id ? `STF-${selectedStaffDetail.id}` : '—')}
                               </span>
-                              <span className="text-[10px] text-slate-400 font-medium">/ month</span>
-                            </div>
-                          </td>
-                          <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
-                            Date Joined
-                          </th>
-                          <td className="w-[32%] bg-white text-xs font-semibold text-slate-800 px-3.5 py-2.5 align-middle">
-                            {formatDate(selectedStaffDetail.created_at)}
-                          </td>
-                        </tr>
+                            </td>
+                          </tr>
 
-                        {/* Row 4: Email Address & Phone Number */}
-                        <tr className="border-b border-[#E3DDD0]">
-                          <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
-                            Email Address
-                          </th>
-                          <td className="w-[32%] bg-white text-xs font-semibold text-slate-800 px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle break-all">
-                            {selectedStaffDetail.email || '—'}
-                          </td>
-                          <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
-                            Phone Number
-                          </th>
-                          <td className="w-[32%] bg-white text-xs font-semibold text-slate-800 px-3.5 py-2.5 align-middle">
-                            {selectedStaffDetail.phone || '—'}
-                          </td>
-                        </tr>
+                          {/* Row 2: Account Status & KYC Status */}
+                          <tr className="border-b border-[#E3DDD0]">
+                            <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
+                              Account Status
+                            </th>
+                            <td className="w-[32%] bg-white text-xs font-semibold px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
+                              <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-lg border capitalize ${
+                                String(selectedStaffDetail.status).toLowerCase() === 'active'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : 'bg-slate-100 text-slate-700 border-slate-200'
+                              }`}>
+                                <span className={`h-1.5 w-1.5 rounded-full ${
+                                  String(selectedStaffDetail.status).toLowerCase() === 'active' ? 'bg-emerald-500' : 'bg-slate-400'
+                                }`} />
+                                {selectedStaffDetail.status || 'Active'}
+                              </span>
+                            </td>
+                            <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
+                              KYC Verification
+                            </th>
+                            <td className="w-[32%] bg-white text-xs font-semibold px-3.5 py-2.5 align-middle">
+                              <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-lg border ${
+                                modalKycStatus === 'approved'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : modalKycStatus === 'rejected'
+                                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                              }`}>
+                                {modalKycStatus === 'approved' && <CheckCircle className="h-3 w-3" />}
+                                {modalKycStatus === 'rejected' && <XCircle className="h-3 w-3" />}
+                                {modalKycStatus === 'pending' && <AlertCircle className="h-3 w-3" />}
+                                <span className="capitalize">{modalKycStatus}</span>
+                              </span>
+                            </td>
+                          </tr>
 
-                        {/* Row 5: Branch Name & Branch Location */}
-                        <tr className="border-b border-[#E3DDD0]">
-                          <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
-                            Branch Name
-                          </th>
-                          <td className="w-[32%] bg-white text-xs font-bold text-slate-900 px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle leading-snug">
-                            {getStaffBranchName(selectedStaffDetail)}
-                          </td>
-                          <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
-                            Branch Location
-                          </th>
-                          <td className="w-[32%] bg-white text-xs font-semibold text-slate-800 px-3.5 py-2.5 align-middle">
+                          {/* Row 3: Salary & Date Joined */}
+                          <tr className="border-b border-[#E3DDD0]">
+                            <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
+                              Monthly Salary
+                            </th>
+                            <td className="w-[32%] bg-white text-xs font-semibold px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
+                              <div className="flex items-center gap-2">
+                                <span className="inline-flex items-center gap-1 font-bold text-xs text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200 font-mono">
+                                  <IndianRupee className="h-3.5 w-3.5 text-emerald-600" />
+                                  {formatSalary(selectedStaffDetail.salary ?? selectedStaffDetail.monthly_salary ?? selectedStaffDetail.basic_salary).replace('₹', '')}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-medium">/ month</span>
+                              </div>
+                            </td>
+                            <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
+                              Date Joined
+                            </th>
+                            <td className="w-[32%] bg-white text-xs font-semibold text-slate-800 px-3.5 py-2.5 align-middle">
+                              {formatDate(selectedStaffDetail.created_at)}
+                            </td>
+                          </tr>
+
+                          {/* Row 4: Email Address & Phone Number */}
+                          <tr className="border-b border-[#E3DDD0]">
+                            <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
+                              Email Address
+                            </th>
+                            <td className="w-[32%] bg-white text-xs font-semibold text-slate-800 px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle break-all">
+                              {selectedStaffDetail.email || '—'}
+                            </td>
+                            <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
+                              Phone Number
+                            </th>
+                            <td className="w-[32%] bg-white text-xs font-semibold text-slate-800 px-3.5 py-2.5 align-middle">
+                              {selectedStaffDetail.phone || '—'}
+                            </td>
+                          </tr>
+
+                          {/* Row 5: Branch Name & Branch Location */}
+                          <tr className="border-b border-[#E3DDD0]">
+                            <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
+                              Branch Name
+                            </th>
+                            <td className="w-[32%] bg-white text-xs font-bold text-slate-900 px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle leading-snug">
+                              {getStaffBranchName(selectedStaffDetail)}
+                            </td>
+                            <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
+                              Branch Location
+                            </th>
+                            <td className="w-[32%] bg-white text-xs font-semibold text-slate-800 px-3.5 py-2.5 align-middle">
+                              {getStaffBranchLocation(selectedStaffDetail)}
+                            </td>
+                          </tr>
+
+                          {/* Row 6: Aadhaar Number & PAN Card */}
+                          <tr className="border-b border-[#E3DDD0]">
+                            <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
+                              Aadhaar Number
+                            </th>
+                            <td className="w-[32%] bg-white text-xs font-semibold px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-mono text-slate-900">
+                                  {formatAadhaar(selectedStaffDetail.aadhaar_number || selectedStaffDetail.documents?.aadhaar_number)}
+                                </span>
+                                {(selectedStaffDetail.aadhaar_number || selectedStaffDetail.documents?.aadhaar_number) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopy(selectedStaffDetail.aadhaar_number || selectedStaffDetail.documents?.aadhaar_number, 'tbl_aadhaar')}
+                                    className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition cursor-pointer"
+                                    title="Copy Aadhaar Number"
+                                  >
+                                    {copiedField === 'tbl_aadhaar' ? (
+                                      <Check className="h-3.5 w-3.5 text-emerald-600" />
+                                    ) : (
+                                      <Copy className="h-3.5 w-3.5" />
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                            <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
+                              PAN Card
+                            </th>
+                            <td className="w-[32%] bg-white text-xs font-semibold px-3.5 py-2.5 align-middle">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-mono text-slate-900 uppercase">
+                                  {selectedStaffDetail.pan_number || selectedStaffDetail.documents?.pan_number || '—'}
+                                </span>
+                                {(selectedStaffDetail.pan_number || selectedStaffDetail.documents?.pan_number) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopy(selectedStaffDetail.pan_number || selectedStaffDetail.documents?.pan_number, 'tbl_pan')}
+                                    className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition cursor-pointer"
+                                    title="Copy PAN Number"
+                                  >
+                                    {copiedField === 'tbl_pan' ? (
+                                      <Check className="h-3.5 w-3.5 text-emerald-600" />
+                                    ) : (
+                                      <Copy className="h-3.5 w-3.5" />
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+
+                          {/* Row 7: Bank Account & Bank IFSC */}
+                          <tr>
+                            <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
+                              Bank Account
+                            </th>
+                            <td className="w-[32%] bg-white text-xs font-semibold px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-mono text-slate-900 truncate" title={selectedStaffDetail.bank_account_number || selectedStaffDetail.documents?.bank_account_number}>
+                                  {selectedStaffDetail.bank_account_number || selectedStaffDetail.documents?.bank_account_number || '—'}
+                                </span>
+                                {(selectedStaffDetail.bank_account_number || selectedStaffDetail.documents?.bank_account_number) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopy(selectedStaffDetail.bank_account_number || selectedStaffDetail.documents?.bank_account_number, 'tbl_bank')}
+                                    className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition cursor-pointer"
+                                    title="Copy Bank Account Number"
+                                  >
+                                    {copiedField === 'tbl_bank' ? (
+                                      <Check className="h-3.5 w-3.5 text-emerald-600" />
+                                    ) : (
+                                      <Copy className="h-3.5 w-3.5" />
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                            <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
+                              Bank IFSC
+                            </th>
+                            <td className="w-[32%] bg-white text-xs font-semibold px-3.5 py-2.5 align-middle">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-mono text-slate-900 uppercase">
+                                  {selectedStaffDetail.bank_ifsc || selectedStaffDetail.documents?.bank_ifsc || '—'}
+                                </span>
+                                {(selectedStaffDetail.bank_ifsc || selectedStaffDetail.documents?.bank_ifsc) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopy(selectedStaffDetail.bank_ifsc || selectedStaffDetail.documents?.bank_ifsc, 'tbl_ifsc')}
+                                    className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition cursor-pointer"
+                                    title="Copy Bank IFSC"
+                                  >
+                                    {copiedField === 'tbl_ifsc' ? (
+                                      <Check className="h-3.5 w-3.5 text-emerald-600" />
+                                    ) : (
+                                      <Copy className="h-3.5 w-3.5" />
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Mobile view: Clean stacked responsive card list that fits 375px screens without horizontal scroll */}
+                  <div className="sm:hidden rounded-2xl border border-[#E3DDD0] bg-[#FAF8F4]/50 p-3 space-y-2.5 text-xs shadow-xs">
+                    {/* Status & KYC Row */}
+                    <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#E3DDD0]">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A8175]">Status:</span>
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border capitalize ${
+                          String(selectedStaffDetail.status).toLowerCase() === 'active'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-slate-100 text-slate-700 border-slate-200'
+                        }`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${
+                            String(selectedStaffDetail.status).toLowerCase() === 'active' ? 'bg-emerald-500' : 'bg-slate-400'
+                          }`} />
+                          {selectedStaffDetail.status || 'Active'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A8175]">KYC:</span>
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border capitalize ${
+                          modalKycStatus === 'approved'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : modalKycStatus === 'rejected'
+                            ? 'bg-rose-50 text-rose-700 border-rose-200'
+                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}>
+                          {modalKycStatus === 'approved' && <CheckCircle className="h-3 w-3" />}
+                          {modalKycStatus === 'rejected' && <XCircle className="h-3 w-3" />}
+                          {modalKycStatus === 'pending' && <AlertCircle className="h-3 w-3" />}
+                          <span>{modalKycStatus}</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Salary & Joined */}
+                    <div className="grid grid-cols-2 gap-2 pb-2 border-b border-[#E3DDD0]">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A8175] block">Salary</span>
+                        <span className="inline-flex items-center gap-0.5 font-bold text-xs text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-mono mt-0.5">
+                          <IndianRupee className="h-3 w-3 text-emerald-600" />
+                          {formatSalary(selectedStaffDetail.salary ?? selectedStaffDetail.monthly_salary ?? selectedStaffDetail.basic_salary).replace('₹', '')}
+                          <span className="text-[9px] text-slate-400 font-normal">/mo</span>
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A8175] block">Joined</span>
+                        <span className="font-semibold text-slate-800 text-[11px] mt-0.5 block">
+                          {formatDate(selectedStaffDetail.created_at)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Email & Phone */}
+                    <div className="space-y-1.5 pb-2 border-b border-[#E3DDD0]">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A8175]">Email</span>
+                        <span className="font-semibold text-slate-800 text-[11px] truncate max-w-[190px]">
+                          {selectedStaffDetail.email || '—'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A8175]">Phone</span>
+                        <span className="font-semibold text-slate-800 text-[11px]">
+                          {selectedStaffDetail.phone || '—'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Branch Info */}
+                    <div className="space-y-1 pb-2 border-b border-[#E3DDD0]">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A8175]">Branch</span>
+                        <span className="font-bold text-slate-900 text-[11px] truncate max-w-[190px]">
+                          {getStaffBranchName(selectedStaffDetail)}
+                        </span>
+                      </div>
+                      {getStaffBranchLocation(selectedStaffDetail) && getStaffBranchLocation(selectedStaffDetail) !== '—' && (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A8175]">Location</span>
+                          <span className="text-slate-600 text-[11px]">
                             {getStaffBranchLocation(selectedStaffDetail)}
-                          </td>
-                        </tr>
+                          </span>
+                        </div>
+                      )}
+                    </div>
 
-                        {/* Row 6: Aadhaar Number & PAN Card */}
-                        <tr className="border-b border-[#E3DDD0]">
-                          <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
-                            Aadhaar Number
-                          </th>
-                          <td className="w-[32%] bg-white text-xs font-semibold px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="font-mono text-slate-900">
-                                {formatAadhaar(selectedStaffDetail.aadhaar_number || selectedStaffDetail.documents?.aadhaar_number)}
-                              </span>
-                              {(selectedStaffDetail.aadhaar_number || selectedStaffDetail.documents?.aadhaar_number) && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleCopy(selectedStaffDetail.aadhaar_number || selectedStaffDetail.documents?.aadhaar_number, 'tbl_aadhaar')}
-                                  className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition cursor-pointer"
-                                  title="Copy Aadhaar Number"
-                                >
-                                  {copiedField === 'tbl_aadhaar' ? (
-                                    <Check className="h-3.5 w-3.5 text-emerald-600" />
-                                  ) : (
-                                    <Copy className="h-3.5 w-3.5" />
-                                  )}
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                          <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
-                            PAN Card
-                          </th>
-                          <td className="w-[32%] bg-white text-xs font-semibold px-3.5 py-2.5 align-middle">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="font-mono text-slate-900 uppercase">
-                                {selectedStaffDetail.pan_number || selectedStaffDetail.documents?.pan_number || '—'}
-                              </span>
-                              {(selectedStaffDetail.pan_number || selectedStaffDetail.documents?.pan_number) && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleCopy(selectedStaffDetail.pan_number || selectedStaffDetail.documents?.pan_number, 'tbl_pan')}
-                                  className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition cursor-pointer"
-                                  title="Copy PAN Number"
-                                >
-                                  {copiedField === 'tbl_pan' ? (
-                                    <Check className="h-3.5 w-3.5 text-emerald-600" />
-                                  ) : (
-                                    <Copy className="h-3.5 w-3.5" />
-                                  )}
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
+                    {/* Identity & Banking IDs with Copy */}
+                    <div className="space-y-1.5 pt-0.5">
+                      {/* Aadhaar */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A8175]">Aadhaar</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono font-semibold text-slate-900 text-[11px]">
+                            {formatAadhaar(selectedStaffDetail.aadhaar_number || selectedStaffDetail.documents?.aadhaar_number)}
+                          </span>
+                          {(selectedStaffDetail.aadhaar_number || selectedStaffDetail.documents?.aadhaar_number) && (
+                            <button
+                              type="button"
+                              onClick={() => handleCopy(selectedStaffDetail.aadhaar_number || selectedStaffDetail.documents?.aadhaar_number, 'tbl_aadhaar')}
+                              className="p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-700"
+                              title="Copy Aadhaar"
+                            >
+                              {copiedField === 'tbl_aadhaar' ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                            </button>
+                          )}
+                        </div>
+                      </div>
 
-                        {/* Row 7: Bank Account & Bank IFSC */}
-                        <tr>
-                          <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
-                            Bank Account
-                          </th>
-                          <td className="w-[32%] bg-white text-xs font-semibold px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="font-mono text-slate-900 truncate" title={selectedStaffDetail.bank_account_number || selectedStaffDetail.documents?.bank_account_number}>
-                                {selectedStaffDetail.bank_account_number || selectedStaffDetail.documents?.bank_account_number || '—'}
-                              </span>
-                              {(selectedStaffDetail.bank_account_number || selectedStaffDetail.documents?.bank_account_number) && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleCopy(selectedStaffDetail.bank_account_number || selectedStaffDetail.documents?.bank_account_number, 'tbl_bank')}
-                                  className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition cursor-pointer"
-                                  title="Copy Bank Account Number"
-                                >
-                                  {copiedField === 'tbl_bank' ? (
-                                    <Check className="h-3.5 w-3.5 text-emerald-600" />
-                                  ) : (
-                                    <Copy className="h-3.5 w-3.5" />
-                                  )}
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                          <th className="w-[18%] bg-[#FAF8F4] text-[#8A8175] text-[10px] font-bold uppercase tracking-wider px-3.5 py-2.5 border-r border-[#E3DDD0] align-middle">
-                            Bank IFSC
-                          </th>
-                          <td className="w-[32%] bg-white text-xs font-semibold px-3.5 py-2.5 align-middle">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="font-mono text-slate-900 uppercase">
-                                {selectedStaffDetail.bank_ifsc || selectedStaffDetail.documents?.bank_ifsc || '—'}
-                              </span>
-                              {(selectedStaffDetail.bank_ifsc || selectedStaffDetail.documents?.bank_ifsc) && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleCopy(selectedStaffDetail.bank_ifsc || selectedStaffDetail.documents?.bank_ifsc, 'tbl_ifsc')}
-                                  className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition cursor-pointer"
-                                  title="Copy Bank IFSC"
-                                >
-                                  {copiedField === 'tbl_ifsc' ? (
-                                    <Check className="h-3.5 w-3.5 text-emerald-600" />
-                                  ) : (
-                                    <Copy className="h-3.5 w-3.5" />
-                                  )}
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
+                      {/* PAN */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A8175]">PAN</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono font-semibold text-slate-900 text-[11px] uppercase">
+                            {selectedStaffDetail.pan_number || selectedStaffDetail.documents?.pan_number || '—'}
+                          </span>
+                          {(selectedStaffDetail.pan_number || selectedStaffDetail.documents?.pan_number) && (
+                            <button
+                              type="button"
+                              onClick={() => handleCopy(selectedStaffDetail.pan_number || selectedStaffDetail.documents?.pan_number, 'tbl_pan')}
+                              className="p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-700"
+                              title="Copy PAN"
+                            >
+                              {copiedField === 'tbl_pan' ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Bank Account */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A8175]">Account</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono font-semibold text-slate-900 text-[11px] truncate max-w-[130px]">
+                            {selectedStaffDetail.bank_account_number || selectedStaffDetail.documents?.bank_account_number || '—'}
+                          </span>
+                          {(selectedStaffDetail.bank_account_number || selectedStaffDetail.documents?.bank_account_number) && (
+                            <button
+                              type="button"
+                              onClick={() => handleCopy(selectedStaffDetail.bank_account_number || selectedStaffDetail.documents?.bank_account_number, 'tbl_bank')}
+                              className="p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-700"
+                              title="Copy Account"
+                            >
+                              {copiedField === 'tbl_bank' ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Bank IFSC */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A8175]">IFSC</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono font-semibold text-slate-900 text-[11px] uppercase">
+                            {selectedStaffDetail.bank_ifsc || selectedStaffDetail.documents?.bank_ifsc || '—'}
+                          </span>
+                          {(selectedStaffDetail.bank_ifsc || selectedStaffDetail.documents?.bank_ifsc) && (
+                            <button
+                              type="button"
+                              onClick={() => handleCopy(selectedStaffDetail.bank_ifsc || selectedStaffDetail.documents?.bank_ifsc, 'tbl_ifsc')}
+                              className="p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-700"
+                              title="Copy IFSC"
+                            >
+                              {copiedField === 'tbl_ifsc' ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Modal Tabs Bar */}
-              <div className="flex items-center gap-1 border-b border-[#E3DDD0] px-6 pt-2 bg-[#FAF8F4]/50 shrink-0 overflow-x-auto">
-                {/* 1. KYC & Documents Tab */}
-                <button
-                  type="button"
-                  onClick={() => setModalActiveTab('documents')}
-                  className={`pb-3 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-                    modalActiveTab === 'documents'
-                      ? 'border-[#9C6B2E] text-[#9C6B2E]'
-                      : 'border-transparent text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  <span>KYC & Documents</span>
-                  <span className="ml-1 rounded-full px-2 py-0.2 text-[10px] bg-[#F1EDE4] text-[#9C6B2E]">
-                    {modalDocuments.length}
-                  </span>
-                </button>
+                {/* Modal Tabs Bar - Sticky */}
+                <div className="sticky top-0 z-10 bg-[#FAF8F4]/95 backdrop-blur-md border-y border-[#E3DDD0] px-3 sm:px-6 pt-2 pb-0 shrink-0 flex items-center gap-1 overflow-x-auto shadow-xs">
+                  {/* 1. KYC & Documents Tab */}
+                  <button
+                    type="button"
+                    onClick={() => setModalActiveTab('documents')}
+                    className={`pb-2.5 sm:pb-3 px-2.5 sm:px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                      modalActiveTab === 'documents'
+                        ? 'border-[#9C6B2E] text-[#9C6B2E]'
+                        : 'border-transparent text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    <span>KYC & Documents</span>
+                    <span className="ml-1 rounded-full px-2 py-0.2 text-[10px] bg-[#F1EDE4] text-[#9C6B2E]">
+                      {modalDocuments.length}
+                    </span>
+                  </button>
 
-                {/* 2. Assigned Courses Tab */}
-                <button
-                  type="button"
-                  onClick={() => setModalActiveTab('courses')}
-                  className={`pb-3 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-                    modalActiveTab === 'courses'
-                      ? 'border-[#9C6B2E] text-[#9C6B2E]'
-                      : 'border-transparent text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  <BookOpen className="h-3.5 w-3.5" />
-                  <span>Assigned Courses</span>
-                  <span className="ml-1 rounded-full px-2 py-0.2 text-[10px] bg-[#F1EDE4] text-[#9C6B2E]">
-                    {modalCourses.length}
-                  </span>
-                </button>
+                  {/* 2. Assigned Courses Tab */}
+                  <button
+                    type="button"
+                    onClick={() => setModalActiveTab('courses')}
+                    className={`pb-2.5 sm:pb-3 px-2.5 sm:px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                      modalActiveTab === 'courses'
+                        ? 'border-[#9C6B2E] text-[#9C6B2E]'
+                        : 'border-transparent text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    <BookOpen className="h-3.5 w-3.5" />
+                    <span>Assigned Courses</span>
+                    <span className="ml-1 rounded-full px-2 py-0.2 text-[10px] bg-[#F1EDE4] text-[#9C6B2E]">
+                      {modalCourses.length}
+                    </span>
+                  </button>
 
-                {/* 3. Assignments Tab */}
-                <button
-                  type="button"
-                  onClick={() => setModalActiveTab('assignments')}
-                  className={`pb-3 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-                    modalActiveTab === 'assignments'
-                      ? 'border-[#9C6B2E] text-[#9C6B2E]'
-                      : 'border-transparent text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  <FileText className="h-3.5 w-3.5" />
-                  <span>Assignments</span>
-                  <span className="ml-1 rounded-full px-2 py-0.2 text-[10px] bg-[#F1EDE4] text-[#9C6B2E]">
-                    {modalAssignments.length}
-                  </span>
-                </button>
+                  {/* 3. Assignments Tab */}
+                  <button
+                    type="button"
+                    onClick={() => setModalActiveTab('assignments')}
+                    className={`pb-2.5 sm:pb-3 px-2.5 sm:px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                      modalActiveTab === 'assignments'
+                        ? 'border-[#9C6B2E] text-[#9C6B2E]'
+                        : 'border-transparent text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    <span>Assignments</span>
+                    <span className="ml-1 rounded-full px-2 py-0.2 text-[10px] bg-[#F1EDE4] text-[#9C6B2E]">
+                      {modalAssignments.length}
+                    </span>
+                  </button>
 
-                {/* 4. Announcements Tab */}
-                <button
-                  type="button"
-                  onClick={() => setModalActiveTab('announcements')}
-                  className={`pb-3 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-                    modalActiveTab === 'announcements'
-                      ? 'border-[#9C6B2E] text-[#9C6B2E]'
-                      : 'border-transparent text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  <Megaphone className="h-3.5 w-3.5" />
-                  <span>Announcements</span>
-                  <span className="ml-1 rounded-full px-2 py-0.2 text-[10px] bg-[#F1EDE4] text-[#9C6B2E]">
-                    {modalAnnouncements.length}
-                  </span>
-                </button>
-              </div>
+                  {/* 4. Announcements Tab */}
+                  <button
+                    type="button"
+                    onClick={() => setModalActiveTab('announcements')}
+                    className={`pb-2.5 sm:pb-3 px-2.5 sm:px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                      modalActiveTab === 'announcements'
+                        ? 'border-[#9C6B2E] text-[#9C6B2E]'
+                        : 'border-transparent text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    <Megaphone className="h-3.5 w-3.5" />
+                    <span>Announcements</span>
+                    <span className="ml-1 rounded-full px-2 py-0.2 text-[10px] bg-[#F1EDE4] text-[#9C6B2E]">
+                      {modalAnnouncements.length}
+                    </span>
+                  </button>
+                </div>
 
-              {/* Modal Body: Scrollable Content */}
-              <div className="p-6 overflow-y-auto flex-1 min-h-[260px] max-h-[50vh] space-y-4 custom-staff-scrollbar bg-white">
+                {/* Modal Body: Content flowing naturally in the scrollable container */}
+                <div className="p-3 sm:p-6 space-y-4 bg-white flex-1">
                 {/* TAB: KYC & Documents */}
                 {modalActiveTab === 'documents' && (
                   <div className="space-y-5">
@@ -1304,7 +1477,7 @@ const BranchAdminStaffMonitoring = () => {
                           {modalDocuments.map((doc) => (
                             <div
                               key={doc.key}
-                              className="rounded-2xl border border-[#E3DDD0] bg-[#FAF8F4] p-3.5 flex items-center justify-between gap-3 hover:border-[#c9bea9] transition shadow-xs"
+                              className="rounded-2xl border border-[#E3DDD0] bg-[#FAF8F4] p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#c9bea9] transition shadow-xs"
                             >
                               <div className="min-w-0 flex items-center gap-3">
                                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-[#E3DDD0] text-[#9C6B2E] shrink-0">
@@ -1318,11 +1491,11 @@ const BranchAdminStaffMonitoring = () => {
                                 </div>
                               </div>
 
-                              <div className="flex items-center gap-1.5 shrink-0">
+                              <div className="flex items-center gap-1.5 shrink-0 justify-end w-full sm:w-auto">
                                 <button
                                   type="button"
                                   onClick={() => setPreviewDoc(doc)}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-white border border-[#E3DDD0] hover:bg-[#F1EDE4] transition cursor-pointer"
+                                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-white border border-[#E3DDD0] hover:bg-[#F1EDE4] transition cursor-pointer"
                                   title="Preview document"
                                 >
                                   <Eye className="w-3.5 h-3.5 text-[#9C6B2E]" />
@@ -1332,7 +1505,7 @@ const BranchAdminStaffMonitoring = () => {
                                   href={doc.url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-[#17140f] bg-white border border-[#E3DDD0] hover:bg-[#F1EDE4] transition"
+                                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-[#17140f] bg-white border border-[#E3DDD0] hover:bg-[#F1EDE4] transition"
                                   title="Open in new tab"
                                 >
                                   <span>Open</span>
@@ -1541,36 +1714,37 @@ const BranchAdminStaffMonitoring = () => {
                   </div>
                 )}
               </div>
+            </div>
 
-              {/* KYC & Verification Actions Footer */}
-              <div className="flex items-center justify-between border-t border-[#E3DDD0] px-6 py-4 bg-[#FAF8F4]/80 shrink-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-semibold text-slate-500">
-                    Verification Status:
-                  </span>
-                  <span className={`text-[11px] font-bold uppercase tracking-wider ${
-                    modalKycStatus === 'approved' ? 'text-emerald-700' : modalKycStatus === 'rejected' ? 'text-rose-700' : 'text-amber-700'
-                  }`}>
-                    {modalKycStatus}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedStaffDetail(null)}
-                    className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-[#F1EDE4] transition border border-[#E3DDD0] cursor-pointer"
-                  >
-                    Close
-                  </button>
-                  <Link
-                    to="/branch-admin/staff-verification"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-[#9C6B2E] text-white hover:bg-[#855923] transition shadow-xs"
-                  >
-                    <ShieldCheck className="h-3.5 w-3.5" />
-                    <span>Verify Documents</span>
-                  </Link>
-                </div>
+            {/* KYC & Verification Actions Footer */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-[#E3DDD0] px-4 sm:px-6 py-3.5 bg-[#FAF8F4]/90 shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-semibold text-slate-500">
+                  Verification Status:
+                </span>
+                <span className={`text-[11px] font-bold uppercase tracking-wider ${
+                  modalKycStatus === 'approved' ? 'text-emerald-700' : modalKycStatus === 'rejected' ? 'text-rose-700' : 'text-amber-700'
+                }`}>
+                  {modalKycStatus}
+                </span>
               </div>
+              <div className="flex items-center gap-2 sm:gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSelectedStaffDetail(null)}
+                  className="flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-[#F1EDE4] transition border border-[#E3DDD0] cursor-pointer text-center"
+                >
+                  Close
+                </button>
+                <Link
+                  to="/branch-admin/staff-verification"
+                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-[#9C6B2E] text-white hover:bg-[#855923] transition shadow-xs text-center"
+                >
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  <span>Verify Documents</span>
+                </Link>
+              </div>
+            </div>
             </div>
           </div>,
           document.body

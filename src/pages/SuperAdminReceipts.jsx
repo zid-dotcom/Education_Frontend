@@ -33,6 +33,7 @@ import {
   getSuperAdminReceiptsApi,
 } from "../services/superadminreceipts";
 import { getBranchesApi } from "../services/adminbranches";
+import { getDefaultFromDate, getDefaultToDate } from "../utils/dateFilters";
 import OfficialReceiptVoucherCard from "../components/common/OfficialReceiptVoucherCard";
 
 const useDisplayFonts = () => {
@@ -768,10 +769,13 @@ export default function SuperAdminReceipts() {
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMethod, setSelectedMethod] = useState("all");
-  const [fromDateInput, setFromDateInput] = useState("");
-  const [toDateInput, setToDateInput] = useState("");
-  const [appliedDates, setAppliedDates] = useState({ from: "", to: "" });
-  const [activePreset, setActivePreset] = useState("all");
+  const [fromDateInput, setFromDateInput] = useState(getDefaultFromDate);
+  const [toDateInput, setToDateInput] = useState(getDefaultToDate);
+  const [appliedDates, setAppliedDates] = useState(() => ({
+    from: getDefaultFromDate(),
+    to: getDefaultToDate(),
+  }));
+  const [activePreset, setActivePreset] = useState("month");
   const [dateError, setDateError] = useState("");
 
   // Modal & Download
@@ -895,11 +899,11 @@ export default function SuperAdminReceipts() {
       setToDateInput(todayStr);
       setAppliedDates({ from: weekAgo, to: todayStr });
     } else if (presetId === "month") {
-      const now = new Date();
-      const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-      setFromDateInput(monthStart);
-      setToDateInput(todayStr);
-      setAppliedDates({ from: monthStart, to: todayStr });
+      const from = getDefaultFromDate();
+      const to = getDefaultToDate();
+      setFromDateInput(from);
+      setToDateInput(to);
+      setAppliedDates({ from, to });
     }
   };
 
@@ -918,10 +922,12 @@ export default function SuperAdminReceipts() {
   };
 
   const handleClearDates = () => {
-    setFromDateInput("");
-    setToDateInput("");
-    setAppliedDates({ from: "", to: "" });
-    setActivePreset("all");
+    const from = getDefaultFromDate();
+    const to = getDefaultToDate();
+    setFromDateInput(from);
+    setToDateInput(to);
+    setAppliedDates({ from, to });
+    setActivePreset("month");
     setDateError("");
   };
 
@@ -1177,7 +1183,7 @@ export default function SuperAdminReceipts() {
 
   return (
     <div
-      className="min-h-screen md:flex"
+      className="min-h-screen md:flex max-w-full overflow-x-hidden"
       style={{ ...sans, background: "#faf8f4", color: "#17140f" }}
     >
       <style>{PAGE_CSS}</style>
@@ -1193,7 +1199,7 @@ export default function SuperAdminReceipts() {
       />
 
       {/* Main Content Area */}
-      <main className="min-w-0 flex-1">
+      <main className="min-w-0 flex-1 max-w-full overflow-x-hidden">
         {/* Sticky Header */}
         <header
           className="sticky top-0 z-20 hidden md:flex h-[92px] items-center justify-between border-b px-6 backdrop-blur-md sm:px-10 shrink-0"
@@ -1235,7 +1241,7 @@ export default function SuperAdminReceipts() {
         </header>
 
         {/* Content Container */}
-        <div className="p-6 sm:p-10 space-y-6 max-w-7xl mx-auto">
+        <div className="p-6 sm:p-10 space-y-6 w-full">
           {/* Alerts */}
           {error && (
             <div
@@ -1394,21 +1400,21 @@ export default function SuperAdminReceipts() {
               2. FILTERS (BRANCH, DATES, SEARCH, METHOD)
              ========================================================================= */}
           <section
-            className="sa-rise rounded-2xl p-5 sm:p-6 space-y-4"
+            className="sa-rise rounded-2xl p-4 sm:p-6 space-y-4"
             style={{ background: "#ffffff", border: "1px solid #e3ddd0", animationDelay: "200ms" }}
           >
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              {/* Branch Filter */}
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-[#8a8175]">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              {/* Branch Filter & Presets */}
+              <div className="flex flex-col sm:flex-row flex-wrap sm:items-center gap-3">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#8a8175] shrink-0">
                     Branch:
                   </label>
-                  <div className="relative">
+                  <div className="relative flex-1 sm:flex-initial min-w-0 max-w-full">
                     <select
                       value={selectedBranchId}
                       onChange={(e) => setSelectedBranchId(e.target.value)}
-                      className="appearance-none rounded-xl border border-[#e3ddd0] bg-[#faf8f4] py-2 pl-3.5 pr-9 text-xs font-semibold text-slate-900 outline-none transition focus:border-[#9c6b2e] focus:bg-white focus:ring-1 focus:ring-[#9c6b2e]"
+                      className="w-full appearance-none rounded-xl border border-[#e3ddd0] bg-[#faf8f4] py-2 pl-3.5 pr-9 text-xs font-semibold text-slate-900 outline-none transition focus:border-[#9c6b2e] focus:bg-white focus:ring-1 focus:ring-[#9c6b2e] truncate"
                     >
                       <option value="all">All Branches (Global)</option>
                       {branches.map((b) => {
@@ -1425,9 +1431,8 @@ export default function SuperAdminReceipts() {
                 </div>
 
                 {/* Quick Date Presets */}
-                <div className="flex items-center gap-1.5 pl-2 border-l border-[#e3ddd0]">
+                <div className="flex flex-wrap items-center gap-1.5 sm:pl-2 sm:border-l sm:border-[#e3ddd0]">
                   {[
-                    { id: "all", label: "All Dates" },
                     { id: "today", label: "Today" },
                     { id: "week", label: "7 Days" },
                     { id: "month", label: "This Month" },
@@ -1452,64 +1457,68 @@ export default function SuperAdminReceipts() {
               </div>
 
               {/* Payment Method Filter */}
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-[#8a8175]">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <label className="text-xs font-bold uppercase tracking-wider text-[#8a8175] shrink-0">
                   Method:
                 </label>
-                <select
-                  value={selectedMethod}
-                  onChange={(e) => setSelectedMethod(e.target.value)}
-                  className="rounded-xl border border-[#e3ddd0] bg-[#faf8f4] px-3 py-1.5 text-xs font-semibold text-slate-900 outline-none transition focus:border-[#9c6b2e] focus:bg-white focus:ring-1 focus:ring-[#9c6b2e]"
-                >
-                  <option value="all">All Payment Methods</option>
-                  <option value="razorpay">Razorpay / Online</option>
-                  <option value="cash">Branch Cash</option>
-                  <option value="upi">Branch UPI</option>
-                  <option value="split">Branch Split (Cash + UPI)</option>
-                </select>
+                <div className="relative flex-1 sm:flex-initial min-w-0 max-w-full">
+                  <select
+                    value={selectedMethod}
+                    onChange={(e) => setSelectedMethod(e.target.value)}
+                    className="w-full sm:w-auto rounded-xl border border-[#e3ddd0] bg-[#faf8f4] px-3 py-1.5 text-xs font-semibold text-slate-900 outline-none transition focus:border-[#9c6b2e] focus:bg-white focus:ring-1 focus:ring-[#9c6b2e] truncate"
+                  >
+                    <option value="all">All Payment Methods</option>
+                    <option value="razorpay">Razorpay / Online</option>
+                    <option value="cash">Branch Cash</option>
+                    <option value="upi">Branch UPI</option>
+                    <option value="split">Branch Split (Cash + UPI)</option>
+                  </select>
+                </div>
               </div>
             </div>
 
             {/* Custom Date Range Inputs */}
-            <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-[#f1ede4]">
-              <span className="text-xs font-semibold text-[#8a8175] flex items-center gap-1.5">
+            <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2.5 sm:gap-3 pt-3 border-t border-[#f1ede4]">
+              <span className="text-xs font-semibold text-[#8a8175] flex items-center gap-1.5 shrink-0">
                 <Calendar className="h-3.5 w-3.5 text-[#9c6b2e]" />
                 Date Range:
               </span>
-              <div className="flex items-center gap-2">
-                <label className="text-[11px] text-[#8a8175]">From:</label>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <label className="text-[11px] text-[#8a8175] shrink-0">From:</label>
                 <input
                   type="date"
                   value={fromDateInput}
                   onChange={(e) => setFromDateInput(e.target.value)}
-                  className="rounded-xl border border-[#e3ddd0] bg-[#faf8f4] px-3 py-1.5 text-xs font-medium text-slate-800 outline-none transition focus:border-[#9c6b2e] focus:bg-white focus:ring-1 focus:ring-[#9c6b2e]"
+                  className="flex-1 sm:flex-initial rounded-xl border border-[#e3ddd0] bg-[#faf8f4] px-3 py-1.5 text-xs font-medium text-slate-800 outline-none transition focus:border-[#9c6b2e] focus:bg-white focus:ring-1 focus:ring-[#9c6b2e]"
                 />
               </div>
-              <div className="flex items-center gap-2">
-                <label className="text-[11px] text-[#8a8175]">To:</label>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <label className="text-[11px] text-[#8a8175] shrink-0">To:</label>
                 <input
                   type="date"
                   value={toDateInput}
                   onChange={(e) => setToDateInput(e.target.value)}
-                  className="rounded-xl border border-[#e3ddd0] bg-[#faf8f4] px-3 py-1.5 text-xs font-medium text-slate-800 outline-none transition focus:border-[#9c6b2e] focus:bg-white focus:ring-1 focus:ring-[#9c6b2e]"
+                  className="flex-1 sm:flex-initial rounded-xl border border-[#e3ddd0] bg-[#faf8f4] px-3 py-1.5 text-xs font-medium text-slate-800 outline-none transition focus:border-[#9c6b2e] focus:bg-white focus:ring-1 focus:ring-[#9c6b2e]"
                 />
               </div>
-              <button
-                type="button"
-                onClick={handleApplyCustomDates}
-                className="rounded-xl bg-[#17140f] px-3.5 py-1.5 text-xs font-bold text-[#f4b942] hover:bg-slate-800 transition"
-              >
-                Apply Range
-              </button>
-              {isDateFilterActive && (
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <button
                   type="button"
-                  onClick={handleClearDates}
-                  className="rounded-xl border border-[#e3ddd0] bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-[#f1ede4] transition"
+                  onClick={handleApplyCustomDates}
+                  className="flex-1 sm:flex-initial rounded-xl bg-[#17140f] px-3.5 py-1.5 text-xs font-bold text-[#f4b942] hover:bg-slate-800 transition"
                 >
-                  Clear Dates
+                  Apply Range
                 </button>
-              )}
+                {isDateFilterActive && (
+                  <button
+                    type="button"
+                    onClick={handleClearDates}
+                    className="rounded-xl border border-[#e3ddd0] bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-[#f1ede4] transition"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
 
             {dateError && (

@@ -156,13 +156,41 @@ export async function updateMyStaffDocumentsApi(formData, token) {
 
 /**
  * Get My Attendance: GET /staff-attendance/my
+ * Filters:
+ * - month (e.g. '2026-10')
+ * - date_from & date_to
+ * - attendance_date (single date fallback)
  * @param {string} token
- * @param {string} [date] Optional YYYY-MM-DD
+ * @param {string|object} [paramsOrDate] Optional month, range, or YYYY-MM-DD
  */
-export async function getMyStaffAttendanceApi(token, date = null) {
-  const url = date
-    ? `${API_BASE_URL}/staff-attendance/my?attendance_date=${encodeURIComponent(date)}`
-    : `${API_BASE_URL}/staff-attendance/my`;
+export async function getMyStaffAttendanceApi(token, paramsOrDate = null) {
+  let query = '';
+  if (typeof paramsOrDate === 'string' && paramsOrDate) {
+    if (paramsOrDate.length === 7 && paramsOrDate.includes('-')) {
+      query = `?month=${encodeURIComponent(paramsOrDate)}`;
+    } else {
+      query = `?attendance_date=${encodeURIComponent(paramsOrDate)}`;
+    }
+  } else if (paramsOrDate && typeof paramsOrDate === 'object') {
+    const qp = new URLSearchParams();
+    if (paramsOrDate.month) qp.append('month', paramsOrDate.month);
+    let dFrom = paramsOrDate.date_from;
+    let dTo = paramsOrDate.date_to;
+    if (dFrom && dTo && dFrom > dTo) {
+      const temp = dFrom;
+      dFrom = dTo;
+      dTo = temp;
+    }
+    if (dFrom) qp.append('date_from', dFrom);
+    if (dTo) qp.append('date_to', dTo);
+    if (paramsOrDate.attendance_date && !dFrom) {
+      qp.append('attendance_date', paramsOrDate.attendance_date);
+    }
+    const qs = qp.toString();
+    if (qs) query = `?${qs}`;
+  }
+
+  const url = `${API_BASE_URL}/staff-attendance/my${query}`;
 
   const response = await fetch(url, {
     method: 'GET',

@@ -353,7 +353,7 @@ const SuperAdminStaffMessages = () => {
   }, [conversations, searchQuery]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#faf8f4] text-slate-800 font-sans">
+    <div className="flex flex-col md:flex-row h-screen w-full max-w-full overflow-hidden bg-[#faf8f4] text-slate-800 font-sans">
       <style>{PAGE_CSS}</style>
 
       {/* Super Admin Sidebar */}

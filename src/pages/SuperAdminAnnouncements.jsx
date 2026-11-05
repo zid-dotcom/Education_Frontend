@@ -323,7 +323,7 @@ const SuperAdminAnnouncements = () => {
   };
 
   return (
-    <div className="min-h-screen md:flex bg-[#FAF8F4]" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-screen md:flex bg-[#FAF8F4] max-w-full overflow-x-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
       <style>{PAGE_CSS}</style>
 
       {/* Super Admin Sidebar */}
@@ -337,7 +337,7 @@ const SuperAdminAnnouncements = () => {
       />
 
       {/* Main Content Area */}
-      <main className="min-w-0 flex-1 h-screen overflow-y-auto">
+      <main className="min-w-0 flex-1 h-screen overflow-y-auto max-w-full overflow-x-hidden">
         {/* Top Header */}
         <header className="sticky top-0 z-20 hidden md:flex h-16 items-center justify-between border-b border-[#E3DDD0] bg-[#FAF8F4]/90 px-6 backdrop-blur-md">
           <div className="flex items-center gap-3">
@@ -384,7 +384,7 @@ const SuperAdminAnnouncements = () => {
         </header>
 
         {/* Content Body */}
-        <div className="p-6 sm:p-8 space-y-6 max-w-7xl mx-auto">
+        <div className="p-6 sm:p-8 space-y-6 w-full">
           {/* Alerts */}
           {error && (
             <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs font-semibold text-rose-800 flex items-center justify-between gap-3 sa-fade">

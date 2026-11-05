@@ -33,6 +33,7 @@ import {
   getBranchAdminReceiptApi,
   getBranchAdminReceiptsApi,
 } from "../services/branchadminreceipts";
+import { getDefaultFromDate, getDefaultToDate } from "../utils/dateFilters";
 import OfficialReceiptVoucherCard from "../components/common/OfficialReceiptVoucherCard";
 
 const useDisplayFonts = () => {
@@ -1353,11 +1354,11 @@ export default function BranchAdminReceipts() {
       setAppliedDates(newRange);
       fetchReceipts(newRange);
     } else if (presetId === "month") {
-      const now = new Date();
-      const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-      setFromDateInput(monthStart);
-      setToDateInput(todayStr);
-      const newRange = { from: monthStart, to: todayStr };
+      const from = getDefaultFromDate();
+      const to = getDefaultToDate();
+      setFromDateInput(from);
+      setToDateInput(to);
+      const newRange = { from, to };
       setAppliedDates(newRange);
       fetchReceipts(newRange);
     }

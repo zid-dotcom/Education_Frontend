@@ -89,7 +89,7 @@ export default function AdminBranchAdmins() {
   const input = 'w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400';
 
   return (
-    <div className="admin-branch-admins-page min-h-screen bg-slate-50 text-slate-900 md:flex">
+    <div className="admin-branch-admins-page min-h-screen bg-slate-50 text-slate-900 md:flex max-w-full overflow-x-hidden">
       <SuperAdminSidebar
         user={user}
         navigate={navigate}
@@ -98,7 +98,7 @@ export default function AdminBranchAdmins() {
         setSidebarOpen={setSidebarOpen}
         activePage="branch-admins"
       />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col max-w-full overflow-x-hidden">
         <header className="hidden md:block border-b border-slate-200 bg-white px-5 py-5 sm:px-8">
           <div className="flex items-center justify-between">
             <div>
@@ -119,7 +119,7 @@ export default function AdminBranchAdmins() {
           </div>
         </header>
 
-        <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-5 py-7 sm:px-8 lg:py-10">
+        <main className="flex w-full flex-1 flex-col gap-8 px-5 py-7 sm:px-8 lg:py-10">
           {(error || message) && (
             <div className={`rounded-2xl border p-4 text-sm font-semibold ${error ? 'border-rose-300 bg-rose-50 text-rose-900' : 'border-emerald-300 bg-emerald-50 text-emerald-900'}`}>
               {error || message}

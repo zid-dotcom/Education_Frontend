@@ -15,6 +15,7 @@ import StaffDocumentsTab from '../components/staff/tabs/StaffDocumentsTab';
 import StaffMessagesTab from '../components/staff/tabs/StaffMessagesTab';
 import StaffSuperAdminMessagesTab from '../components/staff/tabs/StaffSuperAdminMessagesTab';
 import StaffProfileTab from '../components/staff/tabs/StaffProfileTab';
+import StaffAttendanceTab from '../components/staff/tabs/StaffAttendanceTab';
 
 // Modular Staff Modals
 import StaffAssignmentModal from '../components/staff/modals/StaffAssignmentModal';
@@ -98,7 +99,7 @@ body.staff-modal-open .staff-portal-sidebar-aside {
 }
 `;
 
-const VALID_TABS = ['dashboard', 'courses', 'assignments', 'study_materials', 'messages', 'super_admin_messages', 'announcements', 'institution_announcements', 'documents', 'profile'];
+const VALID_TABS = ['dashboard', 'attendance', 'courses', 'assignments', 'study_materials', 'messages', 'super_admin_messages', 'announcements', 'institution_announcements', 'documents', 'profile'];
 
 const StaffDashboard = ({ defaultTab }) => {
   const { user, token, logout } = useAuth();
@@ -112,6 +113,7 @@ const StaffDashboard = ({ defaultTab }) => {
   // Derive initial tab from pathname, defaultTab prop, URL search query, or saved localStorage
   const getTabFromLocation = () => {
     const path = location.pathname;
+    if (path.includes('/staff/attendance')) return 'attendance';
     if (path.includes('/staff/courses')) return 'courses';
     if (path.includes('/staff/assignments')) return 'assignments';
     if (path.includes('/staff/study-materials')) return 'study_materials';
@@ -1329,6 +1331,16 @@ const StaffDashboard = ({ defaultTab }) => {
             {/* TAB 8: SUPER ADMIN MESSAGES */}
             {activeTab === 'super_admin_messages' && (
               <StaffSuperAdminMessagesTab token={token} user={user} />
+            )}
+
+            {/* TAB 9: MY ATTENDANCE */}
+            {activeTab === 'attendance' && (
+              <StaffAttendanceTab
+                user={user}
+                profileData={profileData}
+                token={token}
+                branchName={branchName}
+              />
             )}
           </div>
         </main>

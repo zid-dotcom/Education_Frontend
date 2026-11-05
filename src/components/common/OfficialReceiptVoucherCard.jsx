@@ -318,7 +318,7 @@ export default function OfficialReceiptVoucherCard({ receipt, user }) {
   return (
     <div
       id="receipt-voucher-card"
-      className="p-5 sm:p-7 space-y-5 rounded-2xl"
+      className="p-3.5 sm:p-7 space-y-4 sm:space-y-5 rounded-2xl max-w-full overflow-hidden"
       style={{
         background: "#ffffff",
         border: "1px solid #e3ddd0",
@@ -327,33 +327,33 @@ export default function OfficialReceiptVoucherCard({ receipt, user }) {
     >
       {/* 1. Brand Header & Receipt Meta */}
       <div
-        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5"
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-4 sm:pb-5"
         style={{ borderBottom: "1px solid #e3ddd0" }}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           <div
-            className="flex h-12 w-12 items-center justify-center rounded-2xl text-lg font-bold shadow-xs select-none"
+            className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl text-base sm:text-lg font-bold shadow-xs select-none shrink-0"
             style={{ background: "#17140f", color: "#f4b942" }}
           >
             A
           </div>
-          <div>
+          <div className="min-w-0">
             <h2
-              className="text-xl font-bold tracking-tight text-slate-900 leading-tight"
+              className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 leading-tight truncate"
               style={serif}
             >
               Aurum FX Academy
             </h2>
-            <p className="text-[11px] font-semibold tracking-wide" style={{ color: "#9c6b2e" }}>
+            <p className="text-[10px] sm:text-[11px] font-semibold tracking-wide truncate" style={{ color: "#9c6b2e" }}>
               Official Student Tuition & Fee Receipt
               {branchName ? ` • ${branchName}` : ""}
             </p>
           </div>
         </div>
 
-        <div className="text-left sm:text-right space-y-1">
+        <div className="text-left sm:text-right space-y-1 min-w-0">
           <span
-            className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold border"
+            className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] sm:text-xs font-bold border"
             style={{
               background: "#ecfdf5",
               color: "#065f46",
@@ -363,7 +363,7 @@ export default function OfficialReceiptVoucherCard({ receipt, user }) {
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
             <span>Payment Verified</span>
           </span>
-          <p className="text-xs font-bold font-mono text-slate-900">
+          <p className="text-xs font-bold font-mono text-slate-900 truncate">
             Receipt Number: {receiptNo}
           </p>
           <p className="text-[11px]" style={{ color: "#8a8175" }}>
@@ -374,19 +374,19 @@ export default function OfficialReceiptVoucherCard({ receipt, user }) {
 
       {/* 2. Student & Course Information */}
       <div
-        className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-2xl p-4.5"
+        className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 rounded-2xl p-3.5 sm:p-4.5"
         style={{ background: "#faf8f4", border: "1px solid #e3ddd0" }}
       >
-        <div>
+        <div className="min-w-0">
           <h4
             className="text-[10px] font-bold uppercase tracking-wider"
             style={{ color: "#9c6b2e" }}
           >
             Student Details
           </h4>
-          <p className="mt-1 text-sm font-bold text-slate-900">{studentName}</p>
+          <p className="mt-1 text-sm font-bold text-slate-900 truncate">{studentName}</p>
           {studentEmail && (
-            <p className="text-xs" style={{ color: "#5b5346" }}>
+            <p className="text-xs truncate" style={{ color: "#5b5346" }}>
               {studentEmail}
             </p>
           )}
@@ -397,15 +397,15 @@ export default function OfficialReceiptVoucherCard({ receipt, user }) {
           )}
         </div>
 
-        <div>
+        <div className="min-w-0">
           <h4
             className="text-[10px] font-bold uppercase tracking-wider"
             style={{ color: "#9c6b2e" }}
           >
             Course & Payment Term
           </h4>
-          <p className="mt-1 text-sm font-bold text-slate-900">{courseTitle}</p>
-          <p className="text-xs font-medium" style={{ color: "#5b5346" }}>
+          <p className="mt-1 text-sm font-bold text-slate-900 truncate">{courseTitle}</p>
+          <p className="text-xs font-medium truncate" style={{ color: "#5b5346" }}>
             {paymentTypeLabel}
           </p>
         </div>
@@ -413,35 +413,35 @@ export default function OfficialReceiptVoucherCard({ receipt, user }) {
 
       {/* 3. Payment Item Table */}
       <div
-        className="overflow-hidden rounded-2xl"
+        className="overflow-x-auto rounded-2xl max-w-full"
         style={{ border: "1px solid #e3ddd0" }}
       >
-        <table className="w-full text-xs">
+        <table className="w-full text-xs min-w-[280px]">
           <thead>
             <tr
-              className="font-bold"
+              className="font-bold text-[11px]"
               style={{
                 background: "#f1ede4",
                 color: "#7a531f",
                 borderBottom: "1px solid #e3ddd0",
               }}
             >
-              <th className="px-4 py-3 text-left">Description</th>
-              <th className="px-4 py-3 text-center">Payment Method</th>
-              <th className="px-4 py-3 text-right">Amount Paid</th>
+              <th className="px-3 py-2.5 sm:px-4 sm:py-3 text-left">Description</th>
+              <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">Payment Method</th>
+              <th className="px-3 py-2.5 sm:px-4 sm:py-3 text-right">Amount Paid</th>
             </tr>
           </thead>
           <tbody style={{ background: "#ffffff" }}>
             <tr style={{ borderBottom: "1px solid #efe9dd" }}>
-              <td className="px-4 py-3.5">
+              <td className="px-3 py-2.5 sm:px-4 sm:py-3.5">
                 <p className="font-bold text-slate-900">{courseTitle}</p>
-                <p className="text-[11px]" style={{ color: "#8a8175" }}>
+                <p className="text-[10px] sm:text-[11px]" style={{ color: "#8a8175" }}>
                   {paymentTypeLabel}
                 </p>
               </td>
-              <td className="px-4 py-3.5 text-center">
+              <td className="px-2 py-2.5 sm:px-4 sm:py-3.5 text-center">
                 <span
-                  className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold border"
+                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] sm:text-[11px] font-bold border"
                   style={{
                     background: methodBadge.bg,
                     color: methodBadge.text,
@@ -451,39 +451,39 @@ export default function OfficialReceiptVoucherCard({ receipt, user }) {
                   {methodBadge.label}
                 </span>
                 {isSplit && (
-                  <div className="mt-1 text-[11px] font-semibold text-slate-700">
+                  <div className="mt-1 text-[10px] sm:text-[11px] font-semibold text-slate-700">
                     <span>Cash: <strong className="font-extrabold text-slate-900">{formatCurrency(cashAmount ?? 0)}</strong></span>
                     <span className="mx-1 text-slate-400">|</span>
                     <span>UPI: <strong className="font-extrabold text-slate-900">{formatCurrency(upiAmount ?? 0)}</strong></span>
                   </div>
                 )}
                 {isCash && cashAmount !== null && (
-                  <div className="mt-1 text-[11px] font-semibold text-slate-700">
+                  <div className="mt-1 text-[10px] sm:text-[11px] font-semibold text-slate-700">
                     <span>Cash: <strong className="font-extrabold text-slate-900">{formatCurrency(cashAmount)}</strong></span>
                   </div>
                 )}
                 {isUpi && upiAmount !== null && (
-                  <div className="mt-1 text-[11px] font-semibold text-slate-700">
+                  <div className="mt-1 text-[10px] sm:text-[11px] font-semibold text-slate-700">
                     <span>UPI: <strong className="font-extrabold text-slate-900">{formatCurrency(upiAmount)}</strong></span>
                   </div>
                 )}
               </td>
-              <td className="px-4 py-3.5 text-right font-bold text-slate-900 tabular-nums text-sm">
+              <td className="px-3 py-2.5 sm:px-4 sm:py-3.5 text-right font-bold text-slate-900 tabular-nums text-xs sm:text-sm">
                 {formatCurrency(amountPaid)}
               </td>
             </tr>
 
             {/* Total Cleared Row */}
             <tr
-              className="font-extrabold text-sm"
+              className="font-extrabold text-xs sm:text-sm"
               style={{ background: "#faf8f4", borderTop: "2px solid #e3ddd0" }}
             >
-              <td className="px-4 py-3 text-slate-900">Total Cleared (This Receipt)</td>
-              <td className="px-4 py-3 text-center text-xs font-bold" style={{ color: "#047857" }}>
+              <td className="px-3 py-2.5 sm:px-4 sm:py-3 text-slate-900">Total Cleared</td>
+              <td className="px-2 py-2.5 sm:px-4 sm:py-3 text-center text-[10px] sm:text-xs font-bold" style={{ color: "#047857" }}>
                 Verified & Received
               </td>
               <td
-                className="px-4 py-3 text-right text-base tabular-nums"
+                className="px-3 py-2.5 sm:px-4 sm:py-3 text-right text-sm sm:text-base tabular-nums"
                 style={{ color: "#9c6b2e" }}
               >
                 {formatCurrency(amountPaid)}

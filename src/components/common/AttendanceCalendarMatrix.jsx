@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
   Calendar,
+  CalendarCheck,
   Search,
   Check,
   X,
@@ -16,6 +17,9 @@ import {
   Activity,
   ShieldCheck,
   TrendingUp,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 
 /**
@@ -24,10 +28,10 @@ import {
  */
 export const normalizeStatus = (status) => {
   const s = String(status || "").toLowerCase().trim().replace(/[-\s]/g, "_");
-  if (s === "half_day" || s === "halfday" || s === "late") return "half_day";
-  if (s === "leave" || s === "excused" || s === "on_leave") return "leave";
-  if (s === "absent") return "absent";
-  if (s === "present") return "present";
+  if (s === "half_day" || s === "halfday" || s === "late" || s === "h") return "half_day";
+  if (s === "leave" || s === "excused" || s === "on_leave" || s === "l") return "leave";
+  if (s === "absent" || s === "a") return "absent";
+  if (s === "present" || s === "p") return "present";
   return s || "";
 };
 
@@ -386,6 +390,21 @@ const SinglePersonAttendanceInsights = ({ monthStats, people, monthLabel, todayS
   );
 };
 
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 /**
  * AttendanceCalendarMatrix Component
  * Reusable full-month attendance spreadsheet/matrix grid matching the user's design image.
@@ -393,7 +412,10 @@ const SinglePersonAttendanceInsights = ({ monthStats, people, monthLabel, todayS
 const AttendanceCalendarMatrix = ({
   people = [],
   records = [],
+  attendanceRecords, // alias support
   onSaveStatus, // async (personId, dateStr, newStatus, existingRecord)
+  onMonthChange, // optional (newMonthDate) => void
+  initialDate = null,
   title = "Staff Attendance",
   subtitle = "Monthly attendance tracking and register",
   isSinglePerson = false,
@@ -401,18 +423,30 @@ const AttendanceCalendarMatrix = ({
   isStaffPage = false,
   fullWidth = false,
   allowPastUpdates = false, // When false, only TODAY's attendance can be marked or updated
+  holidays = [],
 }) => {
   const isExpandedLayout = isStaffPage || fullWidth;
   const todayStr = getToday();
   const [currentMonthDate, setCurrentMonthDate] = useState(() => {
+    if (initialDate) {
+      const parsed = new Date(initialDate);
+      if (!isNaN(parsed.getTime())) {
+        return new Date(parsed.getFullYear(), parsed.getMonth(), 1);
+      }
+    }
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRole, setSelectedRole] = useState("all");
 
+  // Determine single-person view mode (e.g., My Attendance page)
+  const singlePersonMode = Boolean(
+    isSinglePerson || (Array.isArray(people) && people.length === 1)
+  );
+
   // Floating Popover state for marking status
-  const [activeCell, setActiveCell] = useState(null); // { personId, personName, dateStr, dayNum, dayName, currentStatus, record, top, left, ... }
+  const [activeCell, setActiveCell] = useState(null); // { personId, personName, dateStr, dayNum, dayName, currentStatus, record, holiday, top, left, ... }
   const popoverRef = useRef(null);
 
   // Responsive mobile screen detection
@@ -432,26 +466,85 @@ const AttendanceCalendarMatrix = ({
   const year = currentMonthDate.getFullYear();
   const monthIndex = currentMonthDate.getMonth(); // 0 to 11
 
+  const yearsList = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const list = [];
+    for (let y = currentYear - 3; y <= currentYear + 3; y++) {
+      list.push(y);
+    }
+    if (!list.includes(year)) {
+      list.push(year);
+      list.sort((a, b) => a - b);
+    }
+    return list;
+  }, [year]);
+
   const monthLabel = currentMonthDate.toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
   });
 
-  const prevMonth = () => {
-    setCurrentMonthDate(new Date(year, monthIndex - 1, 1));
+  const handleMonthYearChange = (newYear, newMonthIdx) => {
+    const nextDate = new Date(newYear, newMonthIdx, 1);
+    setCurrentMonthDate(nextDate);
     setActiveCell(null);
+    if (typeof onMonthChange === "function") {
+      onMonthChange(nextDate);
+    }
+  };
+
+  const prevMonth = () => {
+    const nextDate = new Date(year, monthIndex - 1, 1);
+    setCurrentMonthDate(nextDate);
+    setActiveCell(null);
+    if (typeof onMonthChange === "function") {
+      onMonthChange(nextDate);
+    }
   };
 
   const nextMonth = () => {
-    setCurrentMonthDate(new Date(year, monthIndex + 1, 1));
+    const nextDate = new Date(year, monthIndex + 1, 1);
+    setCurrentMonthDate(nextDate);
     setActiveCell(null);
+    if (typeof onMonthChange === "function") {
+      onMonthChange(nextDate);
+    }
   };
 
   const goToToday = () => {
     const d = new Date();
-    setCurrentMonthDate(new Date(d.getFullYear(), d.getMonth(), 1));
+    const nextDate = new Date(d.getFullYear(), d.getMonth(), 1);
+    setCurrentMonthDate(nextDate);
     setActiveCell(null);
+    if (typeof onMonthChange === "function") {
+      onMonthChange(nextDate);
+    }
   };
+
+  // Robust holiday list extraction supporting both array and wrapped object ({ holidays: [...] })
+  const holidaysList = useMemo(() => {
+    if (Array.isArray(holidays)) return holidays;
+    if (Array.isArray(holidays?.holidays)) return holidays.holidays;
+    if (Array.isArray(holidays?.data)) return holidays.data;
+    return [];
+  }, [holidays]);
+
+  const holidaysMap = useMemo(() => {
+    const map = {};
+    holidaysList.forEach((h) => {
+      if (!h) return;
+      const rawDate = h.date || h.holiday_date || h.day;
+      const d = typeof rawDate === "string" ? rawDate.trim().slice(0, 10) : "";
+      if (d) {
+        map[d] = {
+          ...h,
+          date: d,
+          reason: h.reason || h.title || h.name || "Declared Holiday",
+        };
+      }
+    });
+    return map;
+  }, [holidaysList]);
 
   // Days in selected month
   const daysInMonth = useMemo(() => {
@@ -468,6 +561,7 @@ const AttendanceCalendarMatrix = ({
       const isToday = dateStr === todayStr;
       const isFuture = dateStr > todayStr;
       const isPast = dateStr < todayStr;
+      const holiday = holidaysMap[dateStr] || null;
       return {
         dayNum,
         dateStr,
@@ -478,37 +572,74 @@ const AttendanceCalendarMatrix = ({
         isToday,
         isFuture,
         isPast,
+        holiday,
       };
     });
-  }, [year, monthIndex, todayStr]);
+  }, [year, monthIndex, todayStr, holidaysMap]);
 
-  // Fast lookup map for records: key = `${personId}_${dateStr}`
+  // Count declared holidays in the current month
+  const declaredHolidaysCount = useMemo(() => {
+    return daysInMonth.filter((d) => Boolean(d.holiday)).length;
+  }, [daysInMonth]);
+
+  // Unified list of records supporting records and attendanceRecords prop aliases
+  const recordsList = useMemo(() => {
+    if (Array.isArray(records) && records.length > 0) return records;
+    if (Array.isArray(attendanceRecords) && attendanceRecords.length > 0) return attendanceRecords;
+    if (Array.isArray(records)) return records;
+    if (Array.isArray(attendanceRecords)) return attendanceRecords;
+    return [];
+  }, [records, attendanceRecords]);
+
+  // Fast lookup map for records: key = `${personId}_${dateStr}` and dateStr for single person
   const recordsMap = useMemo(() => {
     const map = new Map();
-    if (Array.isArray(records)) {
-      records.forEach((rec) => {
-        if (!rec) return;
-        const pId = rec.staff_id ?? rec.person_id ?? rec.user_id;
-        const dateStr = rec.date ? String(rec.date).slice(0, 10) : "";
-        if (dateStr) {
-          if (pId !== undefined && pId !== null && pId !== "") {
-            map.set(`${String(pId)}_${dateStr}`, rec);
-          }
-          if (isSinglePerson) {
-            map.set(dateStr, rec);
-          }
+    recordsList.forEach((rec) => {
+      if (!rec) return;
+      const rawDate = rec.date || rec.attendance_date || rec.marked_at;
+      const dateStr = rawDate ? String(rawDate).slice(0, 10) : "";
+      if (!dateStr) return;
+
+      const pId =
+        rec.staff_id ??
+        rec.person_id ??
+        rec.user_id ??
+        rec.branch_admin_id ??
+        rec.admin_id;
+
+      if (pId !== undefined && pId !== null && pId !== "") {
+        map.set(`${String(pId)}_${dateStr}`, rec);
+      }
+      if (rec.staff_code) {
+        map.set(`${String(rec.staff_code)}_${dateStr}`, rec);
+      }
+      if (rec.email) {
+        map.set(`${String(rec.email).toLowerCase()}_${dateStr}`, rec);
+      }
+      if (singlePersonMode) {
+        map.set(dateStr, rec);
+        if (people?.[0]?.id) {
+          map.set(`${String(people[0].id)}_${dateStr}`, rec);
         }
-      });
-    }
+      }
+    });
     return map;
-  }, [records, isSinglePerson]);
+  }, [recordsList, singlePersonMode, people]);
 
   const getRecordForPerson = (person, dateStr) => {
     if (!person) return undefined;
     const pId = person.id ?? "single";
-    const specificRecord = recordsMap.get(`${String(pId)}_${dateStr}`);
+    let specificRecord = recordsMap.get(`${String(pId)}_${dateStr}`);
     if (specificRecord) return specificRecord;
-    if (isSinglePerson) {
+    if (person.staff_code) {
+      specificRecord = recordsMap.get(`${String(person.staff_code)}_${dateStr}`);
+      if (specificRecord) return specificRecord;
+    }
+    if (person.email) {
+      specificRecord = recordsMap.get(`${String(person.email).toLowerCase()}_${dateStr}`);
+      if (specificRecord) return specificRecord;
+    }
+    if (singlePersonMode) {
       return recordsMap.get(dateStr);
     }
     return undefined;
@@ -591,6 +722,8 @@ const AttendanceCalendarMatrix = ({
 
   // Handle cell click
   const handleCellClick = (e, person, day) => {
+    // Declared branch holidays are strictly read-only! No attendance can be marked or altered.
+    if (day.holiday) return;
     // Only TODAY's attendance can be marked or updated. Yesterday and past dates cannot be updated!
     if (!day.isToday && !allowPastUpdates) return;
     if (day.isFuture) return; // Tomorrow and future dates are strictly read-only!
@@ -612,6 +745,7 @@ const AttendanceCalendarMatrix = ({
       dayName: day.dayName,
       currentStatus,
       record: existing,
+      holiday: day.holiday,
       top: rect.top,
       left: rect.left,
       bottom: rect.bottom,
@@ -725,6 +859,22 @@ const AttendanceCalendarMatrix = ({
                   {monthStats.halfDay}
                 </span>
               </div>
+              {declaredHolidaysCount > 0 && (
+                <div className={`flex items-center justify-between text-xs font-semibold text-slate-700 ${isExpandedLayout ? "p-3.5 rounded-xl bg-[#fef6e7] border border-[#edd194]" : "p-1 rounded-lg bg-[#fef6e7]/60"}`}>
+                  <span className="flex items-center gap-3">
+                    <span className={`flex items-center justify-center rounded-lg bg-[#fef4e2] border border-[#ecd299] text-[#87501a] ${isExpandedLayout ? "h-8 w-8" : "h-5 w-5 rounded-md"}`}>
+                      <CalendarCheck className={isExpandedLayout ? "h-4 w-4" : "h-3 w-3"} strokeWidth={2.5} />
+                    </span>
+                    <div>
+                      <div className="text-sm font-bold text-slate-900">Branch Holidays</div>
+                      {isExpandedLayout && <div className="text-[11px] text-slate-500 font-medium">Declared holidays this month</div>}
+                    </div>
+                  </span>
+                  <span className={`font-black bg-[#fae7be] border border-[#ecd299] ${isExpandedLayout ? "text-base text-[#7a440e] px-3.5 py-1 rounded-full" : "text-xs text-[#7a440e] px-2 py-0.5 rounded-full"}`}>
+                    {declaredHolidaysCount}
+                  </span>
+                </div>
+              )}
             </div>
 
             {isExpandedLayout && (
@@ -825,30 +975,101 @@ const AttendanceCalendarMatrix = ({
         {/* ========================================================= */}
         <div className={`${isExpandedLayout ? "flex-1 min-w-0 w-full flex flex-col gap-6" : "lg:col-span-9 flex flex-col gap-6"}`}>
           <div className="rounded-2xl border border-[#e3ddd0] bg-white shadow-xs overflow-hidden flex flex-col">
-          {/* Top Control Bar: Month, Search, Navigation */}
-          <div className="p-4 sm:p-5 border-b border-[#e3ddd0] bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            {/* Month & Year Title */}
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#FAF8F4] border border-[#e3ddd0] text-[#9c6b2e]">
+          {/* Top Control Bar: Month, Month Selector, Search, Navigation */}
+          <div className="p-4 sm:p-5 border-b border-[#e3ddd0] bg-white flex flex-col md:flex-row md:items-center justify-between gap-4">
+            {/* Left: Month Title + Month/Year Selection Controls */}
+            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#FAF8F4] border border-[#e3ddd0] text-[#9c6b2e] shrink-0">
                 <Calendar className="h-4 w-4" />
               </div>
-              <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight whitespace-nowrap">
                 {monthLabel}
               </h2>
+
+              {/* Month & Year Selection Stepper & Dropdowns */}
+              <div className="flex items-center gap-1 bg-[#FAF8F4] border border-[#e3ddd0] p-1 rounded-xl shadow-2xs">
+                {/* Previous Month */}
+                <button
+                  type="button"
+                  onClick={prevMonth}
+                  className="p-1 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white transition cursor-pointer"
+                  title="Previous month"
+                  aria-label="Previous month"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+
+                {/* Month Dropdown */}
+                <div className="relative">
+                  <select
+                    value={monthIndex}
+                    onChange={(e) => handleMonthYearChange(year, Number(e.target.value))}
+                    className="appearance-none bg-white border border-[#ded8cb] hover:border-[#9c6b2e] rounded-lg pl-2 pr-6 py-1 text-xs font-bold text-slate-800 shadow-2xs focus:outline-none focus:border-[#9c6b2e] cursor-pointer"
+                    aria-label="Select month"
+                  >
+                    {MONTH_NAMES.map((name, idx) => (
+                      <option key={name} value={idx}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
+                </div>
+
+                {/* Year Dropdown */}
+                <div className="relative">
+                  <select
+                    value={year}
+                    onChange={(e) => handleMonthYearChange(Number(e.target.value), monthIndex)}
+                    className="appearance-none bg-white border border-[#ded8cb] hover:border-[#9c6b2e] rounded-lg pl-2 pr-6 py-1 text-xs font-bold text-slate-800 shadow-2xs focus:outline-none focus:border-[#9c6b2e] cursor-pointer"
+                    aria-label="Select year"
+                  >
+                    {yearsList.map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
+                </div>
+
+                {/* Next Month */}
+                <button
+                  type="button"
+                  onClick={nextMonth}
+                  className="p-1 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white transition cursor-pointer"
+                  title="Next month"
+                  aria-label="Next month"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+
+                {/* Today / This Month Reset (only if not viewing current month) */}
+                {(year !== new Date().getFullYear() || monthIndex !== new Date().getMonth()) && (
+                  <button
+                    type="button"
+                    onClick={goToToday}
+                    className="ml-0.5 px-2 py-1 rounded-lg bg-white border border-[#ded8cb] text-[11px] font-bold text-[#9c6b2e] hover:bg-[#f3ede1] transition cursor-pointer shadow-2xs whitespace-nowrap"
+                    title="Jump to current month"
+                  >
+                    Today
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Right Controls: Search & Month Stepper */}
+            {/* Right Controls: Search Staff */}
             <div className="flex flex-wrap items-center gap-2.5">
-              {/* Search Staff */}
               {!isSinglePerson && (
-                <div className="relative">
+                <div className="relative w-full sm:w-auto">
                   <Search className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search name..."
-                    className="w-36 sm:w-44 pl-9 pr-3 py-1.5 rounded-lg border border-[#e3ddd0] bg-[#FAF8F4] text-xs font-medium text-slate-800 focus:outline-none focus:border-[#9c6b2e] focus:bg-white transition-all"
+                    className="w-full sm:w-44 pl-9 pr-3 py-1.5 rounded-lg border border-[#e3ddd0] bg-[#FAF8F4] text-xs font-medium text-slate-800 focus:outline-none focus:border-[#9c6b2e] focus:bg-white transition-all"
                   />
                   {searchQuery && (
                     <button
@@ -872,7 +1093,7 @@ const AttendanceCalendarMatrix = ({
               <thead>
                 <tr className="border-b border-[#e3ddd0] bg-[#faf8f4] text-slate-600 select-none">
                   {/* Left Column: Name */}
-                  <th className="sticky left-0 z-20 bg-[#faf8f4] py-3.5 px-4 text-xs font-extrabold uppercase tracking-wider text-slate-700 min-w-[180px] sm:min-w-[210px] border-r border-[#e3ddd0]">
+                  <th className="sticky left-0 z-20 bg-[#faf8f4] py-4 px-4 text-xs font-extrabold uppercase tracking-wider text-slate-700 min-w-[200px] sm:min-w-[230px] border-r border-[#e3ddd0]">
                     {isSinglePerson ? "Staff Profile" : "Staff Name"}
                   </th>
 
@@ -880,20 +1101,24 @@ const AttendanceCalendarMatrix = ({
                   {daysInMonth.map((day) => (
                     <th
                       key={day.dateStr}
-                      className={`py-2 px-1 text-center min-w-[44px] sm:min-w-[48px] border-r border-[#efe9dd] last:border-r-0 ${
-                        day.isToday
-                          ? "bg-amber-100/70 font-extrabold ring-1 ring-amber-400/50"
+                      className={`py-3 px-1.5 text-center border-r border-[#efe9dd] last:border-r-0 ${
+                        day.holiday
+                          ? "min-w-[100px] sm:min-w-[120px] bg-[#fef4e2] font-extrabold ring-1 ring-[#e5af4b]/70"
+                          : day.isToday
+                          ? "min-w-[54px] sm:min-w-[62px] bg-amber-100/70 font-extrabold ring-1 ring-amber-400/50"
                           : day.isFuture
-                          ? "bg-slate-50/50 opacity-60"
+                          ? "min-w-[54px] sm:min-w-[62px] bg-slate-50/50 opacity-60"
                           : day.isWeekend
-                          ? "bg-[#f5f1e8]/60"
-                          : ""
+                          ? "min-w-[54px] sm:min-w-[62px] bg-[#f5f1e8]/60"
+                          : "min-w-[54px] sm:min-w-[62px]"
                       }`}
                     >
                       <div className="flex flex-col items-center">
                         <span
-                          className={`text-[10px] font-bold tracking-tight uppercase ${
-                            day.isToday
+                          className={`text-[10px] sm:text-[11px] font-bold tracking-tight uppercase ${
+                            day.holiday
+                              ? "text-[#87501a] font-extrabold"
+                              : day.isToday
                               ? "text-amber-900 font-extrabold"
                               : day.isFuture
                               ? "text-slate-400"
@@ -905,8 +1130,12 @@ const AttendanceCalendarMatrix = ({
                           {day.dayName}
                         </span>
                         <span
-                          className={`text-xs mt-0.5 inline-flex items-center justify-center h-6 w-6 rounded-full font-bold ${
-                            day.isToday
+                          className={`text-xs sm:text-sm mt-0.5 inline-flex items-center justify-center h-6 w-6 sm:h-7 sm:w-7 rounded-full font-bold ${
+                            day.holiday && day.isToday
+                              ? "bg-[#9c6b2e] text-white shadow-xs ring-2 ring-[#e5af4b]"
+                              : day.holiday
+                              ? "bg-[#eac478] text-[#5c3408] font-black shadow-xs ring-1 ring-[#cfa24b]"
+                              : day.isToday
                               ? "bg-[#9c6b2e] text-white shadow-xs ring-2 ring-amber-300"
                               : day.isFuture
                               ? "text-slate-400"
@@ -915,11 +1144,29 @@ const AttendanceCalendarMatrix = ({
                         >
                           {day.dayNum}
                         </span>
-                        {day.isToday && (
+                        {day.holiday ? (
+                          <div className="flex flex-col items-center mt-1 leading-tight gap-0.5 w-full px-0.5">
+                            <span
+                              className={`w-full px-1.5 py-0.5 rounded-md text-[8.5px] font-black uppercase tracking-tight text-center truncate ${
+                                day.isToday
+                                  ? "bg-[#87501a] text-amber-100 shadow-2xs"
+                                  : "bg-[#fae7be] text-[#7a440e] border border-[#ecd299]"
+                              }`}
+                              title={`Declared Branch Holiday: ${day.holiday.reason || 'Public Holiday'}${day.isToday ? ' (Today)' : ''}`}
+                            >
+                              {day.holiday.reason || "Holiday"}
+                            </span>
+                            {day.isToday && (
+                              <span className="text-[7px] font-extrabold uppercase tracking-widest text-[#9c6b2e]">
+                                Today
+                              </span>
+                            )}
+                          </div>
+                        ) : day.isToday ? (
                           <span className="mt-0.5 text-[8px] font-extrabold uppercase tracking-widest text-[#9c6b2e]">
                             Today
                           </span>
-                        )}
+                        ) : null}
                       </div>
                     </th>
                   ))}
@@ -981,13 +1228,15 @@ const AttendanceCalendarMatrix = ({
                             activeCell &&
                             String(activeCell.personId) === String(person.id) &&
                             activeCell.dateStr === day.dateStr;
-                          const canEdit = (day.isToday || allowPastUpdates) && !day.isFuture;
+                          const canEdit = !day.holiday && (day.isToday || allowPastUpdates) && !day.isFuture;
 
                           return (
                             <td
                               key={day.dateStr}
-                              className={`p-1.5 text-center border-r border-[#efe9dd] last:border-r-0 ${
-                                day.isToday
+                              className={`p-2 text-center border-r border-[#efe9dd] last:border-r-0 ${
+                                day.holiday
+                                  ? "bg-[#fef9ee]"
+                                  : day.isToday
                                   ? "bg-amber-50/50"
                                   : day.isFuture
                                   ? "bg-slate-50/40"
@@ -999,13 +1248,15 @@ const AttendanceCalendarMatrix = ({
                               <button
                                 type="button"
                                 onClick={(e) => {
-                                  if (canEdit) {
+                                  if (canEdit && !day.holiday) {
                                     handleCellClick(e, person, day);
                                   }
                                 }}
-                                disabled={!canEdit || isSavingThis}
+                                disabled={day.holiday || !canEdit || isSavingThis}
                                 title={
-                                  day.isFuture
+                                  day.holiday
+                                    ? `${person.name} - Branch Holiday: "${day.holiday.reason || 'Declared Holiday'}"`
+                                    : day.isFuture
                                     ? `${person.name} - ${day.dayName} ${day.dayNum} ${monthLabel} (Future date - Read only)`
                                     : !day.isToday && !allowPastUpdates
                                     ? `${person.name} - ${day.dayName} ${day.dayNum} ${monthLabel}: ${
@@ -1015,23 +1266,21 @@ const AttendanceCalendarMatrix = ({
                                         config ? config.label : "Click to mark/update"
                                       }`
                                 }
-                                className={`h-8 w-8 sm:h-9 sm:w-9 mx-auto rounded-lg flex items-center justify-center text-xs font-bold transition-all relative ${
-                                  !canEdit
-                                    ? "cursor-not-allowed select-none"
-                                    : "cursor-pointer transform active:scale-95 hover:scale-105"
+                                className={`h-9 w-9 sm:h-10 sm:w-10 mx-auto rounded-xl flex flex-col items-center justify-center text-xs font-bold transition-all relative ${
+                                  day.holiday
+                                    ? "cursor-not-allowed select-none border border-[#ecd299] bg-[#fef4e2] text-[#87501a] shadow-2xs"
+                                    : config
+                                    ? `shadow-2xs ${canEdit ? "cursor-pointer transform active:scale-95 hover:scale-105" : "cursor-default select-none"}`
+                                    : canEdit
+                                    ? "cursor-pointer transform active:scale-95 hover:scale-105 border border-[#e3ddd0] bg-white hover:border-[#9c6b2e]/60 hover:bg-amber-50/40 text-slate-300 hover:text-slate-500"
+                                    : "cursor-not-allowed select-none border border-slate-200/50 bg-slate-50/40 text-slate-300"
                                 } ${
                                   isSelected
                                     ? "ring-2 ring-[#9c6b2e] ring-offset-1"
                                     : ""
-                                } ${
-                                  config
-                                    ? "shadow-2xs"
-                                    : canEdit
-                                    ? "border border-[#e3ddd0] bg-white hover:border-[#9c6b2e]/60 hover:bg-amber-50/40 text-slate-300 hover:text-slate-500"
-                                    : "border border-slate-200/50 bg-slate-50/40 text-slate-300"
                                 }`}
                                 style={
-                                  config
+                                  config && !day.holiday
                                     ? {
                                         background: config.bg,
                                         borderColor: config.border,
@@ -1044,6 +1293,16 @@ const AttendanceCalendarMatrix = ({
                               >
                                 {isSavingThis ? (
                                   <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-500" />
+                                ) : day.holiday ? (
+                                  <div className="flex flex-col items-center justify-center leading-none text-center px-0.5 select-none pointer-events-none">
+                                    <CalendarCheck className="h-3.5 w-3.5 text-[#9c6b2e]" strokeWidth={2.4} />
+                                    <span
+                                      className="text-[7.5px] font-black uppercase text-[#87501a] tracking-tighter mt-0.5"
+                                      title={`Holiday: ${day.holiday.reason || 'Holiday'}`}
+                                    >
+                                      Off
+                                    </span>
+                                  </div>
                                 ) : config ? (
                                   <config.icon className="h-4 w-4" strokeWidth={2.6} />
                                 ) : canEdit ? (
@@ -1098,6 +1357,13 @@ const AttendanceCalendarMatrix = ({
                 </span>
                 Half Day
               </span>
+
+              <span className="flex items-center gap-1.5 text-amber-900">
+                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-[#fef4e2] border border-[#ecd299] text-[#87501a]">
+                  <CalendarCheck className="h-3 w-3" strokeWidth={2.5} />
+                </span>
+                Branch Holiday
+              </span>
             </div>
           </div>
         </div>
@@ -1130,7 +1396,7 @@ const AttendanceCalendarMatrix = ({
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
                 <div className="min-w-0 pr-2">
                   <div className="truncate text-base font-extrabold text-slate-900">
                     {activeCell.personName}
@@ -1148,6 +1414,19 @@ const AttendanceCalendarMatrix = ({
                   <X className="h-4 w-4" />
                 </button>
               </div>
+
+              {/* Holiday Notice Banner if declared holiday */}
+              {activeCell.holiday && (
+                <div className="mb-3 flex items-center gap-2.5 p-2.5 rounded-xl bg-[#fef6e7] border border-[#edd194] text-amber-900 text-xs font-semibold">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#fae7be] text-[#87501a] shrink-0">
+                    <CalendarCheck className="h-3.5 w-3.5" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-black uppercase tracking-wider text-[#87501a]">Declared Branch Holiday</div>
+                    <div className="truncate text-xs font-bold text-slate-800">{activeCell.holiday.reason || "Official Holiday"}</div>
+                  </div>
+                </div>
+              )}
 
               {/* Action Buttons */}
               <div className="space-y-2.5">
@@ -1263,6 +1542,19 @@ const AttendanceCalendarMatrix = ({
                 <X className="h-3.5 w-3.5" />
               </button>
             </div>
+
+            {/* Holiday Notice Banner if declared holiday */}
+            {activeCell.holiday && (
+              <div className="mb-2 flex items-center gap-2 p-2 rounded-xl bg-[#fef6e7] border border-[#edd194] text-amber-900 text-xs font-semibold">
+                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-[#fae7be] text-[#87501a] shrink-0">
+                  <CalendarCheck className="h-3 w-3" />
+                </span>
+                <div className="min-w-0">
+                  <div className="text-[9px] font-black uppercase tracking-wider text-[#87501a]">Branch Holiday</div>
+                  <div className="truncate text-[11px] font-bold text-slate-800">{activeCell.holiday.reason || "Official Holiday"}</div>
+                </div>
+              </div>
+            )}
 
             {/* Quick Mark Options */}
             <div className="space-y-1.5">

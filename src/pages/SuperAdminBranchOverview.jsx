@@ -438,7 +438,7 @@ const SuperAdminBranchOverview = () => {
 
   return (
     <div
-      className="min-h-screen md:flex"
+      className="min-h-screen md:flex max-w-full overflow-x-hidden"
       style={{ fontFamily: "'Inter', system-ui, sans-serif", background: '#faf8f4', color: '#17140f' }}
     >
       <style>{PAGE_CSS}</style>
@@ -451,7 +451,7 @@ const SuperAdminBranchOverview = () => {
         activePage="branch-overview"
       />
 
-      <main className="min-w-0 flex-1 relative">
+      <main className="min-w-0 flex-1 relative max-w-full overflow-x-hidden">
         {/* Top Header */}
         <header
           className="hidden md:flex items-center justify-between border-b px-6 py-5 sm:px-10"
@@ -498,7 +498,7 @@ const SuperAdminBranchOverview = () => {
           </div>
         </header>
 
-        <div className="mx-auto max-w-7xl px-6 py-8 sm:px-10 space-y-8">
+        <div className="w-full px-4 py-6 sm:px-8 sm:py-8 lg:px-10 space-y-8">
           {/* Page Intro Banner */}
           <div className="sa-rise flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
             <div>

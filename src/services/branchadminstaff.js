@@ -15,6 +15,7 @@ const authOptions = (token, options = {}) => ({
   ...options,
   headers: {
     'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': '69420',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers || {}),
   },
@@ -66,6 +67,7 @@ export async function updateBranchAdminStaffStatusApi(staffId, status, token) {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
+      'ngrok-skip-browser-warning': '69420',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     credentials: 'include',
@@ -85,8 +87,41 @@ export async function markStaffAttendanceApi(payload, token) {
   return parseResponse(response, 'Failed to mark staff attendance.');
 }
 
-export async function getStaffAttendanceApi(token, attendanceDate) {
-  const query = attendanceDate ? `?attendance_date=${encodeURIComponent(attendanceDate)}` : '';
+/**
+ * Branch admin viewing staff attendance
+ * GET /staff-attendance
+ * Filters:
+ * - month (e.g. '2026-10')
+ * - date_from & date_to (e.g. '2026-10-01' and '2026-10-31')
+ * - attendance_date (single date fallback)
+ */
+export async function getStaffAttendanceApi(token, paramsOrDate) {
+  let query = '';
+  if (typeof paramsOrDate === 'string' && paramsOrDate) {
+    if (paramsOrDate.length === 7 && paramsOrDate.includes('-')) {
+      query = `?month=${encodeURIComponent(paramsOrDate)}`;
+    } else {
+      query = `?attendance_date=${encodeURIComponent(paramsOrDate)}`;
+    }
+  } else if (paramsOrDate && typeof paramsOrDate === 'object') {
+    const qp = new URLSearchParams();
+    if (paramsOrDate.month) qp.append('month', paramsOrDate.month);
+    let dFrom = paramsOrDate.date_from;
+    let dTo = paramsOrDate.date_to;
+    if (dFrom && dTo && dFrom > dTo) {
+      const temp = dFrom;
+      dFrom = dTo;
+      dTo = temp;
+    }
+    if (dFrom) qp.append('date_from', dFrom);
+    if (dTo) qp.append('date_to', dTo);
+    if (paramsOrDate.attendance_date && !dFrom) {
+      qp.append('attendance_date', paramsOrDate.attendance_date);
+    }
+    const qs = qp.toString();
+    if (qs) query = `?${qs}`;
+  }
+
   const response = await fetch(`${API_BASE_URL}/staff-attendance${query}`, authOptions(token));
   return parseResponse(response, 'Failed to load staff attendance.');
 }

@@ -25,6 +25,7 @@ import {
   createBranchAdminExpenseApi,
   getBranchAdminExpensesApi,
 } from '../services/branchadminexpenses';
+import { getDefaultFromDate, getDefaultToDate } from '../utils/dateFilters';
 
 const useDisplayFonts = () => {
   useEffect(() => {
@@ -157,9 +158,9 @@ export default function BranchAdminExpenses() {
   const [successMessage, setSuccessMessage] = useState('');
 
   // Date filters
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
-  const [activePreset, setActivePreset] = useState('all');
+  const [fromDate, setFromDate] = useState(getDefaultFromDate);
+  const [toDate, setToDate] = useState(getDefaultToDate);
+  const [activePreset, setActivePreset] = useState('month');
   const [dateError, setDateError] = useState('');
 
   // Search filter
@@ -229,13 +230,9 @@ export default function BranchAdminExpenses() {
     } else if (preset === 'week') {
       setFromDate(getDateDaysAgo(7));
       setToDate(today);
-    } else if (preset === 'month') {
-      setFromDate(getMonthStartStr());
-      setToDate(today);
     } else {
-      // all
-      setFromDate('');
-      setToDate('');
+      setFromDate(getDefaultFromDate());
+      setToDate(getDefaultToDate());
     }
   };
 
@@ -245,28 +242,41 @@ export default function BranchAdminExpenses() {
     if (type === 'to') setToDate(val);
   };
 
-  // Filtered expenses based on search query
+  // Filtered expenses based on date range and search query
   const filteredExpenses = useMemo(() => {
-    if (!searchQuery.trim()) return expenses;
+    let list = expenses;
+
+    if (fromDate || toDate) {
+      list = list.filter((e) => {
+        const rawDate = e.date || e.expense_date || e.created_at || e.timestamp || '';
+        const d = String(rawDate).slice(0, 10);
+        if (!d) return true;
+        if (fromDate && d < fromDate) return false;
+        if (toDate && d > toDate) return false;
+        return true;
+      });
+    }
+
+    if (!searchQuery.trim()) return list;
     const q = searchQuery.toLowerCase().trim();
-    return expenses.filter((e) => {
+    return list.filter((e) => {
       const itemText = (e.item || e.title || e.name || '').toLowerCase();
       const costText = String(e.cost || e.amount || '');
       return itemText.includes(q) || costText.includes(q);
     });
-  }, [expenses, searchQuery]);
+  }, [expenses, fromDate, toDate, searchQuery]);
 
   // Summary Metrics
   const metrics = useMemo(() => {
-    const count = expenses.length;
-    const total = expenses.reduce((sum, e) => sum + (Number(e.cost ?? e.amount) || 0), 0);
+    const count = filteredExpenses.length;
+    const total = filteredExpenses.reduce((sum, e) => sum + (Number(e.cost ?? e.amount) || 0), 0);
     const average = count > 0 ? total / count : 0;
-    const highest = expenses.reduce(
+    const highest = filteredExpenses.reduce(
       (max, e) => Math.max(max, Number(e.cost ?? e.amount) || 0),
       0
     );
     return { count, total, average, highest };
-  }, [expenses]);
+  }, [filteredExpenses]);
 
   // Handle Create Expense Submission
   const handleCreateExpense = async (e) => {
@@ -563,7 +573,6 @@ export default function BranchAdminExpenses() {
                   Filter:
                 </span>
                 {[
-                  { id: 'all', label: 'All Time' },
                   { id: 'today', label: 'Today' },
                   { id: 'week', label: 'Last 7 Days' },
                   { id: 'month', label: 'This Month' },
@@ -612,10 +621,10 @@ export default function BranchAdminExpenses() {
                   </div>
                 </div>
 
-                {(fromDate || toDate) && (
+                {(fromDate !== getDefaultFromDate() || toDate !== getDefaultToDate()) && (
                   <button
                     type="button"
-                    onClick={() => applyPreset('all')}
+                    onClick={() => applyPreset('month')}
                     className="text-xs font-semibold text-[#9c6b2e] underline hover:opacity-80"
                   >
                     Reset

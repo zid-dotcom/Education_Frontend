@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ChevronDown,
@@ -20,11 +20,13 @@ import {
   Banknote,
   Smartphone,
   Menu,
+  RotateCcw,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BranchAdminSidebar from '../components/layout/BranchAdminSidebar';
 import NavLogoutButton from "../components/common/NavLogoutButton";
 import { getBranchAdminProfitApi } from '../services/branchadminprofit';
+import { getDefaultFromDate, getDefaultToDate } from '../utils/dateFilters';
 
 const PAGE_CSS = `
 @keyframes sa-rise { from { opacity:0; transform:translateY(16px) scale(.97); } to { opacity:1; transform:translateY(0) scale(1); } }
@@ -75,6 +77,12 @@ const getStatusBadge = (status) => {
   );
 };
 
+const getToday = () => {
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60000;
+  return new Date(now.getTime() - offset).toISOString().slice(0, 10);
+};
+
 const formatDate = (dateString) => {
   if (!dateString) return '—';
   try {
@@ -84,22 +92,24 @@ const formatDate = (dateString) => {
   }
 };
 
-const getPaymentDate = (enr, fromDateStr, toDateStr) => {
-  if (Array.isArray(enr.installments)) {
-    const matchingInst = enr.installments.find(
-      (i) =>
-        (i.paid_date && i.paid_date >= fromDateStr && i.paid_date <= toDateStr) ||
-        i.paid_date === fromDateStr
-    );
-    if (matchingInst) return matchingInst.paid_date;
+// Check whether a payment transaction or installment is successful (not failed, pending, due, or cancelled)
+const isSuccessfulPayment = (item) => {
+  if (!item) return false;
+  const rawStatus = String(item.status || item.payment_status || item.transaction_status || '').trim().toLowerCase();
+  const failedStatuses = ['failed', 'failure', 'cancelled', 'canceled', 'pending', 'due', 'rejected', 'unpaid', 'refunded', 'reversed'];
+  if (failedStatuses.includes(rawStatus)) {
+    return false;
   }
-  if (enr.payment_date) return enr.payment_date;
-  if (enr.paid_at) return enr.paid_at;
-  if (enr.created_at) return enr.created_at;
-  return fromDateStr || toDateStr;
+  const successStatuses = ['paid', 'success', 'successful', 'completed', 'approved', 'captured'];
+  const amt = Number(item.amount ?? item.paid_amount ?? item.paid ?? 0);
+  if (successStatuses.includes(rawStatus)) {
+    return amt > 0;
+  }
+  const hasPaidDate = Boolean(item.paid_date || item.paid_at || item.payment_date);
+  return hasPaidDate && amt > 0;
 };
 
-// Robust helper to gather all matching payment objects for an enrollment from all possible sources
+// Strict enrollment-first matching helper for payment records
 const getEnrollmentPayments = (enrollment, rootProfit) => {
   if (!enrollment) return [];
   const enrollmentId = enrollment.enrollment_id ?? enrollment.id;
@@ -128,28 +138,19 @@ const getEnrollmentPayments = (enrollment, rootProfit) => {
     const pStdName = p.student_name ?? p.studentName ?? p.name;
 
     // Strict enrollment-first matching:
-    // 1. If enrollmentId is present on both, it MUST match!
     if (enrollmentId && pEnrId !== undefined && pEnrId !== null) {
-      if (Number(pEnrId) !== Number(enrollmentId)) {
-        return; // Belongs to a different enrollment, reject!
-      }
+      if (Number(pEnrId) !== Number(enrollmentId)) return;
     } else if (courseId && pCourseId !== undefined && pCourseId !== null) {
-      // 2. If no enrollmentId but courseId is present on payment, it must match the course
-      if (Number(pCourseId) !== Number(courseId)) {
-        return; // Belongs to a different course, reject!
-      }
-      if (studentId && pStdId !== undefined && pStdId !== null && Number(pStdId) !== Number(studentId)) {
-        return;
-      }
+      if (Number(pCourseId) !== Number(courseId)) return;
+      if (studentId && pStdId !== undefined && pStdId !== null && Number(pStdId) !== Number(studentId)) return;
     } else {
-      // 3. Fallback only if neither enrollmentId nor courseId is present on payment record
       const studentMatch =
         (studentId && pStdId !== undefined && pStdId !== null && Number(pStdId) === Number(studentId)) ||
         (enrollment.name && pStdName && String(pStdName).trim().toLowerCase() === String(enrollment.name).trim().toLowerCase());
       if (!studentMatch) return;
     }
 
-    const key = p.payment_id || p.id || `${p.installment_number}_${p.amount}_${p.payment_date || idx}`;
+    const key = p.payment_id || p.transaction_id || p.id || `${p.installment_number}_${p.amount}_${p.payment_date || idx}`;
     if (!uniqueMap.has(key)) {
       uniqueMap.set(key, p);
     }
@@ -158,14 +159,128 @@ const getEnrollmentPayments = (enrollment, rootProfit) => {
   return Array.from(uniqueMap.values());
 };
 
+// Retrieve all successful payment transactions belonging to this enrollment, sorted latest first
+const getEnrollmentSuccessfulTransactions = (enrollment, rootProfit) => {
+  if (!enrollment) return [];
+  const txList = [];
+  const seenKeys = new Set();
+
+  const addTx = (t, defaultType = 'payment') => {
+    if (!t || !isSuccessfulPayment(t)) return;
+    const amt = Number(t.paid_amount ?? t.amount ?? t.paid ?? 0);
+    if (amt <= 0) return;
+
+    const dateStr = String(t.payment_date || t.paid_date || t.paid_at || t.created_at || t.date || '').slice(0, 10);
+    const instNum = Number(t.installment_number ?? 0);
+    const key = t.payment_id || t.transaction_id || t.id || `${instNum}_${amt}_${dateStr}`;
+    if (seenKeys.has(key)) return;
+    seenKeys.add(key);
+
+    txList.push({
+      id: key,
+      amount: amt,
+      payment_date: dateStr,
+      raw_date: t.payment_date || t.paid_date || t.paid_at || t.created_at || t.date || '',
+      installment_number: instNum,
+      status: t.status || t.payment_status || 'paid',
+      type: defaultType,
+      raw: t,
+    });
+  };
+
+  // 1. Transactions matching this enrollment
+  const payments = getEnrollmentPayments(enrollment, rootProfit);
+  payments.forEach((p) => addTx(p, 'payment'));
+
+  // 2. Installments belonging to this enrollment
+  if (Array.isArray(enrollment.installments)) {
+    enrollment.installments.forEach((inst, idx) => {
+      addTx({
+        ...inst,
+        installment_number: inst.installment_number ?? idx + 1,
+        paid_amount: inst.paid_amount ?? inst.paid ?? inst.amount,
+      }, 'installment');
+    });
+  }
+
+  // Sort descending by date (latest first), then installment_number descending
+  txList.sort((a, b) => {
+    const da = a.raw_date || a.payment_date || '';
+    const db = b.raw_date || b.payment_date || '';
+    if (da && db && da !== db) return db.localeCompare(da);
+    if (da && !db) return -1;
+    if (!da && db) return 1;
+    return (b.installment_number || 0) - (a.installment_number || 0);
+  });
+
+  return txList;
+};
+
+// Get the latest successful transaction for an enrollment
+const getLatestSuccessfulTransaction = (enrollment, rootProfit, fromDateStr = '', toDateStr = '') => {
+  const txList = getEnrollmentSuccessfulTransactions(enrollment, rootProfit);
+  if (txList.length === 0) return null;
+
+  if (fromDateStr || toDateStr) {
+    const inRange = txList.filter((t) => {
+      const d = t.payment_date;
+      if (!d) return false;
+      if (fromDateStr && d < fromDateStr) return false;
+      if (toDateStr && d > toDateStr) return false;
+      return true;
+    });
+    if (inRange.length > 0) return inRange[0];
+  }
+
+  return txList[0];
+};
+
+// Calculate Last Paid: amount of the latest successful payment transaction
+const getLastPaidAmount = (enrollment, rootProfit, fromDateStr = '', toDateStr = '') => {
+  if (!enrollment) return 0;
+  const latestTx = getLatestSuccessfulTransaction(enrollment, rootProfit, fromDateStr, toDateStr);
+  if (latestTx && latestTx.amount > 0) {
+    return latestTx.amount;
+  }
+
+  // Fallback to explicit single-transaction amount fields (NEVER total_paid or total_fee)
+  if (enrollment.last_paid_amount !== undefined && enrollment.last_paid_amount !== null && Number(enrollment.last_paid_amount) > 0) {
+    return Number(enrollment.last_paid_amount);
+  }
+  if (enrollment.last_payment_amount !== undefined && enrollment.last_payment_amount !== null && Number(enrollment.last_payment_amount) > 0) {
+    return Number(enrollment.last_payment_amount);
+  }
+  if (enrollment.recent_payment_amount !== undefined && enrollment.recent_payment_amount !== null && Number(enrollment.recent_payment_amount) > 0) {
+    return Number(enrollment.recent_payment_amount);
+  }
+  // Single installment full payment
+  if (Number(enrollment.installment_count) === 1 && Number(enrollment.total_paid) > 0) {
+    return Number(enrollment.total_paid);
+  }
+
+  return 0;
+};
+
+// Date of the latest successful payment transaction
+const getPaymentDate = (enrollment, rootProfit, fromDateStr = '', toDateStr = '') => {
+  if (!enrollment) return '';
+  const latestTx = getLatestSuccessfulTransaction(enrollment, rootProfit, fromDateStr, toDateStr);
+  if (latestTx && latestTx.payment_date) {
+    return latestTx.payment_date;
+  }
+  const rawDate = enrollment.payment_date || enrollment.paid_at || enrollment.paid_date || enrollment.created_at || enrollment.date || enrollment.enrollment_date;
+  if (rawDate) return String(rawDate).slice(0, 10);
+  return '';
+};
+
 export default function BranchAdminProfit() {
   const { user, token, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  const [fromDate, setFromDate] = useState(todayStr);
-  const [toDate, setToDate] = useState(todayStr);
+  const [fromDate, setFromDate] = useState(getDefaultFromDate);
+  const [toDate, setToDate] = useState(getDefaultToDate);
+  const activeRequestIdRef = useRef(0);
   const [dateError, setDateError] = useState('');
   const [error, setError] = useState('');
 
@@ -185,14 +300,21 @@ export default function BranchAdminProfit() {
     setProfitLoading(true);
     setError('');
 
+    const requestId = ++activeRequestIdRef.current;
+
     try {
       const data = await getBranchAdminProfitApi(token, { fromDate: from, toDate: to });
+      if (requestId !== activeRequestIdRef.current) return;
       setProfit(data);
     } catch (err) {
-      setError(err.message || 'Failed to load branch revenue.');
+      if (requestId === activeRequestIdRef.current) {
+        setError(err.message || 'Failed to load branch revenue.');
+      }
     } finally {
-      setProfitLoading(false);
-      setLoading(false);
+      if (requestId === activeRequestIdRef.current) {
+        setProfitLoading(false);
+        setLoading(false);
+      }
     }
   };
 
@@ -205,13 +327,42 @@ export default function BranchAdminProfit() {
     loadProfit(fromDate, toDate);
   }, [fromDate, toDate, token]);
 
-  const enrollments = Array.isArray(profit?.enrollments)
+  const rawEnrollments = Array.isArray(profit?.enrollments)
     ? profit.enrollments
     : Array.isArray(profit?.payments)
     ? profit.payments
     : Array.isArray(profit?.recent_payments)
     ? profit.recent_payments
     : [];
+
+  const enrollments = useMemo(() => {
+    if (!fromDate && !toDate) return rawEnrollments;
+
+    return rawEnrollments.filter((enr) => {
+      // 1. Check if enrollment has any successful transaction within [fromDate, toDate]
+      const txList = getEnrollmentSuccessfulTransactions(enr, profit);
+      if (txList.length > 0) {
+        const hasTxInRange = txList.some((t) => {
+          const d = t.payment_date;
+          if (!d) return false;
+          if (fromDate && d < fromDate) return false;
+          if (toDate && d > toDate) return false;
+          return true;
+        });
+        if (hasTxInRange) return true;
+      }
+
+      // 2. Check the enrollment's payment / record date
+      const pDate = getPaymentDate(enr, profit, fromDate, toDate);
+      if (pDate) {
+        if (fromDate && pDate < fromDate) return false;
+        if (toDate && pDate > toDate) return false;
+        return true;
+      }
+
+      return false;
+    });
+  }, [rawEnrollments, fromDate, toDate, profit]);
 
   const totalReceived =
     profit?.total_received ??
@@ -533,7 +684,15 @@ export default function BranchAdminProfit() {
                   <input
                     type="date"
                     value={fromDate}
-                    onChange={(e) => setFromDate(e.target.value)}
+                    max={toDate || undefined}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFromDate(val);
+                      setDateError('');
+                      if (val && toDate && val > toDate) {
+                        setToDate(val);
+                      }
+                    }}
                     className="rounded-xl border px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#9c6b2e]"
                     style={{
                       borderColor: dateError ? '#ef4444' : '#e3ddd0',
@@ -550,7 +709,15 @@ export default function BranchAdminProfit() {
                   <input
                     type="date"
                     value={toDate}
-                    onChange={(e) => setToDate(e.target.value)}
+                    min={fromDate || undefined}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setToDate(val);
+                      setDateError('');
+                      if (val && fromDate && val < fromDate) {
+                        setFromDate(val);
+                      }
+                    }}
                     className="rounded-xl border px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#9c6b2e]"
                     style={{
                       borderColor: dateError ? '#ef4444' : '#e3ddd0',
@@ -559,6 +726,22 @@ export default function BranchAdminProfit() {
                     }}
                   />
                 </div>
+
+                {(fromDate !== getDefaultFromDate() || toDate !== getDefaultToDate()) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFromDate(getDefaultFromDate());
+                      setToDate(getDefaultToDate());
+                      setDateError('');
+                    }}
+                    className="inline-flex items-center gap-1 rounded-xl border border-[#ded8cb] bg-white px-3 py-1.5 text-xs font-bold text-[#9c6b2e] hover:bg-[#f3ede1] transition cursor-pointer shadow-2xs"
+                    title="Reset date filters to default month range"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    Reset
+                  </button>
+                )}
               </div>
 
               {profitLoading ? (
@@ -654,7 +837,7 @@ export default function BranchAdminProfit() {
                                 'Student',
                                 'Course',
                                 'Total Fee',
-                                'Paid Today',
+                                'Last Paid',
                                 'Total Paid',
                                 'Balance',
                                 'Installments',
@@ -673,52 +856,60 @@ export default function BranchAdminProfit() {
                             </tr>
                           </thead>
                           <tbody>
-                            {enrollments.map((enr, i) => (
-                              <tr
-                                key={enr.enrollment_id ?? enr.id ?? i}
-                                className="transition hover:bg-sky-50"
-                                style={{ borderBottom: '1px solid #f1ede4' }}
-                              >
-                                <td className="px-5 py-3 font-medium">
-                                  {enr.name || enr.student_name || '—'}
-                                </td>
-                                <td className="px-5 py-3" style={{ color: '#5b5346' }}>
-                                  {enr.course_title || '—'}
-                                </td>
-                                <td className="px-5 py-3 font-medium" style={{ color: '#17140f' }}>
-                                  {fmt(enr.total_fee ?? enr.course_fee)}
-                                </td>
-                                <td className="px-5 py-3 font-semibold" style={{ color: '#10b981' }}>
-                                  {fmt(enr.amount_paid_on_date ?? enr.amount ?? enr.paid_today ?? enr.total_paid)}
-                                </td>
-                                <td className="px-5 py-3" style={{ color: '#5b5346' }}>
-                                  {fmt(enr.total_paid ?? enr.amount_paid ?? enr.amount ?? 0)}
-                                </td>
-                                <td
-                                  className="px-5 py-3 font-medium"
-                                  style={{
-                                    color: Number(enr.balance_amount) > 0 ? '#ef4444' : '#5b5346',
-                                  }}
+                            {enrollments.map((enr, i) => {
+                              const totalFee = enr.total_fee ?? enr.course_fee ?? 0;
+                              const totalPaid = enr.total_paid ?? enr.amount_paid ?? enr.amount ?? 0;
+                              const balance = enr.balance_amount !== undefined ? enr.balance_amount : (Number(totalFee) - Number(totalPaid));
+                              const lastPaid = getLastPaidAmount(enr, profit, fromDate, toDate);
+                              const paymentDate = getPaymentDate(enr, profit, fromDate, toDate);
+
+                              return (
+                                <tr
+                                  key={enr.enrollment_id ?? enr.id ?? i}
+                                  className="transition hover:bg-sky-50"
+                                  style={{ borderBottom: '1px solid #f1ede4' }}
                                 >
-                                  {fmt(enr.balance_amount)}
-                                </td>
-                                <td className="px-5 py-3" style={{ color: '#5b5346' }}>
-                                  {enr.paid_installment_count ?? 0} / {enr.installment_count ?? enr.total_installments ?? 0}
-                                </td>
-                                <td className="px-5 py-3">{getStatusBadge(enr.status || enr.payment_status)}</td>
-                                <td className="px-5 py-3 text-xs" style={{ color: '#5b5346' }}>
-                                  {formatDate(getPaymentDate(enr, fromDate, toDate))}
-                                </td>
-                                <td className="px-5 py-3">
-                                  <button
-                                    onClick={() => setSelectedEnrollment(enr)}
-                                    className="text-xs font-bold text-sky-600 hover:text-sky-800 underline cursor-pointer"
+                                  <td className="px-5 py-3 font-medium">
+                                    {enr.name || enr.student_name || '—'}
+                                  </td>
+                                  <td className="px-5 py-3" style={{ color: '#5b5346' }}>
+                                    {enr.course_title || '—'}
+                                  </td>
+                                  <td className="px-5 py-3 font-medium" style={{ color: '#17140f' }}>
+                                    {fmt(totalFee)}
+                                  </td>
+                                  <td className="px-5 py-3 font-semibold" style={{ color: '#10b981' }}>
+                                    {fmt(lastPaid)}
+                                  </td>
+                                  <td className="px-5 py-3" style={{ color: '#5b5346' }}>
+                                    {fmt(totalPaid)}
+                                  </td>
+                                  <td
+                                    className="px-5 py-3 font-medium"
+                                    style={{
+                                      color: Number(balance) > 0 ? '#ef4444' : '#5b5346',
+                                    }}
                                   >
-                                    View Details
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
+                                    {fmt(balance)}
+                                  </td>
+                                  <td className="px-5 py-3" style={{ color: '#5b5346' }}>
+                                    {enr.paid_installment_count ?? 0} / {enr.installment_count ?? enr.total_installments ?? 0}
+                                  </td>
+                                  <td className="px-5 py-3">{getStatusBadge(enr.status || enr.payment_status)}</td>
+                                  <td className="px-5 py-3 text-xs" style={{ color: '#5b5346' }}>
+                                    {formatDate(paymentDate)}
+                                  </td>
+                                  <td className="px-5 py-3">
+                                    <button
+                                      onClick={() => setSelectedEnrollment(enr)}
+                                      className="text-xs font-bold text-sky-600 hover:text-sky-800 underline cursor-pointer"
+                                    >
+                                      View Details
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -831,14 +1022,21 @@ export default function BranchAdminProfit() {
                       <span className="font-bold text-base">{fmt(selectedEnrollment.total_paid ?? selectedEnrollment.amount_paid ?? selectedEnrollment.amount ?? 0)}</span>
                     </div>
                     <div className="flex justify-between items-center p-2 bg-sky-50 text-sky-800 rounded-lg">
-                      <span className="font-medium">Paid Today:</span>
+                      <span className="font-medium">Last Paid:</span>
                       <span className="font-bold text-base">
-                        {fmt(selectedEnrollment.amount_paid_on_date ?? selectedEnrollment.amount ?? selectedEnrollment.paid_today ?? selectedEnrollment.total_paid)}
+                        {fmt(getLastPaidAmount(selectedEnrollment, profit, fromDate, toDate))}
                       </span>
                     </div>
                     <div className="flex justify-between items-center p-2 bg-rose-50 text-rose-800 rounded-lg">
                       <span className="font-medium">Balance:</span>
-                      <span className="font-bold text-base">{fmt(selectedEnrollment.balance_amount)}</span>
+                      <span className="font-bold text-base">
+                        {fmt(
+                          selectedEnrollment.balance_amount !== undefined
+                            ? selectedEnrollment.balance_amount
+                            : Number(selectedEnrollment.total_fee ?? selectedEnrollment.course_fee ?? 0) -
+                                Number(selectedEnrollment.total_paid ?? selectedEnrollment.amount_paid ?? selectedEnrollment.amount ?? 0)
+                        )}
+                      </span>
                     </div>
                     <div className="flex justify-between items-center p-2 bg-amber-50/80 text-amber-950 rounded-lg border border-amber-200/60">
                       <span className="font-medium text-amber-900">Cash:</span>

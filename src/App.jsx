@@ -647,6 +647,14 @@ function App() {
             }
           />
           <Route
+            path="/staff/attendance"
+            element={
+              <ProtectedRoute staffOnly>
+                <StaffDashboard defaultTab="attendance" />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/staff/courses"
             element={
               <ProtectedRoute staffOnly>

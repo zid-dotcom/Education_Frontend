@@ -228,7 +228,7 @@ const SuperAdminEnrollments = () => {
 
   return (
     <div
-      className="min-h-screen md:flex"
+      className="min-h-screen md:flex max-w-full overflow-x-hidden"
       style={{
         fontFamily: "'Inter', system-ui, sans-serif",
         background: '#faf8f4',
@@ -245,7 +245,7 @@ const SuperAdminEnrollments = () => {
         activePage="enrollments"
       />
 
-      <main className="min-w-0 flex-1">
+      <main className="min-w-0 flex-1 max-w-full overflow-x-hidden">
         <header
           className="hidden md:flex items-center justify-between border-b px-6 py-5 sm:px-10"
           style={{ borderColor: '#e3ddd0', background: '#ffffff' }}
@@ -263,21 +263,23 @@ const SuperAdminEnrollments = () => {
             >
               Course Enrollments
             </h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => loadStudents(selectedBranchId, selectedCourseId, courses)}
+              className="rounded-lg p-2 hover:bg-[#f1ede4]"
+              title="Refresh students"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${studentsLoading ? 'animate-spin' : ''}`}
+                style={{ color: '#9c6b2e' }}
+              />
+            </button>
             <NavLogoutButton redirectTo="/super-admin/login" />
           </div>
-          <button
-            onClick={() => loadStudents(selectedBranchId, selectedCourseId, courses)}
-            className="rounded-lg p-2 hover:bg-[#f1ede4]"
-            title="Refresh students"
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${studentsLoading ? 'animate-spin' : ''}`}
-              style={{ color: '#9c6b2e' }}
-            />
-          </button>
         </header>
 
-        <div className="mx-auto max-w-7xl px-6 py-8 sm:px-10 space-y-6">
+        <div className="w-full px-4 py-6 sm:px-8 sm:py-8 space-y-6">
           {error && (
             <div
               className="rounded-xl px-4 py-3 text-sm font-medium"
@@ -314,24 +316,22 @@ const SuperAdminEnrollments = () => {
             <>
               {/* Breadcrumb selectors */}
               <div
-                className="flex flex-wrap items-center gap-3 rounded-2xl p-4 bg-white border shadow-2xs"
+                className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl p-4 bg-white border shadow-2xs"
                 style={{ borderColor: '#e3ddd0' }}
               >
-                <GraduationCap
-                  className="h-5 w-5 shrink-0"
-                  style={{ color: '#9c6b2e' }}
-                />
-
-                {/* Branch */}
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-500 uppercase">
+                  <GraduationCap
+                    className="h-5 w-5 shrink-0"
+                    style={{ color: '#9c6b2e' }}
+                  />
+                  <span className="text-xs font-bold text-slate-500 uppercase shrink-0">
                     Branch:
                   </span>
-                  <div className="relative">
+                  <div className="relative flex-1 sm:flex-initial min-w-0 max-w-full">
                     <select
                       value={selectedBranchId}
                       onChange={(e) => handleBranchChange(e.target.value)}
-                      className="appearance-none rounded-xl border pl-3 pr-8 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#9c6b2e] bg-sky-50"
+                      className="w-full appearance-none rounded-xl border pl-3 pr-8 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#9c6b2e] bg-sky-50 truncate"
                       style={{ borderColor: '#e3ddd0', color: '#17140f' }}
                     >
                       <option value="all">All Branches</option>
@@ -351,14 +351,16 @@ const SuperAdminEnrollments = () => {
                   </div>
                 </div>
 
-                <ChevronRight className="h-4 w-4" style={{ color: '#a39a8c' }} />
+                <div className="hidden sm:block">
+                  <ChevronRight className="h-4 w-4" style={{ color: '#a39a8c' }} />
+                </div>
 
                 {/* Course */}
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-500 uppercase">
+                  <span className="text-xs font-bold text-slate-500 uppercase shrink-0">
                     Course:
                   </span>
-                  <div className="relative">
+                  <div className="relative flex-1 sm:flex-initial min-w-0 max-w-full">
                     {coursesLoading ? (
                       <div
                         className="flex items-center gap-2 rounded-xl border px-3 py-2 text-xs bg-sky-50"
@@ -373,7 +375,7 @@ const SuperAdminEnrollments = () => {
                           setSelectedCourseId(e.target.value);
                           setError('');
                         }}
-                        className="appearance-none rounded-xl border pl-3 pr-8 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#9c6b2e] bg-sky-50"
+                        className="w-full appearance-none rounded-xl border pl-3 pr-8 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#9c6b2e] bg-sky-50 truncate"
                         style={{ borderColor: '#e3ddd0', color: '#17140f' }}
                         disabled={courses.length === 0}
                       >

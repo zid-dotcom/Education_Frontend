@@ -268,14 +268,27 @@ export function buildProfitDateQuery(dateOrRange) {
   if (typeof dateOrRange === 'string') {
     return `?date=${encodeURIComponent(dateOrRange)}`;
   }
-  const { fromDate, toDate, date } = dateOrRange;
+  const { fromDate, toDate, date, date_from, date_to } = dateOrRange;
+  let dFrom = fromDate || date_from;
+  let dTo = toDate || date_to;
+  if (dFrom && dTo && dFrom > dTo) {
+    const temp = dFrom;
+    dFrom = dTo;
+    dTo = temp;
+  }
   const params = new URLSearchParams();
-  if (fromDate && toDate && fromDate === toDate) {
-    params.append('date', fromDate);
+  if (dFrom && dTo && dFrom === dTo) {
+    params.append('date', dFrom);
+    params.append('from_date', dFrom);
+    params.append('to_date', dTo);
   } else {
-    if (fromDate) params.append('from_date', fromDate);
-    if (toDate) params.append('to_date', toDate);
-    if (!fromDate && !toDate && date) params.append('date', date);
+    if (dFrom) {
+      params.append('from_date', dFrom);
+    }
+    if (dTo) {
+      params.append('to_date', dTo);
+    }
+    if (!dFrom && !dTo && date) params.append('date', date);
   }
   const qs = params.toString();
   return qs ? `?${qs}` : '';
@@ -302,24 +315,39 @@ export async function getSuperAdminBranchTodayProfitApi(branchId, token, date = 
 }
 
 // ─── Attendance ───────────────────────────────────────────────────────────────
-export const BACKEND_SUPPORTS_ATTENDANCE_DATE_RANGE = false;
+export const BACKEND_SUPPORTS_ATTENDANCE_DATE_RANGE = true;
 
 export function buildAttendanceDateQuery(dateOrRange) {
   if (!dateOrRange) return '';
   if (typeof dateOrRange === 'string') {
+    if (dateOrRange.length === 7 && dateOrRange.includes('-')) {
+      return `?month=${encodeURIComponent(dateOrRange)}`;
+    }
     return `?attendance_date=${encodeURIComponent(dateOrRange)}`;
   }
-  const { fromDate, toDate, date } = dateOrRange;
-  if (BACKEND_SUPPORTS_ATTENDANCE_DATE_RANGE) {
-    const params = new URLSearchParams();
-    if (fromDate) params.append('from_date', fromDate);
-    if (toDate) params.append('to_date', toDate);
-    const qs = params.toString();
-    return qs ? `?${qs}` : '';
+  const { fromDate, toDate, date, month, date_from, date_to } = dateOrRange;
+  const params = new URLSearchParams();
+
+  if (month) {
+    params.append('month', month);
   }
-  // Single-date fallback: backend currently accepts single `attendance_date` parameter
-  const singleDate = fromDate || date || toDate;
-  return singleDate ? `?attendance_date=${encodeURIComponent(singleDate)}` : '';
+
+  const dFrom = date_from || fromDate;
+  const dTo = date_to || toDate;
+
+  if (dFrom) {
+    params.append('date_from', dFrom);
+  }
+  if (dTo) {
+    params.append('date_to', dTo);
+  }
+
+  if (!dFrom && !dTo && date) {
+    params.append('attendance_date', date);
+  }
+
+  const qs = params.toString();
+  return qs ? `?${qs}` : '';
 }
 
 export async function getSuperAdminAttendanceBranchesApi(token) {
@@ -339,6 +367,25 @@ export async function getSuperAdminBranchAdminAttendanceApi(branchId, token, dat
   const url = `${API_BASE_URL}/super-admin/attendance/branches/${branchId}/branch-admins${query}`;
   const res = await fetch(url, { headers: getHeaders(token) });
   return parseResponse(res, 'Failed to load admin attendance.');
+}
+
+/**
+ * Super Admin - Attendance Adjustments Audit Log
+ * GET /super-admin/attendance/adjustments
+ * Optional filters: branch_id, staff_id, date_from, date_to, changed_from, changed_to
+ */
+export async function getSuperAdminAttendanceAdjustmentsApi(token, params = {}) {
+  const qp = new URLSearchParams();
+  if (params.branch_id) qp.append('branch_id', params.branch_id);
+  if (params.staff_id) qp.append('staff_id', params.staff_id);
+  if (params.date_from) qp.append('date_from', params.date_from);
+  if (params.date_to) qp.append('date_to', params.date_to);
+  if (params.changed_from) qp.append('changed_from', params.changed_from);
+  if (params.changed_to) qp.append('changed_to', params.changed_to);
+  const qs = qp.toString();
+  const url = `${API_BASE_URL}/super-admin/attendance/adjustments${qs ? `?${qs}` : ''}`;
+  const res = await fetch(url, { headers: getHeaders(token) });
+  return parseResponse(res, 'Failed to load attendance adjustments.');
 }
 
 // ─── Purchases ────────────────────────────────────────────────────────────────

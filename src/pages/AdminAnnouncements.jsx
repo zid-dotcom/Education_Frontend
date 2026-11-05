@@ -149,10 +149,10 @@ const AdminAnnouncements = () => {
   };
 
   return (
-    <div className="min-h-screen md:flex" style={{ fontFamily: "'Inter', system-ui, sans-serif", background: '#faf8f4', color: '#17140f' }}>
+    <div className="min-h-screen md:flex max-w-full overflow-x-hidden" style={{ fontFamily: "'Inter', system-ui, sans-serif", background: '#faf8f4', color: '#17140f' }}>
       <SuperAdminSidebar user={user} navigate={navigate} logout={logout} sidebarOpen={isSidebarOpen} setSidebarOpen={setIsSidebarOpen} activePage="global-announcements" />
 
-      <main className="min-w-0 flex-1">
+      <main className="min-w-0 flex-1 max-w-full overflow-x-hidden">
         <header className="hidden md:flex items-center justify-between border-b px-6 py-5 sm:px-10" style={{ borderColor: '#e3ddd0', background: '#ffffff' }}>
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#9c6b2e' }}>Super Admin</p>
@@ -163,7 +163,7 @@ const AdminAnnouncements = () => {
           </div>
         </header>
 
-        <div className="mx-auto max-w-7xl px-6 py-8 sm:px-10 space-y-6">
+        <div className="w-full px-4 py-6 sm:px-8 sm:py-8 lg:px-10 space-y-6">
         {(error || success) && (
           <div className={`flex items-center justify-between rounded-2xl border p-4 text-sm font-semibold ${error ? 'border-rose-300 bg-rose-50 text-rose-900' : 'border-emerald-300 bg-emerald-50 text-emerald-900'}`}>
             <div className="flex items-center gap-3">{error ? <ShieldAlert className="h-5 w-5 shrink-0 text-rose-600" /> : <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />}<span>{error || success}</span></div>

@@ -632,7 +632,7 @@ const SuperAdminStudents = () => {
 
   return (
     <div
-      className="min-h-screen md:flex"
+      className="min-h-screen md:flex max-w-full overflow-x-hidden"
       style={{
         fontFamily: "'Inter', system-ui, sans-serif",
         background: '#faf8f4',
@@ -649,7 +649,7 @@ const SuperAdminStudents = () => {
         activePage="students"
       />
 
-      <main className="min-w-0 flex-1 pb-16">
+      <main className="min-w-0 flex-1 pb-16 max-w-full overflow-x-hidden">
         {/* Sticky Header */}
         <header
           className="sticky top-0 z-20 hidden md:flex h-[92px] items-center justify-between border-b px-6 py-5 sm:px-10 backdrop-blur-md bg-white/95"
@@ -684,7 +684,7 @@ const SuperAdminStudents = () => {
           </div>
         </header>
 
-        <div className="mx-auto max-w-7xl px-6 py-8 sm:px-10 space-y-6">
+        <div className="w-full px-4 py-6 sm:px-8 sm:py-8 lg:px-10 space-y-6">
           {/* Notifications */}
           {error && (
             <div
@@ -867,12 +867,12 @@ const SuperAdminStudents = () => {
             </div>
 
             {/* Branch Selector Dropdown */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto min-w-0">
               <Building2 className="h-4 w-4 text-[#9c6b2e] shrink-0" />
               <select
                 value={selectedBranchId}
                 onChange={(e) => setSelectedBranchId(e.target.value)}
-                className="rounded-xl border px-3.5 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#9c6b2e] bg-stone-50 cursor-pointer text-slate-800"
+                className="w-full sm:w-auto rounded-xl border px-3.5 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#9c6b2e] bg-stone-50 cursor-pointer text-slate-800 truncate max-w-full"
                 style={{ borderColor: '#e3ddd0' }}
               >
                 <option value="">All Branches</option>

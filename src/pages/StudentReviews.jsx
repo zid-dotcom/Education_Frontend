@@ -19,7 +19,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { createStudentReviewApi, getStudentReviewsApi } from '../services/reviews';
 import { getMyEnrollmentsApi } from '../services/enrollments';
-import { ReviewsBannerIllustration } from '../components/common/StudentBannerIllustrations';
+import reviewsImage from '../assets/reviews.png';
 
 const useReviewFonts = () => {
   useEffect(() => {
@@ -229,7 +229,13 @@ const StudentReviews = () => {
   };
 
   return (
-    <div className="w-full pb-12 space-y-6 font-['Plus_Jakarta_Sans',sans-serif] text-slate-800">
+    <div className="w-full pb-12 space-y-6 font-['Plus_Jakarta_Sans',sans-serif] text-slate-800 opacity-0 animate-[pageFadeIn_0.4s_ease-out_forwards]">
+      <style>{`
+        @keyframes pageFadeIn {
+          0% { opacity: 0; transform: translateY(14px) scale(0.985); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `}</style>
       {/* 1. Header Banner */}
       <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#FAF6EE] via-[#FDF9F2] to-[#FAF1DF] text-[#17140F] border border-[#ECDDC6] shadow-xs mb-6">
         <div className="relative z-10 flex flex-col md:flex-row md:items-stretch justify-between min-h-[190px] sm:min-h-[210px] md:min-h-[230px]">
@@ -267,10 +273,14 @@ const StudentReviews = () => {
             </div>
           </div>
 
-          {/* Right SVG Illustration - Fitted flush to top, bottom and right */}
+          {/* Right reviews illustration */}
           <div className="w-full md:w-auto flex justify-end items-end md:self-stretch shrink-0 select-none overflow-hidden pr-0">
-            <div className="w-full sm:w-[460px] md:w-[480px] lg:w-[540px] xl:w-[600px] h-[190px] sm:h-[220px] md:h-full flex items-end justify-end">
-              <ReviewsBannerIllustration className="w-full h-full block" />
+            <div className="w-full sm:w-[460px] md:w-[480px] lg:w-[540px] xl:w-[600px] h-[190px] sm:h-[220px] md:h-full flex items-end justify-center md:justify-end">
+              <img
+                src={reviewsImage}
+                alt="Course reviews"
+                className="w-full h-full object-contain object-center md:object-right-bottom block"
+              />
             </div>
           </div>
         </div>
@@ -626,4 +636,3 @@ const StudentReviews = () => {
 };
 
 export default StudentReviews;
-

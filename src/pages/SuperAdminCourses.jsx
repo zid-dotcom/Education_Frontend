@@ -608,7 +608,7 @@ const SuperAdminCourses = () => {
 
   return (
     <div
-      className="min-h-screen md:flex"
+      className="min-h-screen md:flex max-w-full overflow-x-hidden"
       style={{
         fontFamily: "'Inter', system-ui, sans-serif",
         background: '#faf8f4',
@@ -625,7 +625,7 @@ const SuperAdminCourses = () => {
         activePage="courses"
       />
 
-      <main className="min-w-0 flex-1">
+      <main className="min-w-0 flex-1 max-w-full overflow-x-hidden">
         <header
           className="hidden md:flex items-center justify-between border-b px-6 py-5 sm:px-10"
           style={{ borderColor: '#e3ddd0', background: '#ffffff' }}
@@ -668,7 +668,7 @@ const SuperAdminCourses = () => {
           </div>
         </header>
 
-        <div className="mx-auto max-w-7xl px-6 py-8 sm:px-10 space-y-6">
+        <div className="w-full px-4 py-6 sm:px-8 sm:py-8 space-y-6">
           {error && (
             <div
               className="rounded-xl px-4 py-3 text-sm font-medium"
@@ -705,20 +705,20 @@ const SuperAdminCourses = () => {
             <>
               {/* Branch Selector Bar */}
               <div
-                className="flex flex-wrap items-center justify-between gap-4 rounded-2xl p-4 bg-white border shadow-2xs"
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 rounded-2xl p-4 bg-white border shadow-2xs"
                 style={{ borderColor: '#e3ddd0' }}
               >
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
                   <label
-                    className="text-xs font-bold uppercase tracking-wider text-slate-500"
+                    className="text-xs font-bold uppercase tracking-wider text-slate-500 shrink-0"
                   >
                     Select Branch:
                   </label>
-                  <div className="relative">
+                  <div className="relative flex-1 sm:flex-initial min-w-0 max-w-full">
                     <select
                       value={selectedBranchId}
                       onChange={(e) => setSelectedBranchId(e.target.value)}
-                      className="appearance-none rounded-xl border pl-4 pr-9 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#9c6b2e] bg-stone-50"
+                      className="w-full appearance-none rounded-xl border pl-4 pr-9 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#9c6b2e] bg-stone-50 truncate"
                       style={{ borderColor: '#e3ddd0', color: '#17140f' }}
                     >
                       <option value="all">All Branches</option>
@@ -737,7 +737,7 @@ const SuperAdminCourses = () => {
                     />
                   </div>
                 </div>
-                <div className="text-xs font-semibold text-sky-700 bg-sky-100/60 px-3 py-1 rounded-full">
+                <div className="text-xs font-semibold text-sky-700 bg-sky-100/60 px-3 py-1 rounded-full self-start sm:self-auto">
                   {courses.length} courses listed for {selectedBranchId === 'all' ? 'All Branches' : (selectedBranch?.name || selectedBranch?.branch_name || 'branch')}
                 </div>
               </div>
@@ -849,7 +849,7 @@ const SuperAdminCourses = () => {
                         </div>
 
                         <div className="space-y-2 border-t pt-3 border-sky-100">
-                          <div className="flex items-center justify-between text-sm">
+                          <div className="flex flex-wrap items-center justify-between gap-1 text-sm">
                             <span className="text-xs text-slate-400">Total Fee</span>
                             <div className="text-right">
                               <span

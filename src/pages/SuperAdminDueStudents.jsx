@@ -192,7 +192,7 @@ const SuperAdminDueStudents = () => {
 
   return (
     <div
-      className="min-h-screen md:flex"
+      className="min-h-screen md:flex max-w-full overflow-x-hidden"
       style={{
         fontFamily: "'Inter', system-ui, sans-serif",
         background: '#faf8f4',
@@ -209,7 +209,7 @@ const SuperAdminDueStudents = () => {
         activePage="dueStudents"
       />
 
-      <main className="min-w-0 flex-1">
+      <main className="min-w-0 flex-1 max-w-full overflow-x-hidden">
         <header
           className="hidden md:flex items-center justify-between border-b px-6 py-5 sm:px-10"
           style={{ borderColor: '#e3ddd0', background: '#ffffff' }}
@@ -227,21 +227,23 @@ const SuperAdminDueStudents = () => {
             >
               Due Students
             </h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => loadDueStudents(selectedBranchId)}
+              className="rounded-lg p-2 hover:bg-[#f1ede4]"
+              title="Refresh dueStudents"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}
+                style={{ color: '#9c6b2e' }}
+              />
+            </button>
             <NavLogoutButton redirectTo="/super-admin/login" />
           </div>
-          <button
-            onClick={() => loadDueStudents(selectedBranchId)}
-            className="rounded-lg p-2 hover:bg-[#f1ede4]"
-            title="Refresh dueStudents"
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}
-              style={{ color: '#9c6b2e' }}
-            />
-          </button>
         </header>
 
-        <div className="mx-auto max-w-7xl px-6 py-8 sm:px-10 space-y-6">
+        <div className="w-full px-4 py-6 sm:px-8 sm:py-8 lg:px-10 space-y-6">
           {error && (
             <div
               className="rounded-xl px-4 py-3 text-sm font-medium"
@@ -299,19 +301,19 @@ const SuperAdminDueStudents = () => {
 
           {/* Filter Bar: Branch selection + Date Range + Search */}
           <div
-            className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-white border shadow-2xs"
+            className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 rounded-2xl bg-white border shadow-2xs max-w-full min-w-0"
             style={{ borderColor: '#e3ddd0' }}
           >
             {/* Left controls: Branch Filter & Date Range */}
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-col sm:flex-row flex-wrap sm:items-center gap-3 w-full lg:w-auto min-w-0">
               {/* Branch Filter dropdown */}
-              <div className="flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-stone-500" />
-                <div className="relative">
+              <div className="flex items-center gap-2 w-full sm:w-auto min-w-0">
+                <Building2 className="h-4 w-4 text-stone-500 shrink-0" />
+                <div className="relative flex-1 sm:flex-initial min-w-0 w-full sm:w-56 max-w-full">
                   <select
                     value={selectedBranchId}
                     onChange={(e) => setSelectedBranchId(e.target.value)}
-                    className="appearance-none rounded-xl border pl-3 pr-8 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#9c6b2e] bg-stone-50"
+                    className="w-full appearance-none rounded-xl border pl-3 pr-8 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#9c6b2e] bg-stone-50 truncate"
                     style={{ borderColor: '#e3ddd0', color: '#17140f' }}
                   >
                     <option value="">All Branches</option>
@@ -332,24 +334,24 @@ const SuperAdminDueStudents = () => {
               </div>
 
               {/* Date Filter: From Date & To Date */}
-              <div className="flex flex-wrap items-center gap-2 sm:border-l sm:pl-3 border-stone-200">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-600">
-                  <Calendar className="h-3.5 w-3.5 text-[#9c6b2e]" />
-                  <span className="text-[11px] uppercase tracking-wider text-stone-500 font-bold">From:</span>
+              <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2 sm:border-l sm:pl-3 border-stone-200 w-full sm:w-auto min-w-0">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-600 w-full sm:w-auto min-w-0">
+                  <Calendar className="h-3.5 w-3.5 text-[#9c6b2e] shrink-0" />
+                  <span className="text-[11px] uppercase tracking-wider text-stone-500 font-bold shrink-0">From:</span>
                   <input
                     type="date"
                     value={fromDate}
                     onChange={(e) => setFromDate(e.target.value)}
-                    className="rounded-xl border border-[#e3ddd0] bg-stone-50 px-2.5 py-1.5 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#9c6b2e]/30 focus:border-[#9c6b2e]"
+                    className="flex-1 sm:flex-initial rounded-xl border border-[#e3ddd0] bg-stone-50 px-2.5 py-1.5 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#9c6b2e]/30 focus:border-[#9c6b2e] min-w-0"
                   />
                 </div>
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-600">
-                  <span className="text-[11px] uppercase tracking-wider text-stone-500 font-bold">To:</span>
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-600 w-full sm:w-auto min-w-0">
+                  <span className="text-[11px] uppercase tracking-wider text-stone-500 font-bold shrink-0">To:</span>
                   <input
                     type="date"
                     value={toDate}
                     onChange={(e) => setToDate(e.target.value)}
-                    className="rounded-xl border border-[#e3ddd0] bg-stone-50 px-2.5 py-1.5 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#9c6b2e]/30 focus:border-[#9c6b2e]"
+                    className="flex-1 sm:flex-initial rounded-xl border border-[#e3ddd0] bg-stone-50 px-2.5 py-1.5 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#9c6b2e]/30 focus:border-[#9c6b2e] min-w-0"
                   />
                 </div>
                 {(fromDate || toDate) && (

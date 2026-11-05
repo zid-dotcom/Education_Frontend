@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   BookOpen,
   Calendar,
@@ -48,6 +48,8 @@ import {
   updateBranchAdminStaffStatusApi,
   updateStaffAttendanceApi,
 } from "../services/branchadminstaff";
+import { getHolidaysApi } from "../services/holidays";
+import { getDefaultFromDate, getDefaultToDate } from "../utils/dateFilters";
 
 /* Same display-font pairing used on the attendance page: Fraunces for
    headings, Inter for everything else. No-op if already injected. */
@@ -166,8 +168,11 @@ const BranchAdminStaff = () => {
   const [attendanceDate, setAttendanceDate] = useState(getToday);
   const [attendance, setAttendance] = useState([]);
   const [attendanceHistory, setAttendanceHistory] = useState([]);
-  const [attendanceStartDate, setAttendanceStartDate] = useState("");
-  const [attendanceEndDate, setAttendanceEndDate] = useState("");
+  const [calendarAttendance, setCalendarAttendance] = useState([]);
+  const [backendHistorySummary, setBackendHistorySummary] = useState(null);
+  const [attendanceStartDate, setAttendanceStartDate] = useState(getDefaultFromDate);
+  const [attendanceEndDate, setAttendanceEndDate] = useState(getDefaultToDate);
+  const activeHistoryRequestIdRef = useRef(0);
   const [attendanceSummary, setAttendanceSummary] = useState({
     total: 0,
     present: 0,
@@ -179,12 +184,21 @@ const BranchAdminStaff = () => {
   const [attendanceDrafts, setAttendanceDrafts] = useState({});
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
   const [attendanceViewMode, setAttendanceViewMode] = useState("calendar");
+  const [holidays, setHolidays] = useState([]);
 
   const handleMatrixSaveStatus = async (staffId, dateStr, newStatus, existingRecord) => {
     if (!token) return;
     const today = getToday();
     if (dateStr !== today) {
       setError("Staff attendance can only be marked or updated for today. Past dates cannot be modified.");
+      return;
+    }
+    const holidayMatch = holidays.find((h) => {
+      const hd = String(h.date || h.holiday_date || "").slice(0, 10);
+      return hd === dateStr;
+    });
+    if (holidayMatch) {
+      setError(`Cannot mark or update attendance on a declared branch holiday ("${holidayMatch.reason || 'Holiday'}"). Attendance is closed.`);
       return;
     }
     const member = staff.find((s) => String(s.id) === String(staffId));
@@ -196,56 +210,68 @@ const BranchAdminStaff = () => {
     try {
       const existing =
         existingRecord ||
+        calendarAttendance.find(
+          (r) =>
+            String(r.staff_id) === String(staffId) &&
+            String(r.date || r.attendance_date || "").slice(0, 10) === String(dateStr).slice(0, 10)
+        ) ||
         attendanceHistory.find(
           (r) =>
             String(r.staff_id) === String(staffId) &&
-            String(r.date) === String(dateStr)
+            String(r.date || r.attendance_date || "").slice(0, 10) === String(dateStr).slice(0, 10)
         );
 
+      let savedRecord;
       if (newStatus === null) {
         if (existing) {
           await updateStaffAttendanceApi(existing.id, { status: "Absent" }, token);
-          setAttendanceHistory((prev) =>
-            prev.map((r) => (r.id === existing.id ? { ...r, status: "Absent" } : r))
-          );
+          savedRecord = { ...existing, status: "Absent" };
         }
-        return;
-      }
-
-      if (existing) {
+      } else if (existing) {
         await updateStaffAttendanceApi(existing.id, { status: newStatus }, token);
-        setAttendanceHistory((prev) =>
-          prev.map((r) => (r.id === existing.id ? { ...r, status: newStatus } : r))
-        );
+        savedRecord = { ...existing, status: newStatus };
       } else {
         const res = await markStaffAttendanceApi(
           { staff_id: staffId, date: dateStr, status: newStatus },
           token
         );
-        const newRecord = res?.attendance || {
+        savedRecord = res?.attendance || {
           id: Date.now(),
           staff_id: staffId,
           date: dateStr,
           status: newStatus,
         };
-        setAttendanceHistory((prev) => {
-          const exists = prev.some(
+      }
+
+      if (savedRecord) {
+        setCalendarAttendance((prev) => {
+          const idx = prev.findIndex(
             (r) =>
               String(r.staff_id) === String(staffId) &&
-              String(r.date) === String(dateStr)
+              String(r.date || r.attendance_date || "").slice(0, 10) === String(dateStr).slice(0, 10)
           );
-          if (exists) {
-            return prev.map((r) =>
-              String(r.staff_id) === String(staffId) &&
-              String(r.date) === String(dateStr)
-                ? { ...r, ...newRecord, status: newStatus }
-                : r
-            );
+          if (idx >= 0) {
+            const next = [...prev];
+            next[idx] = { ...next[idx], ...savedRecord };
+            return next;
           }
-          return [...prev, newRecord];
+          return [...prev, savedRecord];
+        });
+        setAttendanceHistory((prev) => {
+          const idx = prev.findIndex(
+            (r) =>
+              String(r.staff_id) === String(staffId) &&
+              String(r.date || r.attendance_date || "").slice(0, 10) === String(dateStr).slice(0, 10)
+          );
+          if (idx >= 0) {
+            const next = [...prev];
+            next[idx] = { ...next[idx], ...savedRecord };
+            return next;
+          }
+          return [...prev, savedRecord];
         });
       }
-      setSuccess(`${memberName}'s attendance for ${dateStr} saved as ${newStatus}.`);
+      setSuccess(`${memberName}'s attendance for ${dateStr} saved as ${newStatus || "Absent"}.`);
     } catch (err) {
       setError(err.message || "Failed to save staff attendance.");
       throw err;
@@ -266,6 +292,24 @@ const BranchAdminStaff = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadCalendarAttendance = async (monthOrParams) => {
+    if (!token) return;
+    try {
+      const data = await getStaffAttendanceApi(token, monthOrParams);
+      const records = Array.isArray(data?.attendance) ? data.attendance : [];
+      setCalendarAttendance(records);
+    } catch (err) {
+      console.error("Failed to load staff calendar attendance:", err);
+    }
+  };
+
+  const handleCalendarMonthChange = (newDate) => {
+    if (!token || !newDate) return;
+    const y = newDate.getFullYear();
+    const m = String(newDate.getMonth() + 1).padStart(2, '0');
+    loadCalendarAttendance(`${y}-${m}`);
   };
 
   const loadAttendance = async (date = "") => {
@@ -296,26 +340,77 @@ const BranchAdminStaff = () => {
     }
   };
 
-  const loadAttendanceHistory = async () => {
+  const loadAttendanceHistory = async (params = {}) => {
     if (!token) return;
+    const queryParams = { ...params };
+    const dFrom = queryParams.date_from || attendanceStartDate;
+    const dTo = queryParams.date_to || attendanceEndDate;
+    if (dFrom && dTo && dFrom > dTo) {
+      // Guard against invalid date ordering so backend error 'date_from must not be after date_to' never triggers
+      return;
+    }
+    if (dFrom) queryParams.date_from = dFrom;
+    if (dTo) queryParams.date_to = dTo;
+
+    const requestId = ++activeHistoryRequestIdRef.current;
     try {
       setAttendanceLoading(true);
-      const data = await getStaffAttendanceApi(token);
-      setAttendanceHistory(
-        Array.isArray(data?.attendance) ? data.attendance : []
-      );
+      setError("");
+      const data = await getStaffAttendanceApi(token, queryParams);
+      if (requestId !== activeHistoryRequestIdRef.current) return;
+
+      let records = Array.isArray(data?.attendance) ? data.attendance : [];
+      if (dFrom || dTo) {
+        records = records.filter((r) => {
+          const d = String(r.date || r.attendance_date || r.marked_at || "").slice(0, 10);
+          if (!d) return true;
+          if (dFrom && d < dFrom) return false;
+          if (dTo && d > dTo) return false;
+          return true;
+        });
+      }
+      setAttendanceHistory(records);
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        setBackendHistorySummary({
+          total: data.total !== undefined ? Number(data.total) : undefined,
+          present: data.present !== undefined ? Number(data.present) : undefined,
+          half_day: data.half_day !== undefined ? Number(data.half_day) : undefined,
+          absent: data.absent !== undefined ? Number(data.absent) : undefined,
+          leave: data.leave !== undefined ? Number(data.leave) : undefined,
+          total_holidays: data.total_holidays !== undefined ? Number(data.total_holidays) : undefined,
+          total_working_days: data.total_working_days !== undefined ? Number(data.total_working_days) : undefined,
+        });
+      }
     } catch (err) {
-      setError(err.message || "Failed to load attendance history.");
+      if (requestId === activeHistoryRequestIdRef.current) {
+        setError(err.message || "Failed to load attendance history.");
+      }
     } finally {
-      setAttendanceLoading(false);
+      if (requestId === activeHistoryRequestIdRef.current) {
+        setAttendanceLoading(false);
+      }
     }
   };
 
   useEffect(() => {
+    if (activeTab === "history") {
+      if (attendanceStartDate && attendanceEndDate && attendanceStartDate > attendanceEndDate) return;
+      loadAttendanceHistory();
+    }
+  }, [token, activeTab, attendanceStartDate, attendanceEndDate]);
+
+  useEffect(() => {
     loadStaff();
     loadAttendance(attendanceDate);
+    loadCalendarAttendance();
     loadAttendanceHistory();
     if (token) {
+      getHolidaysApi(token)
+        .then((data) => {
+          const list = Array.isArray(data) ? data : Array.isArray(data?.holidays) ? data.holidays : [];
+          setHolidays(list);
+        })
+        .catch(() => {});
       getMyCoursesApi(token)
         .then((data) => setCourses(Array.isArray(data) ? data : []))
         .catch((err) => setError(err.message || "Failed to load courses."));
@@ -503,9 +598,9 @@ const BranchAdminStaff = () => {
     );
   }, [attendanceHistory, attendanceStartDate, attendanceEndDate]);
 
-  // Dynamic 5-Card metrics for Staff Management Attendance History
+  // Dynamic summary metrics for Staff Management Attendance History including working days and holidays
   const historySummary = useMemo(() => {
-    return filteredAttendanceHistory.reduce(
+    const computed = filteredAttendanceHistory.reduce(
       (acc, record) => {
         const s = normalizeAttendanceStatus(record.status);
         acc.total += 1;
@@ -517,7 +612,16 @@ const BranchAdminStaff = () => {
       },
       { total: 0, present: 0, half_day: 0, absent: 0, leave: 0 }
     );
-  }, [filteredAttendanceHistory]);
+    return {
+      total: backendHistorySummary?.total ?? computed.total,
+      present: backendHistorySummary?.present ?? computed.present,
+      half_day: backendHistorySummary?.half_day ?? computed.half_day,
+      absent: backendHistorySummary?.absent ?? computed.absent,
+      leave: backendHistorySummary?.leave ?? computed.leave,
+      total_working_days: backendHistorySummary?.total_working_days ?? 0,
+      total_holidays: backendHistorySummary?.total_holidays ?? holidays.length,
+    };
+  }, [filteredAttendanceHistory, backendHistorySummary, holidays]);
 
   const staffAttendanceTotals = useMemo(() => {
     return staff.map((member) => {
@@ -639,6 +743,7 @@ const BranchAdminStaff = () => {
                   type="button"
                   onClick={() => {
                     setActiveTab(tab.id);
+                    if (tab.id === "attendance") loadCalendarAttendance();
                     if (tab.id === "history") loadAttendanceHistory();
                   }}
                   className={`relative flex shrink-0 items-center gap-2 pb-3 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors cursor-pointer ${FOCUS_RING}`}
@@ -676,12 +781,15 @@ const BranchAdminStaff = () => {
 
               <AttendanceCalendarMatrix
                 people={staff}
-                records={attendanceHistory}
+                records={calendarAttendance}
+                attendanceRecords={calendarAttendance}
                 onSaveStatus={handleMatrixSaveStatus}
                 title="Branch Staff"
                 subtitle={`${staff.length} staff accounts`}
                 savingKey={attendanceSaving}
                 isStaffPage={true}
+                onMonthChange={handleCalendarMonthChange}
+                holidays={holidays}
               />
         </section>
       )}
@@ -717,7 +825,14 @@ const BranchAdminStaff = () => {
                       <input
                         type="date"
                         value={attendanceStartDate}
-                        onChange={(event) => setAttendanceStartDate(event.target.value)}
+                        onChange={(event) => {
+                          const val = event.target.value;
+                          setAttendanceStartDate(val);
+                          setError("");
+                          if (attendanceEndDate && val && val > attendanceEndDate) {
+                            setAttendanceEndDate(val);
+                          }
+                        }}
                         className="rounded-lg border border-[#ded8cb] bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 shadow-2xs focus:border-[#9c6b2e] focus:outline-none"
                       />
                     </label>
@@ -729,35 +844,45 @@ const BranchAdminStaff = () => {
                         type="date"
                         value={attendanceEndDate}
                         min={attendanceStartDate || undefined}
-                        onChange={(event) => setAttendanceEndDate(event.target.value)}
+                        onChange={(event) => {
+                          const val = event.target.value;
+                          setAttendanceEndDate(val);
+                          setError("");
+                          if (attendanceStartDate && val && val < attendanceStartDate) {
+                            setAttendanceStartDate(val);
+                          }
+                        }}
                         className="rounded-lg border border-[#ded8cb] bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 shadow-2xs focus:border-[#9c6b2e] focus:outline-none"
                       />
                     </label>
                   </div>
-                  {(attendanceStartDate || attendanceEndDate) && (
+                  {(attendanceStartDate !== getDefaultFromDate() || attendanceEndDate !== getDefaultToDate()) && (
                     <button
                       type="button"
                       onClick={() => {
-                        setAttendanceStartDate("");
-                        setAttendanceEndDate("");
+                        setAttendanceStartDate(getDefaultFromDate());
+                        setAttendanceEndDate(getDefaultToDate());
+                        setError("");
                       }}
                       className="inline-flex items-center gap-1 rounded-lg bg-white border border-[#ded8cb] px-2.5 py-1.5 text-xs font-bold text-[#9c6b2e] shadow-2xs hover:bg-[#f3ede1] transition-colors cursor-pointer"
-                      title="Clear date filters"
+                      title="Reset date filters to default month range"
                     >
                       <RotateCcw className="h-3 w-3" />
-                      Clear
+                      Reset
                     </button>
                   )}
                 </div>
               </div>
 
-              {/* A. Five Dynamic Summary Cards */}
+              {/* A. Dynamic Summary Cards including Working Days & Holidays */}
               <AttendanceSummaryCards
                 total={historySummary.total}
                 present={historySummary.present}
                 halfDay={historySummary.half_day}
                 absent={historySummary.absent}
                 leave={historySummary.leave}
+                totalWorkingDays={historySummary.total_working_days}
+                totalHolidays={historySummary.total_holidays}
                 loading={attendanceLoading}
                 totalLabel="Total Records"
               />

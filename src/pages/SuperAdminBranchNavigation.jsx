@@ -199,7 +199,7 @@ const SuperAdminBranchNavigation = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 md:flex" style={sans}>
+    <div className="min-h-screen bg-slate-50 text-slate-900 md:flex max-w-full overflow-x-hidden" style={sans}>
       <SuperAdminSidebar
         user={user}
         navigate={navigate}
@@ -209,7 +209,7 @@ const SuperAdminBranchNavigation = () => {
         activePage="navigation-settings"
       />
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col max-w-full overflow-x-hidden">
         {/* Sticky Header */}
         <header className="sticky top-0 z-20 hidden md:flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4 shadow-2xs sm:px-8">
           <div>
@@ -237,7 +237,7 @@ const SuperAdminBranchNavigation = () => {
         </header>
 
         {/* Main Content */}
-        <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-5 py-7 sm:px-8 lg:py-9">
+        <main className="w-full flex-1 space-y-6 px-5 py-7 sm:px-8 lg:py-9">
           {/* Notifications */}
           {(error || success) && (
             <div

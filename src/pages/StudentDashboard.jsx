@@ -2504,6 +2504,12 @@ const StudentDashboard = () => {
               {/* Conditional Student Character Illustration (Boy / Girl Based on Name) - Visible on both mobile and desktop */}
               <div className="flex items-center justify-center shrink-0 mr-1 sm:mr-8 md:mr-10 relative z-10">
                 <div className="relative flex items-center justify-center group cursor-default">
+                  <span className="absolute -left-3 top-2 h-1.5 w-1.5 rounded-full bg-[#b8863b]/70 animate-pulse" />
+                  <span className="absolute -left-5 top-8 h-2 w-2 rounded-full border-2 border-[#b8863b]/60" />
+                  <span className="absolute -bottom-1 left-0 h-1 w-1 rounded-full bg-[#b8863b]/80" />
+                  <span className="absolute right-8 -top-4 text-sm font-bold text-[#b8863b]/70">✦</span>
+                  <span className="absolute right-0 bottom-5 text-xs font-bold text-[#b8863b]/65">✦</span>
+
                   {/* Floating decorative elements matching design */}
                   <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 md:-top-2.5 md:-right-2.5 h-5 w-5 sm:h-7 sm:w-7 md:h-8 md:w-8 rounded-full bg-[#b8863b] shadow-sm flex items-center justify-center text-white z-20">
                     <GraduationCap className="h-3 w-3 sm:h-4 sm:w-4 md:h-4.5 md:w-4.5 text-white stroke-[2.2]" />
@@ -2512,12 +2518,12 @@ const StudentDashboard = () => {
                     <Plus className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 text-white stroke-[2.8]" />
                   </div>
 
-                  {/* Character Illustration Container - Half-portion waist-up focus, no legs */}
-                  <div className="flex h-16 w-16 sm:h-28 sm:w-28 md:h-32 md:w-32 lg:h-[132px] lg:w-[132px] items-center justify-center rounded-2xl sm:rounded-3xl bg-[#FAF8F4] border border-[#E3DDD0] shadow-sm overflow-hidden select-none transition-all duration-300 group-hover:scale-105 group-hover:shadow-md">
+                  {/* Character illustration without a rectangular frame */}
+                  <div className="flex h-16 w-16 sm:h-28 sm:w-28 md:h-32 md:w-32 lg:h-[132px] lg:w-[132px] items-center justify-center overflow-hidden select-none transition-transform duration-300 group-hover:scale-105">
                     <img
                       src={studentBannerAvatar}
                       alt={`${studentGender === 'girl' ? 'Girl' : 'Boy'} Student Avatar`}
-                      className="w-full h-full object-cover select-none pointer-events-none transition-transform duration-300"
+                      className="w-full h-full object-cover mix-blend-multiply select-none pointer-events-none transition-transform duration-300"
                       style={
                         studentGender === 'girl'
                           ? { transform: 'scale(1.7) translateY(8%)', transformOrigin: 'top center' }

@@ -160,7 +160,7 @@ const SuperAdminGstSettings = () => {
   };
 
   return (
-    <div className="min-h-screen md:flex" style={{ ...sans, background: '#faf8f4', color: '#17140f' }}>
+    <div className="min-h-screen md:flex max-w-full overflow-x-hidden" style={{ ...sans, background: '#faf8f4', color: '#17140f' }}>
       <style>{PAGE_CSS}</style>
 
       <SuperAdminSidebar
@@ -172,7 +172,7 @@ const SuperAdminGstSettings = () => {
         activePage="gst-settings"
       />
 
-      <main className="min-w-0 flex-1">
+      <main className="min-w-0 flex-1 max-w-full overflow-x-hidden">
         {/* Header */}
         <header className="sticky top-0 z-20 hidden md:flex h-[92px] items-center justify-between border-b border-[#e3ddd0] bg-[#faf8f4]/95 px-6 backdrop-blur-md sm:px-10 shrink-0">
           <div className="flex items-center gap-3">
@@ -218,7 +218,7 @@ const SuperAdminGstSettings = () => {
           </div>
         </header>
 
-        <div className="mx-auto w-full max-w-6xl space-y-8 px-6 py-8 sm:px-10">
+        <div className="w-full space-y-8 px-4 py-6 sm:px-8 sm:py-8 lg:px-10">
           {/* Notifications */}
           {error && (
             <div

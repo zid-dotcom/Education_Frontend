@@ -526,7 +526,7 @@ const SuperAdminStaffMonitoring = () => {
   };
 
   return (
-    <div className="min-h-screen md:flex bg-[#FAF8F4]" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-screen md:flex bg-[#FAF8F4] max-w-full overflow-x-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
       <style>{PAGE_CSS}</style>
 
       {/* Sidebar with navigate and user props to prevent navigation breakage */}
@@ -540,7 +540,7 @@ const SuperAdminStaffMonitoring = () => {
       />
 
       {/* Main Content Area */}
-      <main className="min-w-0 flex-1 h-screen overflow-y-auto">
+      <main className="min-w-0 flex-1 h-screen overflow-y-auto max-w-full overflow-x-hidden">
         {/* Top Header */}
         <header className="sticky top-0 z-20 hidden md:flex h-16 items-center justify-between border-b border-[#E3DDD0] bg-[#FAF8F4]/90 px-6 backdrop-blur-md">
           <div className="flex items-center gap-3">
@@ -585,7 +585,7 @@ const SuperAdminStaffMonitoring = () => {
         </header>
 
         {/* Content Body */}
-        <div className="p-6 sm:p-8 space-y-6 max-w-7xl mx-auto">
+        <div className="p-6 sm:p-8 space-y-6 w-full">
           {/* Error Banner */}
           {error && (
             <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs font-semibold text-rose-800 flex items-center justify-between gap-3 sa-fade">
@@ -694,12 +694,12 @@ const SuperAdminStaffMonitoring = () => {
                 <Building2 className="h-4 w-4 text-[#9C6B2E] shrink-0" />
                 <span className="text-xs font-bold text-slate-700 whitespace-nowrap">Filter Branch:</span>
               </div>
-              <div className="relative min-w-[260px]">
+              <div className="relative w-full sm:w-auto sm:min-w-[260px] min-w-0 max-w-full">
                 <select
                   value={selectedBranchId}
                   onChange={(e) => handleBranchChange(e.target.value)}
                   disabled={loadingBranches}
-                  className="w-full appearance-none rounded-xl border border-[#E3DDD0] bg-[#FAF8F4] px-3.5 py-2 pr-9 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#9C6B2E]/20 cursor-pointer disabled:opacity-50"
+                  className="w-full appearance-none rounded-xl border border-[#E3DDD0] bg-[#FAF8F4] px-3.5 py-2 pr-9 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#9C6B2E]/20 cursor-pointer disabled:opacity-50 truncate"
                 >
                   <option value="all">All Branches (Global)</option>
                   {branches.map((b) => {
