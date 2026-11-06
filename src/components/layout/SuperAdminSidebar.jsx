@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Bell,
   BookOpen,
@@ -104,6 +104,7 @@ const NAV_GROUPS = [
     label: 'Staff',
     items: [
       { id: 'staff', label: 'Staff', icon: UserPlus, path: '/super-admin/staff' },
+      { id: 'staff-attendance', label: 'Staff Attendance', icon: CalendarCheck, path: '/super-admin/staff-attendance' },
       { id: 'staff-verification', label: 'Staff Verification', icon: ShieldCheck, path: '/super-admin/staff-verification' },
       { id: 'staff-monitoring', label: 'Staff Monitoring', icon: Activity, path: '/super-admin/staff-monitoring' },
       { id: 'staff-messages', label: 'Staff Messages', icon: Users, path: '/super-admin/staff-messages' },
@@ -119,18 +120,57 @@ const NAV_GROUPS = [
   },
 ];
 
+let savedSidebarScrollTop = 0;
+try {
+  savedSidebarScrollTop = Number(sessionStorage.getItem('sa_sidebar_scroll')) || 0;
+} catch {}
+
 const SuperAdminSidebar = ({
   user,
   navigate,
   logout,
   sidebarOpen,
   setSidebarOpen,
-  activePage = 'dashboard',
+  activePage,
 }) => {
   useDisplayFonts();
+  const location = useLocation();
+  const navRef = useRef(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [staffUnreadCount, setStaffUnreadCount] = useState(0);
   const [pendingPurchasesCount, setPendingPurchasesCount] = useState(0);
+
+  // Restore scroll position immediately upon component mounting
+  useLayoutEffect(() => {
+    if (navRef.current && savedSidebarScrollTop > 0) {
+      navRef.current.scrollTop = savedSidebarScrollTop;
+    }
+  }, []);
+
+  // Ensure active navigation item is comfortably visible
+  useEffect(() => {
+    if (navRef.current) {
+      const activeEl = navRef.current.querySelector('[aria-current="page"]');
+      if (activeEl) {
+        const navRect = navRef.current.getBoundingClientRect();
+        const activeRect = activeEl.getBoundingClientRect();
+        if (activeRect.top < navRect.top || activeRect.bottom > navRect.bottom) {
+          activeEl.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+          savedSidebarScrollTop = navRef.current.scrollTop;
+          try {
+            sessionStorage.setItem('sa_sidebar_scroll', String(savedSidebarScrollTop));
+          } catch {}
+        }
+      }
+    }
+  }, [location?.pathname, activePage]);
+
+  const handleNavScroll = (e) => {
+    savedSidebarScrollTop = e.currentTarget.scrollTop;
+    try {
+      sessionStorage.setItem('sa_sidebar_scroll', String(savedSidebarScrollTop));
+    } catch {}
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -216,6 +256,12 @@ const SuperAdminSidebar = ({
 
   const closeSidebar = () => setSidebarOpen(false);
   const goTo = (path) => {
+    if (navRef.current) {
+      savedSidebarScrollTop = navRef.current.scrollTop;
+      try {
+        sessionStorage.setItem('sa_sidebar_scroll', String(savedSidebarScrollTop));
+      } catch {}
+    }
     closeSidebar();
     if (typeof effectiveNavigate === 'function') {
       effectiveNavigate(path);
@@ -316,6 +362,8 @@ const SuperAdminSidebar = ({
         </div>
 
         <nav
+          ref={navRef}
+          onScroll={handleNavScroll}
           className="sa-sidebar-nav flex-1 min-h-0 space-y-5 overflow-y-auto px-3 py-5"
           aria-label="Super Admin navigation"
         >
@@ -326,7 +374,12 @@ const SuperAdminSidebar = ({
               </p>
               <div className="space-y-0.5">
                 {group.items.map(({ id, label, icon: Icon, path }) => {
-                  const isActive = activePage === id || (id === 'due-students' && activePage === 'dueStudents');
+                  const isPathMatch = location?.pathname === path;
+                  const isPropMatch = Boolean(
+                    activePage &&
+                      (activePage === id || (id === 'due-students' && activePage === 'dueStudents'))
+                  );
+                  const isActive = isPathMatch || isPropMatch;
                   return (
                     <button
                       key={id}

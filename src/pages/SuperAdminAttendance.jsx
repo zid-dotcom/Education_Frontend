@@ -29,13 +29,13 @@ import AttendanceStatusBadge, { normalizeAttendanceStatus } from '../components/
 import { getDefaultFromDate, getDefaultToDate } from '../utils/dateFilters';
 import {
   getSuperAdminAttendanceBranchesApi,
-  getSuperAdminBranchStaffAttendanceApi,
   getSuperAdminBranchAdminAttendanceApi,
   getSuperAdminAttendanceAdjustmentsApi,
 } from '../services/superadmin';
 import {
   getSuperAdminBranchHolidaysApi,
 } from '../services/holidays';
+import AttendanceHolidaysCard from '../components/common/AttendanceHolidaysCard';
 
 const PAGE_CSS = `
 @keyframes sa-rise { from { opacity:0; transform:translateY(16px) scale(.97); } to { opacity:1; transform:translateY(0) scale(1); } }
@@ -249,10 +249,70 @@ const AttendanceTable = ({ records = [], emptyMsg = "No attendance records found
 
 const AttendanceAdjustmentsTable = ({
   adjustments = [],
+  adminRecords = [],
+  branches = [],
+  selectedBranch = null,
   emptyMsg = "No attendance records found for this period.",
   title = "Branch Attendance Records",
 }) => {
   const serif = { fontFamily: "'Fraunces', ui-serif, Georgia, serif" };
+
+  const resolveAdminName = (record) => {
+    // 1. Direct explicit name fields returned by API
+    const directName =
+      record.changed_by_name ||
+      record.changed_by_user_name ||
+      record.changed_by_admin_name ||
+      record.admin_name ||
+      record.branch_admin_name ||
+      record.adjusted_by_name ||
+      record.updated_by_name ||
+      record.modifier_name ||
+      record.changer_name ||
+      record.changed_by_user?.name ||
+      record.admin?.name ||
+      record.user?.name;
+
+    if (directName && typeof directName === 'string' && directName.trim()) {
+      return directName.trim();
+    }
+
+    // 2. Check if changed_by itself is already a string name (contains non-digits)
+    const raw = record.changed_by ?? record.adjusted_by ?? record.updated_by;
+    if (raw && typeof raw === 'string' && !/^\d+$/.test(raw.trim())) {
+      return raw.trim();
+    }
+
+    // 3. If raw is numeric (like ID 2), look up against adminRecords
+    const numId = raw !== undefined && raw !== null ? String(raw).trim() : null;
+    if (numId && Array.isArray(adminRecords)) {
+      const match = adminRecords.find((a) => {
+        const aId = String(a.branch_admin_id ?? a.admin_id ?? a.user_id ?? a.id ?? '');
+        return aId === numId;
+      });
+      const found = match?.branch_admin_name || match?.admin_name || match?.name;
+      if (found) return found;
+    }
+
+    // 4. Look up against branches array
+    if (numId && Array.isArray(branches)) {
+      const matchBranch = branches.find((b) => {
+        const bAdminId = String(b.branch_admin_id ?? b.admin_id ?? '');
+        return bAdminId === numId;
+      });
+      const foundBranchAdmin = matchBranch?.branch_admin_name || matchBranch?.admin_name;
+      if (foundBranchAdmin) return foundBranchAdmin;
+    }
+
+    // 5. Look up against selectedBranch
+    if (selectedBranch) {
+      const selName = selectedBranch.branch_admin_name || selectedBranch.admin_name;
+      if (selName) return selName;
+    }
+
+    // 6. Never display raw database ID as user-facing name
+    return "Branch Admin";
+  };
 
   if (adjustments.length === 0) {
     return (
@@ -297,29 +357,29 @@ const AttendanceAdjustmentsTable = ({
 
       {/* Table */}
       <div className="overflow-x-auto custom-staff-scrollbar w-full">
-        <table className="w-full text-left text-xs sm:text-sm min-w-[650px]">
+        <table className="w-full text-left text-xs sm:text-sm min-w-[920px]">
           <thead>
             <tr className="border-b border-[#e8e2d5] bg-[#fbf9f5]">
               <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
-                Name
+                Staff Name
               </th>
               <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
-                Role
+                Designation
               </th>
               <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
                 Attendance Date
               </th>
               <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
-                Previous Status
+                Initially Marked
               </th>
               <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
-                Adjusted Status
+                Updated Status
               </th>
               <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
-                Adjusted By
+                Changed By
               </th>
               <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
-                Adjusted At
+                Last Updated
               </th>
             </tr>
           </thead>
@@ -334,63 +394,105 @@ const AttendanceAdjustmentsTable = ({
                 .join("")
                 .toUpperCase();
               const dateVal = r.attendance_date || r.date || r.for_date;
-              const prevStatus = r.previous_status || r.old_status || r.from_status;
-              const newStatus = r.new_status || r.status || r.to_status || r.adjusted_status;
-              const changedBy = r.changed_by || r.adjusted_by || r.updated_by || "Admin";
-              const changedAt = r.changed_at || r.adjusted_at || r.created_at;
+
+              const firstStatus = r.first_status || r.previous_status || r.old_status || r.from_status;
+              const firstStatusMarkedAt =
+                r.first_status_marked_at_display ||
+                (r.first_status_marked_at ? formatTimestamp(r.first_status_marked_at) : "") ||
+                (r.first_marked_at ? formatTimestamp(r.first_marked_at) : "") ||
+                (r.marked_at ? formatTimestamp(r.marked_at) : "");
+
+              const changedStatus = r.changed_status || r.new_status || r.status || r.to_status || r.adjusted_status;
+              const changedStatusMarkedAt =
+                r.changed_status_marked_at_display ||
+                (r.changed_status_marked_at ? formatTimestamp(r.changed_status_marked_at) : "") ||
+                (r.adjusted_status_marked_at_display || "") ||
+                (r.adjusted_at ? formatTimestamp(r.adjusted_at) : "") ||
+                (r.updated_at ? formatTimestamp(r.updated_at) : "");
+
+              const resolvedAdmin = resolveAdminName(r);
+
+              const changedAtDisplay =
+                r.changed_at_display ||
+                r.adjusted_at_display ||
+                r.updated_at_display ||
+                (r.changed_at ? formatTimestamp(r.changed_at) : "") ||
+                (r.adjusted_at ? formatTimestamp(r.adjusted_at) : "") ||
+                (r.created_at ? formatTimestamp(r.created_at) : "—");
 
               return (
                 <tr
                   key={r.id ?? i}
                   className="hover:bg-[#fcfbf9] transition-colors"
                 >
-                  <td className="px-6 py-4.5">
+                  <td className="px-6 py-4.5 align-top">
                     <div className="flex items-center gap-3">
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f5efe4] text-xs font-extrabold text-[#9c6b2e] border border-[#e8dfd0] shadow-2xs">
                         {initials}
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <div className="font-bold text-slate-900 leading-tight">
                           {personName}
                         </div>
                         {r.staff_code && (
-                          <div className="text-xs font-medium text-slate-400">
+                          <div className="text-[11px] font-medium text-slate-400 mt-0.5">
                             #{r.staff_code}
                           </div>
                         )}
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4.5 font-medium text-slate-600 text-xs">
+                  <td className="px-6 py-4.5 align-top font-medium text-slate-600 text-xs whitespace-nowrap">
                     <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1 text-slate-700 font-semibold">
-                      {r.role || (r.staff_id ? "Staff" : "Branch Admin")}
+                      {r.role || r.designation || (r.staff_id ? "Staff" : "Branch Admin")}
                     </span>
                   </td>
-                  <td className="px-6 py-4.5 font-semibold text-slate-700 whitespace-nowrap">
+                  <td className="px-6 py-4.5 font-semibold text-slate-700 whitespace-nowrap align-top">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                       <span>{formatDate(dateVal)}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4.5 whitespace-nowrap">
-                    {prevStatus ? (
-                      <AttendanceStatusBadge status={prevStatus} />
+                  <td className="px-6 py-4.5 whitespace-nowrap align-top">
+                    {firstStatus ? (
+                      <div className="flex flex-col items-start gap-1">
+                        <AttendanceStatusBadge status={firstStatus} />
+                        {firstStatusMarkedAt && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400">
+                            <Clock className="h-3 w-3 text-slate-400 shrink-0" />
+                            <span>{firstStatusMarkedAt}</span>
+                          </span>
+                        )}
+                      </div>
                     ) : (
                       <span className="text-slate-400 font-medium">—</span>
                     )}
                   </td>
-                  <td className="px-6 py-4.5 whitespace-nowrap">
-                    <AttendanceStatusBadge status={newStatus} />
+                  <td className="px-6 py-4.5 whitespace-nowrap align-top">
+                    {changedStatus ? (
+                      <div className="flex flex-col items-start gap-1">
+                        <AttendanceStatusBadge status={changedStatus} />
+                        {changedStatusMarkedAt && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400">
+                            <Clock className="h-3 w-3 text-slate-400 shrink-0" />
+                            <span>{changedStatusMarkedAt}</span>
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-slate-400 font-medium">—</span>
+                    )}
                   </td>
-                  <td className="px-6 py-4.5 text-xs font-semibold text-slate-700 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#faf8f4] border border-[#e3ddd0]">
-                      {changedBy}
+                  <td className="px-6 py-4.5 whitespace-nowrap align-top">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-[#e3ddd0] text-xs font-semibold text-slate-800 shadow-2xs">
+                      <UserCheck className="h-3.5 w-3.5 text-[#9c6b2e] shrink-0" />
+                      <span>{resolvedAdmin}</span>
                     </span>
                   </td>
-                  <td className="px-6 py-4.5 text-xs font-medium text-slate-600 whitespace-nowrap">
+                  <td className="px-6 py-4.5 text-xs font-medium text-slate-600 whitespace-nowrap align-top">
                     <div className="flex items-center gap-1.5">
                       <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                      <span>{formatTimestamp(changedAt)}</span>
+                      <span>{changedAtDisplay}</span>
                     </div>
                   </td>
                 </tr>
@@ -404,7 +506,6 @@ const AttendanceAdjustmentsTable = ({
 };
 
 const TABS = [
-  { id: 'staff', label: 'Staff Attendance', icon: Users },
   { id: 'admins', label: 'Branch Admins Attendance', icon: UserCheck },
   { id: 'holidays', label: 'Branch Holidays', icon: CalendarDays },
   { id: 'records', label: 'Attendance Records', icon: ClipboardList },
@@ -416,15 +517,13 @@ const SuperAdminAttendance = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [branches, setBranches] = useState([]);
   const [selectedBranchId, setSelectedBranchId] = useState('');
-  const [activeTab, setActiveTab] = useState('staff');
+  const [activeTab, setActiveTab] = useState('admins');
   const [fromDate, setFromDate] = useState(getDefaultFromDate);
   const [toDate, setToDate] = useState(getDefaultToDate);
   const [dateError, setDateError] = useState('');
-  const [staffRecords, setStaffRecords] = useState([]);
   const [adminRecords, setAdminRecords] = useState([]);
   const [attendanceAdjustments, setAttendanceAdjustments] = useState([]);
   const [branchHolidays, setBranchHolidays] = useState([]);
-  const [staffSummary, setStaffSummary] = useState(null);
   const [adminSummary, setAdminSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(false);
@@ -463,7 +562,6 @@ const SuperAdminAttendance = () => {
     const requestId = ++activeRequestIdRef.current;
 
     Promise.allSettled([
-      getSuperAdminBranchStaffAttendanceApi(branchId, token, { fromDate: from, toDate: to }),
       getSuperAdminBranchAdminAttendanceApi(branchId, token, { fromDate: from, toDate: to }),
       getSuperAdminBranchHolidaysApi(branchId, token, { date_from: from, date_to: to }),
       getSuperAdminAttendanceAdjustmentsApi(token, {
@@ -471,7 +569,7 @@ const SuperAdminAttendance = () => {
         date_from: from,
         date_to: to,
       }),
-    ]).then(([staffRes, adminRes, holidayRes, adjustmentsRes]) => {
+    ]).then(([adminRes, holidayRes, adjustmentsRes]) => {
       // If a newer request was dispatched while this was in flight, ignore stale response
       if (requestId !== activeRequestIdRef.current) {
         return;
@@ -545,16 +643,33 @@ const SuperAdminAttendance = () => {
         return null;
       };
 
-      const staffList = extractRecords(staffRes);
       const adminList = extractRecords(adminRes);
-      const holidaysList = extractHolidays(holidayRes);
+
+      // Extract holidays directly returned by the GET branch-admins API, falling back to separate holiday API
+      let holidaysList = [];
+      if (adminRes.status === 'fulfilled' && Array.isArray(adminRes.value?.holidays)) {
+        holidaysList = adminRes.value.holidays;
+      } else if (adminRes.status === 'fulfilled' && Array.isArray(adminRes.value?.branch_holidays)) {
+        holidaysList = adminRes.value.branch_holidays;
+      } else {
+        holidaysList = extractHolidays(holidayRes);
+      }
+
+      if (from || to) {
+        holidaysList = holidaysList.filter((h) => {
+          const hd = String(h.date || h.holiday_date || "").slice(0, 10);
+          if (!hd) return true;
+          if (from && hd < from) return false;
+          if (to && hd > to) return false;
+          return true;
+        });
+      }
+
       const adjList = extractAdjustments(adjustmentsRes);
 
-      setStaffRecords(staffList);
       setAdminRecords(adminList);
       setBranchHolidays(holidaysList);
       setAttendanceAdjustments(adjList);
-      setStaffSummary(extractSummary(staffRes, staffList));
       setAdminSummary(extractSummary(adminRes, adminList));
     }).catch(e => setError(e.message))
       .finally(() => {
@@ -576,12 +691,12 @@ const SuperAdminAttendance = () => {
   }, [selectedBranchId, fromDate, toDate, token]);
 
   // Current active records based on tab
-  const currentRecords = activeTab === 'staff' ? staffRecords : activeTab === 'admins' ? adminRecords : attendanceAdjustments;
+  const currentRecords = activeTab === 'admins' ? adminRecords : attendanceAdjustments;
 
   // Dynamic summary metrics using backend-returned totals & working days/holidays with fallback calculation
   const currentSummary = useMemo(() => {
-    const backendSummary = activeTab === 'staff' ? staffSummary : activeTab === 'admins' ? adminSummary : null;
-    const currentList = activeTab === 'staff' ? staffRecords : activeTab === 'admins' ? adminRecords : attendanceAdjustments;
+    const backendSummary = activeTab === 'admins' ? adminSummary : null;
+    const currentList = activeTab === 'admins' ? adminRecords : attendanceAdjustments;
 
     const computed = currentList.reduce(
       (acc, r) => {
@@ -602,10 +717,10 @@ const SuperAdminAttendance = () => {
       half_day: backendSummary?.half_day ?? computed.half_day,
       absent: backendSummary?.absent ?? computed.absent,
       leave: backendSummary?.leave ?? computed.leave,
-      total_working_days: backendSummary?.total_working_days !== undefined ? backendSummary.total_working_days : (staffSummary?.total_working_days ?? 0),
+      total_working_days: backendSummary?.total_working_days !== undefined ? backendSummary.total_working_days : (adminSummary?.total_working_days ?? 0),
       total_holidays: backendSummary?.total_holidays !== undefined ? backendSummary.total_holidays : branchHolidays.length,
     };
-  }, [activeTab, staffSummary, adminSummary, staffRecords, adminRecords, attendanceAdjustments, branchHolidays]);
+  }, [activeTab, adminSummary, adminRecords, attendanceAdjustments, branchHolidays]);
 
   const selectedBranch = branches.find(
     (b) => String(b.id ?? b.branch_id) === String(selectedBranchId)
@@ -812,10 +927,8 @@ const SuperAdminAttendance = () => {
                   totalHolidays={currentSummary.total_holidays}
                   loading={dataLoading}
                   totalLabel={
-                    activeTab === 'staff'
-                      ? "Total Staff Records"
-                      : activeTab === 'admins'
-                      ? "Total Admin Records"
+                    activeTab === 'admins'
+                      ? "Total Branch Admin Records"
                       : "Total Attendance Records"
                   }
                 />
@@ -829,9 +942,7 @@ const SuperAdminAttendance = () => {
                 {TABS.map(({ id, label, icon: TabIcon }) => {
                   const isActive = activeTab === id;
                   const count =
-                    id === 'staff'
-                      ? staffRecords.length
-                      : id === 'admins'
+                    id === 'admins'
                       ? adminRecords.length
                       : id === 'holidays'
                       ? branchHolidays.length
@@ -871,7 +982,7 @@ const SuperAdminAttendance = () => {
                 <div className="flex flex-col items-center justify-center py-20 space-y-3">
                   <Loader2 className="h-8 w-8 animate-spin text-[#9c6b2e]" />
                   <p className="text-xs font-semibold text-slate-500">
-                    Loading {activeTab === 'staff' ? 'staff' : activeTab === 'admins' ? 'branch admin' : activeTab === 'holidays' ? 'branch holiday' : 'attendance adjustment'} records...
+                    Loading {activeTab === 'admins' ? 'branch admin' : activeTab === 'holidays' ? 'branch holiday' : 'attendance adjustment'} records...
                   </p>
                 </div>
               ) : !selectedBranchId ? (
@@ -888,20 +999,19 @@ const SuperAdminAttendance = () => {
                     Please select a branch from the dropdown above to view its attendance and holiday data.
                   </p>
                 </div>
-              ) : activeTab === 'staff' ? (
-                <AttendanceTable
-                  records={staffRecords}
-                  emptyMsg="No staff attendance records for this period."
-                  defaultRole="Staff"
-                  title={`${selectedBranch?.name || 'Branch'} Staff Attendance Log`}
-                />
               ) : activeTab === 'admins' ? (
-                <AttendanceTable
-                  records={adminRecords}
-                  emptyMsg="No branch admin attendance records for this period."
-                  defaultRole="Branch Admin"
-                  title={`${selectedBranch?.name || 'Branch'} Administrator Attendance Log`}
-                />
+                <div className="space-y-5">
+                  <AttendanceHolidaysCard
+                    holidays={branchHolidays}
+                    title={`${selectedBranch?.name || selectedBranch?.branch_name || 'Branch'} Declared Holidays in Selected Period`}
+                  />
+                  <AttendanceTable
+                    records={adminRecords}
+                    emptyMsg="No branch admin attendance records for this period."
+                    defaultRole="Branch Admin"
+                    title={`${selectedBranch?.name || 'Branch'} Administrator Attendance Log`}
+                  />
+                </div>
               ) : activeTab === 'holidays' ? (
                 /* Tab 3: Branch Holidays */
                 <div
@@ -1013,6 +1123,9 @@ const SuperAdminAttendance = () => {
                 /* Tab 4: Attendance Records (from GET /super-admin/attendance/adjustments) */
                 <AttendanceAdjustmentsTable
                   adjustments={attendanceAdjustments}
+                  adminRecords={adminRecords}
+                  branches={branches}
+                  selectedBranch={selectedBranch}
                   emptyMsg="No attendance records found for this period."
                   title={`${selectedBranch?.name || 'Branch'} Attendance Records`}
                 />

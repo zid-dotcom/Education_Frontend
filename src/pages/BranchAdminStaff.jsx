@@ -50,6 +50,7 @@ import {
 } from "../services/branchadminstaff";
 import { getHolidaysApi } from "../services/holidays";
 import { getDefaultFromDate, getDefaultToDate } from "../utils/dateFilters";
+import AttendanceHolidaysCard from "../components/common/AttendanceHolidaysCard";
 
 /* Same display-font pairing used on the attendance page: Fraunces for
    headings, Inter for everything else. No-op if already injected. */
@@ -185,6 +186,8 @@ const BranchAdminStaff = () => {
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
   const [attendanceViewMode, setAttendanceViewMode] = useState("calendar");
   const [holidays, setHolidays] = useState([]);
+  const [historyHolidays, setHistoryHolidays] = useState([]);
+  const [historySubTab, setHistorySubTab] = useState("staff");
 
   const handleMatrixSaveStatus = async (staffId, dateStr, newStatus, existingRecord) => {
     if (!token) return;
@@ -193,12 +196,15 @@ const BranchAdminStaff = () => {
       setError("Staff attendance can only be marked or updated for today. Past dates cannot be modified.");
       return;
     }
+    const dObj = new Date(dateStr + "T00:00:00");
+    const isSunday = dObj.getDay() === 0;
     const holidayMatch = holidays.find((h) => {
       const hd = String(h.date || h.holiday_date || "").slice(0, 10);
       return hd === dateStr;
     });
-    if (holidayMatch) {
-      setError(`Cannot mark or update attendance on a declared branch holiday ("${holidayMatch.reason || 'Holiday'}"). Attendance is closed.`);
+    if (isSunday || holidayMatch) {
+      const reason = holidayMatch?.reason || (isSunday ? "Sunday (Weekly Off)" : "Holiday");
+      setError(`Cannot mark or update attendance on ${reason}. Attendance is closed.`);
       return;
     }
     const member = staff.find((s) => String(s.id) === String(staffId));
@@ -300,6 +306,20 @@ const BranchAdminStaff = () => {
       const data = await getStaffAttendanceApi(token, monthOrParams);
       const records = Array.isArray(data?.attendance) ? data.attendance : [];
       setCalendarAttendance(records);
+      if (Array.isArray(data?.holidays) && data.holidays.length > 0) {
+        setHolidays((prev) => {
+          const map = new Map();
+          (prev || []).forEach((h) => {
+            const d = String(h?.date || h?.holiday_date || "").slice(0, 10);
+            if (d) map.set(d, h);
+          });
+          data.holidays.forEach((h) => {
+            const d = String(h?.date || h?.holiday_date || "").slice(0, 10);
+            if (d) map.set(d, h);
+          });
+          return Array.from(map.values());
+        });
+      }
     } catch (err) {
       console.error("Failed to load staff calendar attendance:", err);
     }
@@ -370,6 +390,23 @@ const BranchAdminStaff = () => {
         });
       }
       setAttendanceHistory(records);
+
+      let hList = Array.isArray(data?.holidays)
+        ? data.holidays
+        : Array.isArray(data?.branch_holidays)
+        ? data.branch_holidays
+        : [];
+      if (dFrom || dTo) {
+        hList = hList.filter((h) => {
+          const hd = String(h.date || h.holiday_date || "").slice(0, 10);
+          if (!hd) return true;
+          if (dFrom && hd < dFrom) return false;
+          if (dTo && hd > dTo) return false;
+          return true;
+        });
+      }
+      setHistoryHolidays(hList);
+
       if (data && typeof data === 'object' && !Array.isArray(data)) {
         setBackendHistorySummary({
           total: data.total !== undefined ? Number(data.total) : undefined,
@@ -619,9 +656,9 @@ const BranchAdminStaff = () => {
       absent: backendHistorySummary?.absent ?? computed.absent,
       leave: backendHistorySummary?.leave ?? computed.leave,
       total_working_days: backendHistorySummary?.total_working_days ?? 0,
-      total_holidays: backendHistorySummary?.total_holidays ?? holidays.length,
+      total_holidays: backendHistorySummary?.total_holidays ?? (historyHolidays.length || holidays.length),
     };
-  }, [filteredAttendanceHistory, backendHistorySummary, holidays]);
+  }, [filteredAttendanceHistory, backendHistorySummary, historyHolidays, holidays]);
 
   const staffAttendanceTotals = useMemo(() => {
     return staff.map((member) => {
@@ -875,23 +912,73 @@ const BranchAdminStaff = () => {
               </div>
 
               {/* A. Dynamic Summary Cards including Working Days & Holidays */}
-              <AttendanceSummaryCards
-                total={historySummary.total}
-                present={historySummary.present}
-                halfDay={historySummary.half_day}
-                absent={historySummary.absent}
-                leave={historySummary.leave}
-                totalWorkingDays={historySummary.total_working_days}
-                totalHolidays={historySummary.total_holidays}
-                loading={attendanceLoading}
-                totalLabel="Total Records"
-              />
+              {historySubTab !== "holidays" && (
+                <AttendanceSummaryCards
+                  total={historySummary.total}
+                  present={historySummary.present}
+                  halfDay={historySummary.half_day}
+                  absent={historySummary.absent}
+                  leave={historySummary.leave}
+                  totalWorkingDays={historySummary.total_working_days}
+                  totalHolidays={historySummary.total_holidays}
+                  loading={attendanceLoading}
+                  totalLabel="Total Records"
+                />
+              )}
 
-              {/* B. Staff Attendance Records – Summary Table */}
+              {/* Navigation Tabs */}
               <div
-                className="overflow-hidden rounded-2xl bg-white shadow-xs"
-                style={{ border: "1px solid #e3ddd0" }}
+                className="flex items-center gap-2 sm:gap-4 border-b pb-0.5 overflow-x-auto no-scrollbar scroll-smooth w-full"
+                style={{ borderColor: "#e3ddd0" }}
               >
+                {[
+                  { id: "staff", label: "Staff Attendance Records", icon: Users, count: staffAttendanceTotals.length },
+                  { id: "holidays", label: "Branch Holidays", icon: CalendarDays, count: historyHolidays.length },
+                ].map(({ id, label, icon: TabIcon, count }) => {
+                  const isActive = historySubTab === id;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setHistorySubTab(id)}
+                      className="relative flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition cursor-pointer select-none whitespace-nowrap shrink-0"
+                      style={{ color: isActive ? "#17140f" : "#8a8175" }}
+                    >
+                      <TabIcon className="h-4 w-4 shrink-0" />
+                      <span>{label}</span>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
+                          isActive
+                            ? "bg-[#17140f] text-[#f4b942]"
+                            : "bg-slate-200/80 text-slate-600"
+                        }`}
+                      >
+                        {count}
+                      </span>
+                      {isActive && (
+                        <span
+                          className="absolute inset-x-0 bottom-0 h-0.5 rounded-full"
+                          style={{ background: "#9c6b2e" }}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {historySubTab === "staff" ? (
+                <>
+                  {/* Declared Holidays in Period Banner */}
+                  <AttendanceHolidaysCard
+                    holidays={historyHolidays}
+                    title="Branch Declared Holidays in Selected Period"
+                  />
+
+                  {/* B. Staff Attendance Records – Summary Table */}
+                  <div
+                    className="overflow-hidden rounded-2xl bg-white shadow-xs"
+                    style={{ border: "1px solid #e3ddd0" }}
+                  >
                 {/* Header bar */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e8e2d5] bg-[#faf8f4] px-6 py-4.5">
                   <div>
@@ -1161,8 +1248,118 @@ const BranchAdminStaff = () => {
                   </table>
                 </div>
               </div>
-            </section>
+            </>
+          ) : (
+            /* Branch Holidays Table */
+            <div
+              className="overflow-hidden rounded-2xl bg-white shadow-xs"
+              style={{ border: "1px solid #e3ddd0" }}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e8e2d5] bg-[#faf8f4] px-6 py-4.5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <CalendarDays className="h-4 w-4 text-[#9c6b2e]" />
+                    <h3 className="text-base font-bold text-slate-900 tracking-tight" style={serif}>
+                      Branch Declared Holidays
+                    </h3>
+                  </div>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    Official scheduled branch holidays and calendar closures
+                  </p>
+                </div>
+                <span className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full bg-white border border-[#e3ddd0] px-3 py-1 text-xs font-bold text-slate-700 shadow-2xs">
+                  <span className="h-2 w-2 rounded-full bg-[#9c6b2e]" />
+                  {historyHolidays.length} {historyHolidays.length === 1 ? "Holiday" : "Holidays"}
+                </span>
+              </div>
+
+              {historyHolidays.length === 0 ? (
+                <div className="p-10 sm:p-14 text-center">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#f4eee2] text-[#9c6b2e] mb-3">
+                    <CalendarCheck className="h-6 w-6" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-800">
+                    No holidays declared for this period
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
+                    No holidays are recorded for this branch within the chosen date range.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-[#e8e2d5] bg-[#fbf9f5]">
+                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                          Holiday Date
+                        </th>
+                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                          Day
+                        </th>
+                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                          Occasion / Reason
+                        </th>
+                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#f1ede4]">
+                      {historyHolidays.map((h, i) => {
+                        const hDate = h.date || h.holiday_date;
+                        const today = getToday();
+                        const isUpcoming = hDate > today;
+                        const isToday = hDate === today;
+
+                        let weekday = "—";
+                        try {
+                          weekday = new Intl.DateTimeFormat("en-IN", { weekday: "long" }).format(
+                            new Date(`${hDate}T00:00:00`)
+                          );
+                        } catch {}
+
+                        return (
+                          <tr key={h.id ?? i} className="hover:bg-[#fcfbf9] transition-colors">
+                            <td className="px-6 py-4.5 font-bold text-slate-900 whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4 text-[#9c6b2e] shrink-0" />
+                                <span>{formatAttendanceDate(hDate)}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4.5 text-xs font-semibold text-slate-600">
+                              {weekday}
+                            </td>
+                            <td className="px-6 py-4.5">
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#faf5ec] text-[#9c6b2e] border border-[#ebd8b6] font-bold text-xs">
+                                <span>{h.reason || "Declared Holiday"}</span>
+                              </span>
+                            </td>
+                            <td className="px-6 py-4.5 whitespace-nowrap">
+                              {isToday ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 text-[11px] font-extrabold animate-pulse">
+                                  Today
+                                </span>
+                              ) : isUpcoming ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 text-sky-700 border border-sky-200 px-2.5 py-0.5 text-[11px] font-bold">
+                                  Upcoming
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200 px-2.5 py-0.5 text-[11px] font-medium">
+                                  Past
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           )}
+        </section>
+      )}
 
           {/* ---- Staff accounts ---- */}
           {activeTab === "staff" && (

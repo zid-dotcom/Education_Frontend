@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import AttendanceSummaryCards from '../../common/AttendanceSummaryCards';
 import AttendanceStatusBadge, { normalizeAttendanceStatus } from '../../common/AttendanceStatusBadge';
+import AttendanceHolidaysCard from '../../common/AttendanceHolidaysCard';
 import { getMyStaffAttendanceApi } from '../../../services/staff';
 import { getDefaultFromDate, getDefaultToDate } from '../../../utils/dateFilters';
 
@@ -51,7 +52,7 @@ const formatTime = (timeStr, fallbackTimestamp) => {
 };
 
 const StaffAttendanceTab = ({ user, profileData, token, branchName }) => {
-  // Auto-fill default 1-month range (from 1st of current month to 1st of next month)
+  // Auto-fill default range: from 1st of current month to today (e.g. 01-11-2026 to 06-11-2026)
   const [startDate, setStartDate] = useState(getDefaultFromDate);
   const [endDate, setEndDate] = useState(getDefaultToDate);
   const activeRequestIdRef = useRef(0);
@@ -336,118 +337,125 @@ const StaffAttendanceTab = ({ user, profileData, token, branchName }) => {
           <p className="text-xs font-semibold text-slate-500">Loading your attendance records...</p>
         </div>
       ) : activeSubTab === 'log' ? (
-        <div className="overflow-hidden rounded-2xl bg-white shadow-xs border border-[#e3ddd0]">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e8e2d5] bg-[#faf8f4] px-6 py-4.5">
-            <div>
-              <div className="flex items-center gap-2">
-                <ClipboardList className="h-4 w-4 text-[#9c6b2e]" />
-                <h3 className="text-base font-bold text-slate-900 tracking-tight font-['Fraunces',serif]">
-                  Personal Attendance History
-                </h3>
+        <div className="space-y-5">
+          <AttendanceHolidaysCard
+            holidays={holidays}
+            title="Branch Declared Holidays in Selected Period"
+          />
+
+          <div className="overflow-hidden rounded-2xl bg-white shadow-xs border border-[#e3ddd0]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e8e2d5] bg-[#faf8f4] px-6 py-4.5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <ClipboardList className="h-4 w-4 text-[#9c6b2e]" />
+                  <h3 className="text-base font-bold text-slate-900 tracking-tight font-['Fraunces',serif]">
+                    Personal Attendance History
+                  </h3>
+                </div>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Detailed record of marked daily attendances for {staffName}
+                </p>
               </div>
-              <p className="mt-0.5 text-xs text-slate-500">
-                Detailed record of marked daily attendances for {staffName}
-              </p>
+              <span className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full bg-white border border-[#e3ddd0] px-3 py-1 text-xs font-bold text-slate-700 shadow-2xs">
+                <span className="h-2 w-2 rounded-full bg-[#1e6b37]" />
+                {attendanceRecords.length} {attendanceRecords.length === 1 ? 'Record' : 'Records'}
+              </span>
             </div>
-            <span className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full bg-white border border-[#e3ddd0] px-3 py-1 text-xs font-bold text-slate-700 shadow-2xs">
-              <span className="h-2 w-2 rounded-full bg-[#1e6b37]" />
-              {attendanceRecords.length} {attendanceRecords.length === 1 ? 'Record' : 'Records'}
-            </span>
+
+            {attendanceRecords.length === 0 ? (
+              <div className="p-14 text-center">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#f4eee2] text-[#9c6b2e] mb-3">
+                  <CalendarCheck className="h-6 w-6" />
+                </div>
+                <p className="text-sm font-bold text-slate-800">No attendance entries recorded</p>
+                <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
+                  No attendance logs found for {startDate === endDate ? formatDate(startDate) : `${formatDate(startDate)} to ${formatDate(endDate)}`}.
+                </p>
+                {(startDate !== getDefaultFromDate() || endDate !== getDefaultToDate()) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStartDate(getDefaultFromDate());
+                      setEndDate(getDefaultToDate());
+                    }}
+                    className="mt-4 inline-flex items-center gap-1.5 rounded-xl border border-[#ded8cb] bg-white px-3.5 py-2 text-xs font-bold text-[#9c6b2e] hover:bg-[#f3ede1] transition cursor-pointer shadow-2xs"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Reset Date Filter
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-[#e8e2d5] bg-[#fbf9f5]">
+                      <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                        Date
+                      </th>
+                      <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                        Day
+                      </th>
+                      <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                        Check-In
+                      </th>
+                      <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                        Check-Out
+                      </th>
+                      <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                        Status
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#f1ede4]">
+                    {attendanceRecords.map((r, i) => {
+                      const dateVal = r.date || r.attendance_date;
+                      const checkInVal = formatTime(r.check_in || r.time_in, r.marked_at);
+                      const checkOutVal = formatTime(r.check_out || r.time_out, r.marked_out);
+
+                      let weekday = '—';
+                      if (dateVal) {
+                        try {
+                          weekday = new Intl.DateTimeFormat('en-IN', { weekday: 'long' }).format(
+                            new Date(`${dateVal}T00:00:00`)
+                          );
+                        } catch {}
+                      }
+
+                      return (
+                        <tr key={r.id ?? i} className="hover:bg-[#fcfbf9] transition-colors">
+                          <td className="px-6 py-4.5 font-bold text-slate-900 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-[#9c6b2e] shrink-0" />
+                              <span>{formatDate(dateVal)}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4.5 text-xs font-semibold text-slate-600">
+                            {weekday}
+                          </td>
+                          <td className="px-6 py-4.5 text-xs font-medium text-slate-600 whitespace-nowrap">
+                            <div className="flex items-center gap-1.5">
+                              <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                              <span>{checkInVal}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4.5 text-xs font-medium text-slate-600 whitespace-nowrap">
+                            <div className="flex items-center gap-1.5">
+                              <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                              <span>{checkOutVal}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4.5">
+                            <AttendanceStatusBadge status={r.status} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-
-          {attendanceRecords.length === 0 ? (
-            <div className="p-14 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#f4eee2] text-[#9c6b2e] mb-3">
-                <CalendarCheck className="h-6 w-6" />
-              </div>
-              <p className="text-sm font-bold text-slate-800">No attendance entries recorded</p>
-              <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
-                No attendance logs found for {startDate === endDate ? formatDate(startDate) : `${formatDate(startDate)} to ${formatDate(endDate)}`}.
-              </p>
-              {(startDate !== getDefaultFromDate() || endDate !== getDefaultToDate()) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStartDate(getDefaultFromDate());
-                    setEndDate(getDefaultToDate());
-                  }}
-                  className="mt-4 inline-flex items-center gap-1.5 rounded-xl border border-[#ded8cb] bg-white px-3.5 py-2 text-xs font-bold text-[#9c6b2e] hover:bg-[#f3ede1] transition cursor-pointer shadow-2xs"
-                >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  Reset Date Filter
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-[#e8e2d5] bg-[#fbf9f5]">
-                    <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
-                      Date
-                    </th>
-                    <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
-                      Day
-                    </th>
-                    <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
-                      Check-In
-                    </th>
-                    <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
-                      Check-Out
-                    </th>
-                    <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#f1ede4]">
-                  {attendanceRecords.map((r, i) => {
-                    const dateVal = r.date || r.attendance_date;
-                    const checkInVal = formatTime(r.check_in || r.time_in, r.marked_at);
-                    const checkOutVal = formatTime(r.check_out || r.time_out, r.marked_out);
-
-                    let weekday = '—';
-                    if (dateVal) {
-                      try {
-                        weekday = new Intl.DateTimeFormat('en-IN', { weekday: 'long' }).format(
-                          new Date(`${dateVal}T00:00:00`)
-                        );
-                      } catch {}
-                    }
-
-                    return (
-                      <tr key={r.id ?? i} className="hover:bg-[#fcfbf9] transition-colors">
-                        <td className="px-6 py-4.5 font-bold text-slate-900 whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-[#9c6b2e] shrink-0" />
-                            <span>{formatDate(dateVal)}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4.5 text-xs font-semibold text-slate-600">
-                          {weekday}
-                        </td>
-                        <td className="px-6 py-4.5 text-xs font-medium text-slate-600 whitespace-nowrap">
-                          <div className="flex items-center gap-1.5">
-                            <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                            <span>{checkInVal}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4.5 text-xs font-medium text-slate-600 whitespace-nowrap">
-                          <div className="flex items-center gap-1.5">
-                            <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                            <span>{checkOutVal}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4.5">
-                          <AttendanceStatusBadge status={r.status} />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
       ) : (
         /* Sub Tab: Holidays */

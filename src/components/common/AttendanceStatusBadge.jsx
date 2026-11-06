@@ -1,12 +1,13 @@
 import React from "react";
-import { CheckCircle2, Clock, XCircle, CalendarCheck, HelpCircle } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, CalendarCheck, HelpCircle, CalendarDays } from "lucide-react";
 
 /**
  * Standardize attendance status to one of:
- * 'present' | 'half_day' | 'absent' | 'leave'
+ * 'present' | 'half_day' | 'absent' | 'leave' | 'holiday'
  */
 export const normalizeAttendanceStatus = (status) => {
   const s = String(status || "").toLowerCase().trim().replace(/[-\s]/g, "_");
+  if (s.startsWith("holiday")) return "holiday";
   if (s === "half_day" || s === "halfday" || s === "late") return "half_day";
   if (s === "leave" || s === "excused" || s === "on_leave") return "leave";
   if (s === "absent") return "absent";
@@ -51,6 +52,15 @@ export const ATTENDANCE_STATUS_CONFIG = {
     dot: "#6366f1",
     icon: CalendarCheck,
   },
+  holiday: {
+    key: "holiday",
+    label: "Holiday",
+    bg: "#faf5ec",
+    border: "#ebd8b6",
+    text: "#9c6b2e",
+    dot: "#d97706",
+    icon: CalendarDays,
+  },
 };
 
 export const AttendanceStatusBadge = ({ status, className = "" }) => {
@@ -66,6 +76,10 @@ export const AttendanceStatusBadge = ({ status, className = "" }) => {
   };
 
   const Icon = cfg.icon;
+  const displayLabel =
+    key === "holiday" && typeof status === "string" && status.includes(":")
+      ? status
+      : cfg.label;
 
   return (
     <span
@@ -77,7 +91,7 @@ export const AttendanceStatusBadge = ({ status, className = "" }) => {
       }}
     >
       <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} />
-      <span>{cfg.label}</span>
+      <span>{displayLabel}</span>
     </span>
   );
 };

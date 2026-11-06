@@ -1,10 +1,6 @@
 import React from "react";
 import {
   ClipboardList,
-  CheckCircle2,
-  Clock,
-  XCircle,
-  CalendarCheck,
   CalendarDays,
   Briefcase,
 } from "lucide-react";
@@ -12,13 +8,9 @@ import {
 /**
  * Modern Dynamic Attendance Summary Strip
  * Cards:
- * 1. Total Records (Cream / Neutral)
- * 2. Present (Green)
- * 3. Half Day (Amber)
- * 4. Absent (Red)
- * 5. Leave (Blue)
- * 6. Working Days (Slate / Navy - optional)
- * 7. Total Holidays (Amber / Warm Gold - optional)
+ * 1. Total Staff Records / Total Records (Cream / Neutral)
+ * 2. Working Days (Slate / Navy)
+ * 3. Total Holidays (Amber / Warm Gold)
  */
 const AttendanceSummaryCards = ({
   total = 0,
@@ -29,7 +21,7 @@ const AttendanceSummaryCards = ({
   totalWorkingDays,
   totalHolidays,
   loading = false,
-  totalLabel = "Total Records",
+  totalLabel = "Total Staff Records",
 }) => {
   const cards = [
     {
@@ -46,99 +38,34 @@ const AttendanceSummaryCards = ({
       accentBorder: "#9c6b2e",
     },
     {
-      id: "present",
-      label: "Present days",
-      value: present,
-      subtext: "Full duty marked",
-      icon: CheckCircle2,
-      bg: "bg-[#f0faf3]",
-      border: "border-[#bbf0cd]",
-      iconBg: "bg-[#dcfce7]",
-      iconColor: "text-[#15803d]",
-      textColor: "text-[#14532d]",
-      accentBorder: "#16a34a",
+      id: "working_days",
+      label: "Working Days",
+      value: totalWorkingDays !== undefined && totalWorkingDays !== null ? totalWorkingDays : 0,
+      subtext: "Official duty days",
+      icon: Briefcase,
+      bg: "bg-[#f8fafc]",
+      border: "border-[#cbd5e1]",
+      iconBg: "bg-[#e2e8f0]",
+      iconColor: "text-[#334155]",
+      textColor: "text-[#0f172a]",
+      accentBorder: "#64748b",
     },
     {
-      id: "half_day",
-      label: "Half Day",
-      value: halfDay,
-      subtext: "0.5 day duty",
-      icon: Clock,
-      bg: "bg-[#fef9ed]",
-      border: "border-[#fde3a2]",
-      iconBg: "bg-[#fef3c7]",
-      iconColor: "text-[#b45309]",
-      textColor: "text-[#78350f]",
-      accentBorder: "#f59e0b",
+      id: "total_holidays",
+      label: "Total Holidays",
+      value: totalHolidays !== undefined && totalHolidays !== null ? totalHolidays : 0,
+      subtext: "Declared closures",
+      icon: CalendarDays,
+      bg: "bg-[#faf5ec]",
+      border: "border-[#ebd8b6]",
+      iconBg: "bg-[#f5ebd8]",
+      iconColor: "text-[#9c6b2e]",
+      textColor: "text-[#784f1b]",
+      accentBorder: "#9c6b2e",
     },
-    {
-      id: "absent",
-      label: "Absent days",
-      value: absent,
-      subtext: "Unrecorded / absent",
-      icon: XCircle,
-      bg: "bg-[#fef2f2]",
-      border: "border-[#fecaca]",
-      iconBg: "bg-[#fee2e2]",
-      iconColor: "text-[#dc2626]",
-      textColor: "text-[#7f1d1d]",
-      accentBorder: "#ef4444",
-    },
-    {
-      id: "leave",
-      label: "Leave days",
-      value: leave,
-      subtext: "Approved leave",
-      icon: CalendarCheck,
-      bg: "bg-[#fef2f2]",
-      border: "border-[#fecaca]",
-      iconBg: "bg-[#fee2e2]",
-      iconColor: "text-[#dc2626]",
-      textColor: "text-[#7f1d1d]",
-      accentBorder: "#ef4444",
-    },
-    ...(totalWorkingDays !== undefined && totalWorkingDays !== null
-      ? [
-          {
-            id: "working_days",
-            label: "Working Days",
-            value: totalWorkingDays,
-            subtext: "Official duty days",
-            icon: Briefcase,
-            bg: "bg-[#f8fafc]",
-            border: "border-[#cbd5e1]",
-            iconBg: "bg-[#e2e8f0]",
-            iconColor: "text-[#334155]",
-            textColor: "text-[#0f172a]",
-            accentBorder: "#64748b",
-          },
-        ]
-      : []),
-    ...(totalHolidays !== undefined && totalHolidays !== null
-      ? [
-          {
-            id: "total_holidays",
-            label: "Total Holidays",
-            value: totalHolidays,
-            subtext: "Declared closures",
-            icon: CalendarDays,
-            bg: "bg-[#faf5ec]",
-            border: "border-[#ebd8b6]",
-            iconBg: "bg-[#f5ebd8]",
-            iconColor: "text-[#9c6b2e]",
-            textColor: "text-[#784f1b]",
-            accentBorder: "#9c6b2e",
-          },
-        ]
-      : []),
   ];
 
-  const gridClass =
-    cards.length >= 7
-      ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-3.5"
-      : cards.length === 6
-      ? "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 sm:gap-4"
-      : "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4";
+  const gridClass = "grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4";
 
   if (loading) {
     return (

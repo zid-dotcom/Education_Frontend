@@ -78,6 +78,7 @@ import SuperAdminReceipts from './pages/SuperAdminReceipts';
 import SuperAdminExpenses from './pages/SuperAdminExpenses';
 import SuperAdminGstSettings from './pages/SuperAdminGstSettings';
 import SuperAdminAttendance from './pages/SuperAdminAttendance';
+import SuperAdminStaffAttendance from './pages/SuperAdminStaffAttendance';
 import SuperAdminAnnouncements from './pages/SuperAdminAnnouncements';
 import SuperAdminStaff from './pages/SuperAdminStaff';
 import SuperAdminStaffMonitoring from './pages/SuperAdminStaffMonitoring';
@@ -585,6 +586,15 @@ function App() {
             element={
               <ProtectedRoute adminOnly>
                 <SuperAdminAttendance />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/super-admin/staff-attendance"
+            element={
+              <ProtectedRoute adminOnly>
+                <SuperAdminStaffAttendance />
               </ProtectedRoute>
             }
           />

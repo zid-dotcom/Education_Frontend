@@ -561,7 +561,7 @@ const AttendanceCalendarMatrix = ({
       const isToday = dateStr === todayStr;
       const isFuture = dateStr > todayStr;
       const isPast = dateStr < todayStr;
-      const holiday = holidaysMap[dateStr] || null;
+      const holiday = holidaysMap[dateStr] || (isSunday ? { date: dateStr, reason: "Sunday", type: "sunday" } : null);
       return {
         dayNum,
         dateStr,
@@ -671,7 +671,8 @@ const AttendanceCalendarMatrix = ({
     let absent = 0;
     let halfDay = 0;
 
-    daysInMonth.forEach(({ dateStr }) => {
+    daysInMonth.forEach(({ dateStr, holiday }) => {
+      if (holiday) return;
       people.forEach((p) => {
         const rec = getRecordForPerson(p, dateStr);
         if (rec) {

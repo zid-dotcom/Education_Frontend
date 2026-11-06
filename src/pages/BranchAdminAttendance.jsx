@@ -36,6 +36,7 @@ import {
   getHolidaysApi,
 } from "../services/holidays";
 import { getDefaultFromDate, getDefaultToDate } from "../utils/dateFilters";
+import AttendanceHolidaysCard from "../components/common/AttendanceHolidaysCard";
 
 /* Load a serif display face for headings + a clean sans for everything else. */
 const useDisplayFonts = () => {
@@ -122,6 +123,8 @@ const BranchAdminAttendance = () => {
   const [success, setSuccess] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("attendance");
+  const [historySubTab, setHistorySubTab] = useState("attendance");
+  const [historyHolidays, setHistoryHolidays] = useState([]);
 
   // Post Holiday state
   const [holidays, setHolidays] = useState([]);
@@ -141,12 +144,15 @@ const BranchAdminAttendance = () => {
       setError("Attendance can only be marked or updated for today. Past dates cannot be modified.");
       return;
     }
+    const dObj = new Date(dateStr + "T00:00:00");
+    const isSunday = dObj.getDay() === 0;
     const holidayMatch = holidays.find((h) => {
       const hd = String(h.date || h.holiday_date || "").slice(0, 10);
       return hd === dateStr;
     });
-    if (holidayMatch) {
-      setError(`Cannot mark or update attendance on a declared branch holiday ("${holidayMatch.reason || 'Holiday'}"). Attendance is closed.`);
+    if (isSunday || holidayMatch) {
+      const reason = holidayMatch?.reason || (isSunday ? "Sunday (Weekly Off)" : "Holiday");
+      setError(`Cannot mark or update attendance on ${reason}. Attendance is closed.`);
       return;
     }
     setSaving(true);
@@ -252,6 +258,20 @@ const BranchAdminAttendance = () => {
       const data = await getBranchAdminAttendanceApi(token, monthOrParams);
       const records = Array.isArray(data?.attendance) ? data.attendance : [];
       setCalendarAttendance(records);
+      if (Array.isArray(data?.holidays) && data.holidays.length > 0) {
+        setHolidays((prev) => {
+          const map = new Map();
+          (prev || []).forEach((h) => {
+            const d = String(h?.date || h?.holiday_date || "").slice(0, 10);
+            if (d) map.set(d, h);
+          });
+          data.holidays.forEach((h) => {
+            const d = String(h?.date || h?.holiday_date || "").slice(0, 10);
+            if (d) map.set(d, h);
+          });
+          return Array.from(map.values());
+        });
+      }
     } catch (err) {
       console.error("Failed to load admin calendar attendance:", err);
     }
@@ -294,6 +314,23 @@ const BranchAdminAttendance = () => {
         });
       }
       setHistoryAttendance(records);
+
+      let hList = Array.isArray(data?.holidays)
+        ? data.holidays
+        : Array.isArray(data?.branch_holidays)
+        ? data.branch_holidays
+        : [];
+      if (dFrom || dTo) {
+        hList = hList.filter((h) => {
+          const hd = String(h.date || h.holiday_date || "").slice(0, 10);
+          if (!hd) return true;
+          if (dFrom && hd < dFrom) return false;
+          if (dTo && hd > dTo) return false;
+          return true;
+        });
+      }
+      setHistoryHolidays(hList);
+
       if (data?.total_holidays !== undefined || data?.total_working_days !== undefined) {
         setAttendanceSummary((prev) => ({
           ...prev,
@@ -443,7 +480,7 @@ const BranchAdminAttendance = () => {
     if (filteredAttendance.length > 0 || startDate || endDate) {
       return {
         ...filteredSummary,
-        total_holidays: attendanceSummary.total_holidays !== undefined ? attendanceSummary.total_holidays : holidays.length,
+        total_holidays: attendanceSummary.total_holidays !== undefined ? attendanceSummary.total_holidays : (historyHolidays.length || holidays.length),
         total_working_days: attendanceSummary.total_working_days !== undefined ? attendanceSummary.total_working_days : 0,
       };
     }
@@ -453,10 +490,10 @@ const BranchAdminAttendance = () => {
       half_day: attendanceSummary.half_day || 0,
       absent: attendanceSummary.absent || 0,
       leave: attendanceSummary.leave || 0,
-      total_holidays: attendanceSummary.total_holidays !== undefined ? attendanceSummary.total_holidays : holidays.length,
+      total_holidays: attendanceSummary.total_holidays !== undefined ? attendanceSummary.total_holidays : (historyHolidays.length || holidays.length),
       total_working_days: attendanceSummary.total_working_days !== undefined ? attendanceSummary.total_working_days : 0,
     };
-  }, [filteredAttendance, startDate, endDate, filteredSummary, attendanceSummary, holidays]);
+  }, [filteredAttendance, startDate, endDate, filteredSummary, attendanceSummary, historyHolidays, holidays]);
 
   const serif = { fontFamily: "'Fraunces', ui-serif, Georgia, serif" };
   const sans = { fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" };
@@ -680,128 +717,287 @@ const BranchAdminAttendance = () => {
               </div>
 
               {/* A. Dynamic Summary Cards including Working Days & Holidays */}
-              <AttendanceSummaryCards
-                total={visibleSummary.total}
-                present={visibleSummary.present}
-                halfDay={visibleSummary.half_day}
-                absent={visibleSummary.absent}
-                leave={visibleSummary.leave}
-                totalWorkingDays={visibleSummary.total_working_days}
-                totalHolidays={visibleSummary.total_holidays}
-                loading={loading}
-                totalLabel="Total Records"
-              />
+              {historySubTab !== "holidays" && (
+                <AttendanceSummaryCards
+                  total={visibleSummary.total}
+                  present={visibleSummary.present}
+                  halfDay={visibleSummary.half_day}
+                  absent={visibleSummary.absent}
+                  leave={visibleSummary.leave}
+                  totalWorkingDays={visibleSummary.total_working_days}
+                  totalHolidays={visibleSummary.total_holidays}
+                  loading={loading}
+                  totalLabel="Total Records"
+                />
+              )}
 
-              {/* B. Personal Attendance History Table */}
+              {/* Navigation Tabs */}
               <div
-                className="overflow-hidden rounded-2xl bg-white shadow-xs"
-                style={{ border: "1px solid #e3ddd0" }}
+                className="flex items-center gap-2 sm:gap-4 border-b pb-0.5 overflow-x-auto no-scrollbar scroll-smooth w-full"
+                style={{ borderColor: "#e3ddd0" }}
               >
-                {/* Header bar */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e8e2d5] bg-[#faf8f4] px-6 py-4.5">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <History className="h-4 w-4 text-[#9c6b2e]" />
-                      <h3
-                        className="text-base font-bold text-slate-900 tracking-tight"
-                        style={serif}
+                {[
+                  { id: "attendance", label: "Attendance History", icon: History, count: filteredAttendance.length },
+                  { id: "holidays", label: "Branch Holidays", icon: CalendarDays, count: historyHolidays.length },
+                ].map(({ id, label, icon: TabIcon, count }) => {
+                  const isActive = historySubTab === id;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setHistorySubTab(id)}
+                      className="relative flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition cursor-pointer select-none whitespace-nowrap shrink-0"
+                      style={{ color: isActive ? "#17140f" : "#8a8175" }}
+                    >
+                      <TabIcon className="h-4 w-4 shrink-0" />
+                      <span>{label}</span>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
+                          isActive
+                            ? "bg-[#17140f] text-[#f4b942]"
+                            : "bg-slate-200/80 text-slate-600"
+                        }`}
                       >
-                        Personal Attendance Log
-                      </h3>
-                    </div>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      Chronological history of your daily duty clock-in and attendance records
-                    </p>
-                  </div>
-                  <span className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full bg-white border border-[#e3ddd0] px-3 py-1 text-xs font-bold text-slate-700 shadow-2xs">
-                    <span className="h-2 w-2 rounded-full bg-[#1e6b37]" />
-                    {filteredAttendance.length}{" "}
-                    {filteredAttendance.length === 1 ? "Record" : "Records"}
-                  </span>
-                </div>
-
-                {/* Table */}
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-[#e8e2d5] bg-[#fbf9f5]">
-                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
-                          Date
-                        </th>
-                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
-                          Status
-                        </th>
-                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
-                          Marked At
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#f1ede4]">
-                      {loading ? (
-                        <tr>
-                          <td colSpan="3" className="px-6 py-14 text-center text-slate-400">
-                            <Loader2 className="mx-auto h-6 w-6 animate-spin text-[#9c6b2e]" />
-                            <p className="mt-2 text-xs font-medium text-slate-500">
-                              Loading attendance history...
-                            </p>
-                          </td>
-                        </tr>
-                      ) : filteredAttendance.length === 0 ? (
-                        <tr>
-                          <td colSpan="3" className="px-6 py-14 text-center">
-                            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#f4eee2] text-[#9c6b2e] mb-3">
-                              <ClipboardCheck className="h-6 w-6" />
-                            </div>
-                            <p className="text-sm font-bold text-slate-800">
-                              No attendance records in this range
-                            </p>
-                            <p className="mt-1 text-xs text-slate-500">
-                              {startDate || endDate
-                                ? "No logs match the selected date range. Try clearing or expanding your dates."
-                                : "No personal attendance entries have been recorded yet."}
-                            </p>
-                            {(startDate || endDate) && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setStartDate("");
-                                  setEndDate("");
-                                }}
-                                className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[#e3ddd0] bg-white px-3 py-1.5 text-xs font-bold text-[#9c6b2e] shadow-2xs hover:bg-[#f6f2e9] cursor-pointer"
-                              >
-                                <RotateCcw className="h-3.5 w-3.5" /> Clear Filters
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredAttendance.map((record) => (
-                          <tr
-                            key={record.id}
-                            className="hover:bg-[#fcfbf9] transition-colors"
-                          >
-                            <td className="px-6 py-4.5 font-bold text-slate-900 whitespace-nowrap">
-                              <div className="flex items-center gap-2">
-                                <Calendar className="h-4 w-4 text-slate-400 shrink-0" />
-                                <span>{formatDate(record.date)}</span>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4.5">
-                              <AttendanceStatusBadge status={record.status} />
-                            </td>
-                            <td className="px-6 py-4.5 text-xs font-medium text-slate-500 whitespace-nowrap">
-                              <div className="flex items-center gap-1.5">
-                                <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                                <span>{formatTimestamp(record.marked_at)}</span>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
+                        {count}
+                      </span>
+                      {isActive && (
+                        <span
+                          className="absolute inset-x-0 bottom-0 h-0.5 rounded-full"
+                          style={{ background: "#9c6b2e" }}
+                        />
                       )}
-                    </tbody>
-                  </table>
-                </div>
+                    </button>
+                  );
+                })}
               </div>
+
+              {historySubTab === "attendance" ? (
+                <div className="space-y-5">
+                  <AttendanceHolidaysCard
+                    holidays={historyHolidays}
+                    title="Branch Declared Holidays in Selected Period"
+                  />
+
+                  {/* B. Personal Attendance History Table */}
+                  <div
+                    className="overflow-hidden rounded-2xl bg-white shadow-xs"
+                    style={{ border: "1px solid #e3ddd0" }}
+                  >
+                    {/* Header bar */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e8e2d5] bg-[#faf8f4] px-6 py-4.5">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <History className="h-4 w-4 text-[#9c6b2e]" />
+                          <h3
+                            className="text-base font-bold text-slate-900 tracking-tight"
+                            style={serif}
+                          >
+                            Personal Attendance Log
+                          </h3>
+                        </div>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          Chronological history of your daily duty clock-in and attendance records
+                        </p>
+                      </div>
+                      <span className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full bg-white border border-[#e3ddd0] px-3 py-1 text-xs font-bold text-slate-700 shadow-2xs">
+                        <span className="h-2 w-2 rounded-full bg-[#1e6b37]" />
+                        {filteredAttendance.length}{" "}
+                        {filteredAttendance.length === 1 ? "Record" : "Records"}
+                      </span>
+                    </div>
+
+                    {/* Table */}
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-left text-sm">
+                        <thead>
+                          <tr className="border-b border-[#e8e2d5] bg-[#fbf9f5]">
+                            <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                              Date
+                            </th>
+                            <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                              Status
+                            </th>
+                            <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                              Marked At
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#f1ede4]">
+                          {loading ? (
+                            <tr>
+                              <td colSpan="3" className="px-6 py-14 text-center text-slate-400">
+                                <Loader2 className="mx-auto h-6 w-6 animate-spin text-[#9c6b2e]" />
+                                <p className="mt-2 text-xs font-medium text-slate-500">
+                                  Loading attendance history...
+                                </p>
+                              </td>
+                            </tr>
+                          ) : filteredAttendance.length === 0 ? (
+                            <tr>
+                              <td colSpan="3" className="px-6 py-14 text-center">
+                                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#f4eee2] text-[#9c6b2e] mb-3">
+                                  <ClipboardCheck className="h-6 w-6" />
+                                </div>
+                                <p className="text-sm font-bold text-slate-800">
+                                  No attendance records in this range
+                                </p>
+                                <p className="mt-1 text-xs text-slate-500">
+                                  {startDate || endDate
+                                    ? "No logs match the selected date range. Try clearing or expanding your dates."
+                                    : "No personal attendance entries have been recorded yet."}
+                                </p>
+                                {(startDate || endDate) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setStartDate("");
+                                      setEndDate("");
+                                    }}
+                                    className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[#e3ddd0] bg-white px-3 py-1.5 text-xs font-bold text-[#9c6b2e] shadow-2xs hover:bg-[#f6f2e9] cursor-pointer"
+                                  >
+                                    <RotateCcw className="h-3.5 w-3.5" /> Clear Filters
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredAttendance.map((record) => (
+                              <tr
+                                key={record.id}
+                                className="hover:bg-[#fcfbf9] transition-colors"
+                              >
+                                <td className="px-6 py-4.5 font-bold text-slate-900 whitespace-nowrap">
+                                  <div className="flex items-center gap-2">
+                                    <Calendar className="h-4 w-4 text-slate-400 shrink-0" />
+                                    <span>{formatDate(record.date)}</span>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4.5">
+                                  <AttendanceStatusBadge status={record.status} />
+                                </td>
+                                <td className="px-6 py-4.5 text-xs font-medium text-slate-500 whitespace-nowrap">
+                                  <div className="flex items-center gap-1.5">
+                                    <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                                    <span>{formatTimestamp(record.marked_at)}</span>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Branch Holidays Table */
+                <div
+                  className="overflow-hidden rounded-2xl bg-white shadow-xs"
+                  style={{ border: "1px solid #e3ddd0" }}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e8e2d5] bg-[#faf8f4] px-6 py-4.5">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <CalendarDays className="h-4 w-4 text-[#9c6b2e]" />
+                        <h3 className="text-base font-bold text-slate-900 tracking-tight" style={serif}>
+                          Branch Declared Holidays
+                        </h3>
+                      </div>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        Official scheduled branch holidays and calendar closures
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full bg-white border border-[#e3ddd0] px-3 py-1 text-xs font-bold text-slate-700 shadow-2xs">
+                      <span className="h-2 w-2 rounded-full bg-[#9c6b2e]" />
+                      {historyHolidays.length} {historyHolidays.length === 1 ? "Holiday" : "Holidays"}
+                    </span>
+                  </div>
+
+                  {historyHolidays.length === 0 ? (
+                    <div className="p-10 sm:p-14 text-center">
+                      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#f4eee2] text-[#9c6b2e] mb-3">
+                        <CalendarCheck className="h-6 w-6" />
+                      </div>
+                      <p className="text-sm font-bold text-slate-800">
+                        No holidays declared for this period
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
+                        No holidays are recorded for this branch within the chosen date range.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-left text-sm">
+                        <thead>
+                          <tr className="border-b border-[#e8e2d5] bg-[#fbf9f5]">
+                            <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                              Holiday Date
+                            </th>
+                            <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                              Day
+                            </th>
+                            <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                              Occasion / Reason
+                            </th>
+                            <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                              Status
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#f1ede4]">
+                          {historyHolidays.map((h, i) => {
+                            const hDate = h.date || h.holiday_date;
+                            const today = getToday();
+                            const isUpcoming = hDate > today;
+                            const isToday = hDate === today;
+
+                            let weekday = "—";
+                            try {
+                              weekday = new Intl.DateTimeFormat("en-IN", { weekday: "long" }).format(
+                                new Date(`${hDate}T00:00:00`)
+                              );
+                            } catch {}
+
+                            return (
+                              <tr key={h.id ?? i} className="hover:bg-[#fcfbf9] transition-colors">
+                                <td className="px-6 py-4.5 font-bold text-slate-900 whitespace-nowrap">
+                                  <div className="flex items-center gap-2">
+                                    <Calendar className="h-4 w-4 text-[#9c6b2e] shrink-0" />
+                                    <span>{formatDate(hDate)}</span>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4.5 text-xs font-semibold text-slate-600">
+                                  {weekday}
+                                </td>
+                                <td className="px-6 py-4.5">
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#faf5ec] text-[#9c6b2e] border border-[#ebd8b6] font-bold text-xs">
+                                    <span>{h.reason || "Declared Holiday"}</span>
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4.5 whitespace-nowrap">
+                                  {isToday ? (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 text-[11px] font-extrabold animate-pulse">
+                                      Today
+                                    </span>
+                                  ) : isUpcoming ? (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 text-sky-700 border border-sky-200 px-2.5 py-0.5 text-[11px] font-bold">
+                                      Upcoming
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200 px-2.5 py-0.5 text-[11px] font-medium">
+                                      Past
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
