@@ -516,7 +516,7 @@ const SuperAdminDueStudents = () => {
                   {getPendingTermsText(selectedStudent) && (
                     <p className="text-xs font-semibold text-rose-600 mt-1.5 flex items-center gap-1.5">
                       <AlertCircle className="h-3.5 w-3.5 shrink-0 text-rose-500" />
-                      Currently installment {getPendingTermsText(selectedStudent)} is pending
+                      Currently installment {getPendingTermsText(selectedStudent)} is due
                     </p>
                   )}
                 </div>
@@ -653,15 +653,6 @@ const SuperAdminDueStudents = () => {
                                 {selectedStudent.payment_status || '—'}
                              </span>
                            </div>
-                           <div className="col-span-2 pt-4 border-t border-stone-100">
-                             <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1.5">Installments Paid</p>
-                             <p className="text-sm font-bold text-slate-700 bg-white inline-block px-3 py-1.5 rounded-lg border border-stone-100">
-                                {Number(selectedStudent.installment_count) > 0 
-                                  ? `${selectedStudent.paid_installment_count ?? 0} of ${selectedStudent.installment_count} Paid`
-                                  : 'No Installments'
-                                }
-                             </p>
-                           </div>
                         </div>
                      </div>
 
@@ -733,7 +724,7 @@ const SuperAdminDueStudents = () => {
                        {getPendingTermsText(selectedStudent) && (
                          <span className="text-xs font-bold text-rose-600 flex items-center gap-1.5 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200">
                            <span className="inline-block h-2 w-2 rounded-full bg-rose-500" />
-                           Currently installment {getPendingTermsText(selectedStudent)} is pending
+                           Currently installment {getPendingTermsText(selectedStudent)} is due
                          </span>
                        )}
                      </div>

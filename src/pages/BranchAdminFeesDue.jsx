@@ -22,6 +22,7 @@ import {
   X,
   BookOpen,
   AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BranchAdminSidebar from '../components/layout/BranchAdminSidebar';
@@ -72,14 +73,23 @@ const getStudentDueDates = (student) => {
 
 const getPendingTermsText = (student) => {
   if (!student) return '';
-  const installments = student.installments || [];
-  const pendingInstalls = installments.filter((inst) => {
-    const status = String(inst.status || '').toLowerCase();
-    const rem = Number(inst.remaining_amount ?? (Number(inst.amount || 0) - Number(inst.paid_amount || 0)));
-    return status !== 'paid' && (status === 'pending' || status === 'due' || status === 'partial' || rem > 0);
-  });
+  // Check due installments first
+  const dueList = (Array.isArray(student.due_installments) && student.due_installments.length > 0)
+    ? student.due_installments
+    : (student.installments || []).filter((inst) => {
+        const status = String(inst.status || '').toLowerCase();
+        const rem = Number(inst.remaining_amount ?? (Number(inst.amount || 0) - Number(inst.paid_amount || 0)));
+        return (inst.is_due || status === 'due' || status === 'overdue') && rem > 0;
+      });
 
-  const listToUse = pendingInstalls.length > 0 ? pendingInstalls : installments;
+  const listToUse = dueList.length > 0
+    ? dueList
+    : (student.installments || []).filter((inst) => {
+        const status = String(inst.status || '').toLowerCase();
+        const rem = Number(inst.remaining_amount ?? (Number(inst.amount || 0) - Number(inst.paid_amount || 0)));
+        return status !== 'paid' && rem > 0;
+      });
+
   if (listToUse.length === 0) return '';
 
   const numbers = listToUse.map((inst, idx) => inst.installment_number || idx + 1);
@@ -101,12 +111,36 @@ const formatDisplayDate = (dStr) => {
 
 const normalizeDueStudent = (item, defaultBranchName = 'Branch Office') => {
   const primaryEnrollment = item.due_enrollments?.[0] || item;
-  const installments =
-    primaryEnrollment.due_installments ||
-    primaryEnrollment.installments ||
-    item.due_installments ||
-    item.installments ||
-    [];
+
+  // Extract full installments array (contains all terms: paid, pending, due)
+  const fullInstallments =
+    (Array.isArray(item.installments) && item.installments.length > 0)
+      ? item.installments
+      : (Array.isArray(primaryEnrollment.installments) && primaryEnrollment.installments.length > 0)
+      ? primaryEnrollment.installments
+      : [];
+
+  // Extract currently due installments
+  const dueInstallments =
+    (Array.isArray(item.due_installments) && item.due_installments.length > 0)
+      ? item.due_installments
+      : (Array.isArray(primaryEnrollment.due_installments) && primaryEnrollment.due_installments.length > 0)
+      ? primaryEnrollment.due_installments
+      : fullInstallments.filter((inst) => {
+          const status = String(inst.status || '').toLowerCase();
+          return inst.is_due || status === 'due' || status === 'overdue';
+        });
+
+  // Schedule to use: prefer full schedule so both paid & pending terms are visible
+  const installments = fullInstallments.length > 0 ? fullInstallments : dueInstallments;
+
+  // Extract payment transaction history
+  const payments =
+    (Array.isArray(item.payments) && item.payments.length > 0)
+      ? item.payments
+      : (Array.isArray(primaryEnrollment.payments) && primaryEnrollment.payments.length > 0)
+      ? primaryEnrollment.payments
+      : [];
 
   const studentId =
     item.student_id ||
@@ -120,13 +154,71 @@ const normalizeDueStudent = (item, defaultBranchName = 'Branch Office') => {
     item.enrollment_id ||
     item.id;
 
-  const totalDue = Number(
-    item.total_due_amount ??
-    primaryEnrollment.balance_amount ??
-    item.balance_amount ??
-    primaryEnrollment.remaining_amount ??
-    item.remaining_amount ??
+  const totalFee = Number(
+    item.total_fee ??
+    primaryEnrollment.total_fee ??
+    item.amount ??
+    primaryEnrollment.amount ??
+    primaryEnrollment.course_fee ??
     0
+  );
+
+  const totalPaid = Number(
+    item.total_paid ??
+    primaryEnrollment.total_paid ??
+    item.paid_amount ??
+    primaryEnrollment.paid_amount ??
+    0
+  );
+
+  const balanceAmount = Number(
+    item.balance_amount ??
+    primaryEnrollment.balance_amount ??
+    Math.max(0, totalFee - totalPaid)
+  );
+
+  // Total Currently Due Amount (Sum of due installments, NOT the full course balance)
+  let currentDueAmount = 0;
+  if (dueInstallments.length > 0) {
+    currentDueAmount = dueInstallments.reduce((sum, inst) => {
+      const rem = inst.remaining_amount !== undefined && inst.remaining_amount !== null
+        ? Number(inst.remaining_amount)
+        : Math.max(0, Number(inst.amount || 0) - Number(inst.paid_amount || 0));
+      return sum + (rem > 0 ? rem : Number(inst.amount || 0));
+    }, 0);
+  } else if (item.total_due_amount !== undefined && item.total_due_amount !== null && Number(item.total_due_amount) > 0) {
+    currentDueAmount = Number(item.total_due_amount);
+  } else {
+    const dueCount = Number(item.due_installment_count ?? primaryEnrollment.due_installment_count ?? 0);
+    if (dueCount > 0 && installments.length > 0) {
+      const unpaid = installments.filter(i => String(i.status).toLowerCase() !== 'paid');
+      currentDueAmount = unpaid.slice(0, dueCount).reduce((sum, inst) => {
+        const rem = Number(inst.remaining_amount ?? inst.amount ?? 0);
+        return sum + rem;
+      }, 0);
+    } else {
+      currentDueAmount = balanceAmount;
+    }
+  }
+
+  const installmentCount = Number(
+    item.installment_count ??
+    primaryEnrollment.installment_count ??
+    (installments.length > 0 ? installments.length : 0)
+  );
+
+  const paidCount = Number(
+    item.terms_paid ??
+    primaryEnrollment.terms_paid ??
+    item.paid_installment_count ??
+    primaryEnrollment.paid_installment_count ??
+    installments.filter(i => String(i.status).toLowerCase() === 'paid').length
+  );
+
+  const pendingTerms = Number(
+    item.pending_terms ??
+    primaryEnrollment.pending_terms ??
+    Math.max(0, installmentCount - paidCount)
   );
 
   const courseTitle =
@@ -160,37 +252,36 @@ const normalizeDueStudent = (item, defaultBranchName = 'Branch Office') => {
     course_name: courseTitle,
     course_duration: primaryEnrollment.course_duration || item.course_duration || '—',
     course_image: primaryEnrollment.course_image || item.course_image || null,
+    start_date: primaryEnrollment.start_date || item.start_date || null,
+    end_date: primaryEnrollment.end_date || item.end_date || null,
+    installment_schedule: primaryEnrollment.installment_schedule || item.installment_schedule || 'monthly',
     branch_name: branchName,
-    total_due_amount: totalDue,
-    total_fee:
-      primaryEnrollment.total_fee ||
-      primaryEnrollment.amount ||
-      primaryEnrollment.course_fee ||
-      item.total_fee ||
-      item.amount ||
-      0,
-    total_paid:
-      primaryEnrollment.total_paid ||
-      primaryEnrollment.paid_amount ||
-      item.total_paid ||
-      item.paid_amount ||
-      0,
-    balance_amount: totalDue,
-    payment_status: primaryEnrollment.payment_status || item.payment_status || (totalDue > 0 ? 'Pending' : 'Paid'),
+    total_due_amount: currentDueAmount,
+    total_fee: totalFee,
+    total_paid: totalPaid,
+    balance_amount: balanceAmount,
+    payment_status: primaryEnrollment.payment_status || item.payment_status || (balanceAmount > 0 ? 'Pending' : 'Paid'),
     branch_approval_status: primaryEnrollment.branch_approval_status || item.branch_approval_status || 'approved',
     super_admin_approval_status: primaryEnrollment.super_admin_approval_status || item.super_admin_approval_status || 'approved',
     super_admin_rejection_reason: primaryEnrollment.super_admin_rejection_reason || item.super_admin_rejection_reason || null,
     razorpay_order_id: primaryEnrollment.razorpay_order_id || item.razorpay_order_id || null,
     razorpay_payment_id: primaryEnrollment.razorpay_payment_id || item.razorpay_payment_id || null,
-    installment_count: primaryEnrollment.installment_count || item.installment_count || installments.length,
-    paid_installment_count: primaryEnrollment.paid_installment_count ?? item.paid_installment_count ?? installments.filter(i => i.status === 'paid').length,
+    installment_count: installmentCount,
+    paid_installment_count: paidCount,
+    terms_paid: paidCount,
+    pending_terms: pendingTerms,
+    due_installment_count: Number(item.due_installment_count ?? primaryEnrollment.due_installment_count ?? dueInstallments.length),
     installments: installments,
+    due_installments: dueInstallments,
+    payments: payments,
     due_enrollments: item.due_enrollments || [
       {
         ...primaryEnrollment,
         course_title: courseTitle,
         branch_name: branchName,
-        due_installments: installments,
+        installments: installments,
+        due_installments: dueInstallments,
+        payments: payments,
       },
     ],
   };
@@ -564,15 +655,7 @@ function BranchAdminFeesDue() {
                           </td>
                           <td className="px-4 py-3">
                             <button
-                              onClick={() => {
-                                const enr = p.due_enrollments?.[0] || p;
-                                setSelectedStudent({
-                                  ...p,
-                                  ...enr,
-                                  installments: enr.due_installments || enr.installments || p.due_installments || p.installments || [],
-                                  user_id: p.student_id || enr.student_id || p.user_id,
-                                });
-                              }}
+                              onClick={() => setSelectedStudent(p)}
                               className="px-3 py-1.5 rounded-lg text-xs font-bold text-stone-600 bg-stone-50 hover:bg-stone-100 transition whitespace-nowrap border border-stone-200 shadow-2xs"
                             >
                               View Details
@@ -613,7 +696,7 @@ function BranchAdminFeesDue() {
                 {getPendingTermsText(selectedStudent) && (
                   <p className="text-xs font-semibold text-rose-600 mt-1.5 flex items-center gap-1.5">
                     <AlertCircle className="h-3.5 w-3.5 shrink-0 text-rose-500" />
-                    Currently installment {getPendingTermsText(selectedStudent)} is pending
+                    Currently installment {getPendingTermsText(selectedStudent)} is due
                   </p>
                 )}
               </div>
@@ -756,7 +839,7 @@ function BranchAdminFeesDue() {
                           className="w-16 h-16 rounded-xl object-cover border border-slate-200 shrink-0 shadow-sm"
                         />
                       )}
-                      <div className="grid grid-cols-2 gap-5 flex-1">
+                      <div className="grid grid-cols-2 gap-4 flex-1">
                         <div className="col-span-2">
                           <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Course Name</p>
                           <p className="text-sm font-bold text-[#9c6b2e] mt-1">
@@ -769,11 +852,34 @@ function BranchAdminFeesDue() {
                             <Building2 className="h-3.5 w-3.5 text-stone-500" /> {selectedStudent.branch_name}
                           </p>
                         </div>
-                        <div className="col-span-2">
+                        <div>
+                          <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Start Date</p>
+                          <p className="text-sm font-medium text-slate-700 mt-1 flex items-center gap-1.5">
+                            <Calendar className="h-3.5 w-3.5 text-stone-400" />
+                            {selectedStudent.start_date ? formatDisplayDate(selectedStudent.start_date) : '—'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">End Date</p>
+                          <p className="text-sm font-medium text-slate-700 mt-1 flex items-center gap-1.5">
+                            <Calendar className="h-3.5 w-3.5 text-stone-400" />
+                            {selectedStudent.end_date ? formatDisplayDate(selectedStudent.end_date) : '—'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                            Installment Schedule
+                          </p>
+                          <p className="text-sm font-semibold text-slate-800 mt-1 capitalize flex items-center gap-1.5">
+                            <Clock className="h-3.5 w-3.5 text-stone-400" />
+                            {selectedStudent.installment_schedule || 'Monthly'}
+                          </p>
+                        </div>
+                        <div>
                           <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
                             Total Course Fee
                           </p>
-                          <p className="text-sm font-bold text-[#9c6b2e] mt-1 flex items-center gap-1.5">
+                          <p className="text-sm font-bold text-[#9c6b2e] mt-1 flex items-center gap-1">
                             <IndianRupee className="h-3.5 w-3.5 text-[#9c6b2e]" />{' '}
                             {fmt(selectedStudent.total_fee || selectedStudent.course_fee).replace('₹', '')}
                           </p>
@@ -787,58 +893,80 @@ function BranchAdminFeesDue() {
                 <div className="space-y-6">
                   {/* Payment Summary */}
                   <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden bg-gradient-to-br from-white to-stone-50/50">
-                    <div className="px-5 py-3.5 border-b border-stone-100 bg-white/60 flex items-center gap-2">
-                      <Wallet className="h-4 w-4 text-emerald-600" />
-                      <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
-                        Payment Summary
-                      </h3>
+                    <div className="px-5 py-3.5 border-b border-stone-100 bg-white/60 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Wallet className="h-4 w-4 text-emerald-600" />
+                        <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+                          Payment Summary
+                        </h3>
+                      </div>
+                      <span
+                        className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-[10px] font-bold uppercase border shadow-2xs ${
+                          selectedStudent.payment_status?.toLowerCase() === 'paid'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}
+                      >
+                        {selectedStudent.payment_status || 'Pending'}
+                      </span>
                     </div>
-                    <div className="p-5 grid grid-cols-2 gap-5">
-                      <div>
+                    <div className="p-5 grid grid-cols-2 gap-4">
+                      <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-100">
                         <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Total Fee</p>
-                        <p className="text-xl font-bold text-slate-800 mt-1">
+                        <p className="text-lg font-bold text-slate-800 mt-0.5">
                           {fmt(selectedStudent.total_fee || selectedStudent.course_fee)}
                         </p>
                       </div>
-                      <div>
-                        <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Total Paid</p>
-                        <p className="text-xl font-bold text-emerald-600 mt-1">
+                      <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-100">
+                        <p className="text-[10px] uppercase font-bold text-emerald-700 tracking-wider">Total Paid</p>
+                        <p className="text-lg font-bold text-emerald-600 mt-0.5">
                           {fmt(selectedStudent.total_paid || selectedStudent.amount)}
                         </p>
                       </div>
-                      <div>
-                        <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Balance</p>
+                      <div className="p-3 rounded-xl bg-stone-50 border border-stone-200/80">
+                        <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Course Balance</p>
                         <p
-                          className={`text-xl font-bold mt-1 ${
-                            Number(selectedStudent.balance_amount) > 0 ? 'text-rose-600' : 'text-emerald-600'
+                          className={`text-lg font-bold mt-0.5 ${
+                            Number(selectedStudent.balance_amount) > 0 ? 'text-amber-700' : 'text-emerald-600'
                           }`}
                         >
                           {fmt(selectedStudent.balance_amount)}
                         </p>
                       </div>
-                      <div>
-                        <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1.5">
-                          Payment Status
+                      <div className="p-3 rounded-xl bg-rose-50/80 border border-rose-100">
+                        <p className="text-[10px] uppercase font-bold text-rose-600 tracking-wider">Currently Due</p>
+                        <p className="text-lg font-bold text-rose-600 mt-0.5">
+                          {fmt(selectedStudent.total_due_amount)}
                         </p>
-                        <span
-                          className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-bold uppercase border shadow-2xs ${
-                            selectedStudent.payment_status?.toLowerCase() === 'paid'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : 'bg-white text-slate-700 border-slate-200'
-                          }`}
-                        >
-                          {selectedStudent.payment_status || '—'}
-                        </span>
                       </div>
-                      <div className="col-span-2 pt-4 border-t border-stone-100">
-                        <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1.5">
-                          Installments Paid
-                        </p>
-                        <p className="text-sm font-bold text-slate-700 bg-white inline-block px-3 py-1.5 rounded-lg border border-stone-100">
-                          {Number(selectedStudent.installment_count) > 0
-                            ? `${selectedStudent.paid_installment_count ?? 0} of ${selectedStudent.installment_count} Paid`
-                            : 'No Installments'}
-                        </p>
+                      <div className="col-span-2 pt-2">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <p className="text-[11px] uppercase font-bold text-slate-500 tracking-wider">
+                            Installments Paid
+                          </p>
+                          <span className="text-xs font-bold text-slate-700">
+                            {Number(selectedStudent.installment_count) > 0
+                              ? `${selectedStudent.paid_installment_count ?? 0} of ${selectedStudent.installment_count} Paid`
+                              : 'No Installments'}
+                          </span>
+                        </div>
+                        {Number(selectedStudent.installment_count) > 0 && (
+                          <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200/60">
+                            <div
+                              className="bg-emerald-500 h-2 rounded-full transition-all duration-300"
+                              style={{
+                                width: `${Math.min(
+                                  100,
+                                  Math.round(
+                                    ((selectedStudent.paid_installment_count ?? 0) /
+                                      (selectedStudent.installment_count || 1)) *
+                                      100
+                                  )
+                                )}%`,
+                              }}
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -954,15 +1082,20 @@ function BranchAdminFeesDue() {
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-stone-500" />
                       <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
-                        Installment Due Details
+                        Installment Schedule & Due Details
                       </h3>
                     </div>
-                    {getPendingTermsText(selectedStudent) && (
-                      <span className="text-xs font-bold text-rose-600 flex items-center gap-1.5 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200">
-                        <span className="inline-block h-2 w-2 rounded-full bg-rose-500" />
-                        Currently installment {getPendingTermsText(selectedStudent)} is pending
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-slate-500">
+                        {selectedStudent.paid_installment_count ?? 0} of {selectedStudent.installment_count} Paid
                       </span>
-                    )}
+                      {getPendingTermsText(selectedStudent) && (
+                        <span className="text-xs font-bold text-rose-600 flex items-center gap-1.5 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200">
+                          <span className="inline-block h-2 w-2 rounded-full bg-rose-500" />
+                          Installment {getPendingTermsText(selectedStudent)} Due
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
@@ -970,48 +1103,72 @@ function BranchAdminFeesDue() {
                         <tr>
                           <th className="px-5 py-3">Term</th>
                           <th className="px-5 py-3">Amount</th>
-                          <th className="px-5 py-3">Paid</th>
+                          <th className="px-5 py-3">Paid Amount</th>
                           <th className="px-5 py-3">Remaining</th>
                           <th className="px-5 py-3">Due Date</th>
+                          <th className="px-5 py-3">Paid Date</th>
                           <th className="px-5 py-3">Status</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#f1ede4]">
-                        {selectedStudent.installments.map((inst, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50 transition">
-                            <td className="px-5 py-3 font-medium text-slate-800">
-                              #{inst.installment_number || idx + 1}
-                            </td>
-                            <td className="px-5 py-3 font-bold text-slate-700">{fmt(inst.amount)}</td>
-                            <td className="px-5 py-3 font-semibold text-emerald-600">
-                              {fmt(inst.paid_amount ?? (inst.status === 'paid' ? inst.amount : 0))}
-                            </td>
-                            <td className="px-5 py-3 font-semibold text-rose-600">
-                              {fmt(
-                                inst.remaining_amount ??
-                                  (inst.status === 'paid' ? 0 : Math.max(0, Number(inst.amount || 0) - Number(inst.paid_amount || 0)))
-                              )}
-                            </td>
-                            <td className="px-5 py-3 text-xs font-medium text-slate-600">
-                              {formatDisplayDate(inst.due_date)}
-                            </td>
-                            <td className="px-5 py-3">
-                              <span
-                                className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase border ${
-                                  inst.status === 'paid'
-                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                    : inst.status === 'partial'
-                                    ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                    : inst.is_due
-                                    ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                    : 'bg-slate-50 text-slate-600 border-slate-200'
-                                }`}
-                              >
-                                {inst.status || 'Pending'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
+                        {selectedStudent.installments.map((inst, idx) => {
+                          const isPaid = String(inst.status || '').toLowerCase() === 'paid';
+                          const isDue = inst.is_due || String(inst.status || '').toLowerCase() === 'due' || String(inst.status || '').toLowerCase() === 'overdue';
+                          const paidAmt = Number(inst.paid_amount ?? (isPaid ? inst.amount : 0));
+                          const remAmt = Number(
+                            inst.remaining_amount ?? (isPaid ? 0 : Math.max(0, Number(inst.amount || 0) - paidAmt))
+                          );
+
+                          return (
+                            <tr key={inst.id || idx} className="hover:bg-slate-50 transition">
+                              <td className="px-5 py-3.5 font-bold text-slate-800">
+                                #{inst.installment_number || idx + 1}
+                              </td>
+                              <td className="px-5 py-3.5 font-bold text-slate-700">{fmt(inst.amount)}</td>
+                              <td className="px-5 py-3.5 font-semibold text-emerald-600">
+                                {fmt(paidAmt)}
+                              </td>
+                              <td className={`px-5 py-3.5 font-semibold ${remAmt > 0 ? 'text-rose-600' : 'text-slate-400'}`}>
+                                {fmt(remAmt)}
+                              </td>
+                              <td className="px-5 py-3.5 text-xs font-medium text-slate-600">
+                                {formatDisplayDate(inst.due_date)}
+                              </td>
+                              <td className="px-5 py-3.5 text-xs font-medium text-slate-600">
+                                {inst.paid_date ? formatDisplayDate(inst.paid_date) : '—'}
+                              </td>
+                              <td className="px-5 py-3.5">
+                                <span
+                                  className={`inline-flex items-center gap-1 rounded-md px-2.5 py-0.5 text-[10px] font-bold uppercase border ${
+                                    isPaid
+                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                      : inst.status === 'partial'
+                                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                      : isDue
+                                      ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                      : 'bg-slate-50 text-slate-600 border-slate-200'
+                                  }`}
+                                >
+                                  {isPaid ? (
+                                    <>
+                                      <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                                      Paid
+                                    </>
+                                  ) : isDue ? (
+                                    <>
+                                      <AlertCircle className="h-3 w-3 text-rose-600" />
+                                      Due Now
+                                    </>
+                                  ) : inst.status === 'partial' ? (
+                                    'Partially Paid'
+                                  ) : (
+                                    'Upcoming'
+                                  )}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -1022,6 +1179,91 @@ function BranchAdminFeesDue() {
                   <p className="text-sm font-semibold text-slate-600">No installment schedule for this enrollment.</p>
                 </div>
               )}
+
+              {/* Payment Transaction History (Full Width) */}
+              <div className="bg-white rounded-2xl border border-[#e3ddd0] shadow-sm overflow-hidden mt-6">
+                <div className="px-5 py-3.5 border-b border-[#e3ddd0] bg-slate-50 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 text-stone-500" />
+                    <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+                      Payment Transaction History
+                    </h3>
+                  </div>
+                  <span className="text-xs font-semibold text-slate-500">
+                    {selectedStudent.payments?.length || 0} transaction{(selectedStudent.payments?.length || 0) === 1 ? '' : 's'} recorded
+                  </span>
+                </div>
+
+                {selectedStudent.payments && selectedStudent.payments.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-[#faf8f4] border-b border-[#e3ddd0] text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                        <tr>
+                          <th className="px-5 py-3">Txn ID</th>
+                          <th className="px-5 py-3">Installment</th>
+                          <th className="px-5 py-3">Amount</th>
+                          <th className="px-5 py-3">Method</th>
+                          <th className="px-5 py-3">Payment Date</th>
+                          <th className="px-5 py-3">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#f1ede4]">
+                        {selectedStudent.payments.map((p, pIdx) => {
+                          const statusLower = String(p.status || '').toLowerCase();
+                          return (
+                            <tr key={p.id || pIdx} className="hover:bg-slate-50 transition">
+                              <td className="px-5 py-3.5 font-mono text-xs font-bold text-slate-700">
+                                #{p.id || pIdx + 1}
+                              </td>
+                              <td className="px-5 py-3.5 font-medium text-slate-800">
+                                {p.installment_number ? `Term #${p.installment_number}` : '—'}
+                              </td>
+                              <td className="px-5 py-3.5 font-bold text-emerald-600">
+                                {fmt(p.amount)}
+                              </td>
+                              <td className="px-5 py-3.5">
+                                <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 uppercase bg-slate-100 px-2 py-0.5 rounded">
+                                  {p.payment_method || 'Razorpay'}
+                                </span>
+                                {p.upi_transaction_id && (
+                                  <span className="block text-[10px] font-mono text-slate-400 mt-0.5">
+                                    UPI: {p.upi_transaction_id}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-5 py-3.5 text-xs font-medium text-slate-600">
+                                {formatDisplayDate(p.payment_date)}
+                              </td>
+                              <td className="px-5 py-3.5">
+                                <span
+                                  className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-[10px] font-bold uppercase border ${
+                                    statusLower === 'received' || statusLower === 'success' || statusLower === 'paid'
+                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                      : statusLower === 'pending_review' || statusLower === 'pending'
+                                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                      : 'bg-rose-50 text-rose-700 border-rose-200'
+                                  }`}
+                                >
+                                  {statusLower === 'received'
+                                    ? 'Received'
+                                    : statusLower === 'pending_review'
+                                    ? 'Pending Review'
+                                    : p.status || 'Pending'}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="p-8 flex flex-col items-center justify-center text-center">
+                    <CreditCard className="h-8 w-8 text-slate-300 mb-2" />
+                    <p className="text-sm font-semibold text-slate-600">No payment transactions recorded for this enrollment.</p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Footer Actions */}

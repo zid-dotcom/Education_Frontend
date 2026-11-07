@@ -756,11 +756,11 @@ const BranchAdminDashboard = () => {
                 </div>
 
                 {/* Branch Admin at Work Illustration */}
-                <div className="hidden sm:flex items-center justify-end shrink-0 relative z-10">
+                <div className="flex items-center justify-center sm:justify-end shrink-0 relative z-10 self-center sm:self-auto mt-2 sm:mt-0">
                   <img
                     src={branchAdminWorkHero}
                     alt="Branch Admin at Work"
-                    className="h-24 sm:h-28 md:h-32 lg:h-36 w-auto max-w-[180px] sm:max-w-[220px] object-contain drop-shadow-sm select-none pointer-events-none"
+                    className="h-24 sm:h-28 md:h-32 lg:h-36 w-auto max-w-[190px] sm:max-w-[220px] object-contain drop-shadow-sm select-none pointer-events-none"
                   />
                 </div>
               </div>

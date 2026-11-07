@@ -123,7 +123,7 @@ const NAV_GROUPS = [
 let savedSidebarScrollTop = 0;
 try {
   savedSidebarScrollTop = Number(sessionStorage.getItem("ba_sidebar_scroll")) || 0;
-} catch {}
+} catch { }
 
 const BranchAdminSidebar = ({
   user,
@@ -218,14 +218,14 @@ const BranchAdminSidebar = ({
           const list = Array.isArray(val)
             ? val
             : Array.isArray(val?.pending)
-            ? val.pending
-            : Array.isArray(val?.purchases)
-            ? val.purchases
-            : Array.isArray(val?.enrollments)
-            ? val.enrollments
-            : Array.isArray(val?.data)
-            ? val.data
-            : [];
+              ? val.pending
+              : Array.isArray(val?.purchases)
+                ? val.purchases
+                : Array.isArray(val?.enrollments)
+                  ? val.enrollments
+                  : Array.isArray(val?.data)
+                    ? val.data
+                    : [];
           count = list.length;
         }
 
@@ -235,12 +235,12 @@ const BranchAdminSidebar = ({
           const list = Array.isArray(val)
             ? val
             : Array.isArray(val?.purchases)
-            ? val.purchases
-            : Array.isArray(val?.enrollments)
-            ? val.enrollments
-            : Array.isArray(val?.data)
-            ? val.data
-            : [];
+              ? val.purchases
+              : Array.isArray(val?.enrollments)
+                ? val.enrollments
+                : Array.isArray(val?.data)
+                  ? val.data
+                  : [];
           count = list.filter((p) => {
             const cs = String(p.course_status || p.status || "").toLowerCase();
             const ba = String(p.branch_approval_status || "").toLowerCase();
@@ -260,12 +260,12 @@ const BranchAdminSidebar = ({
           const list = Array.isArray(val)
             ? val
             : Array.isArray(val?.pending)
-            ? val.pending
-            : Array.isArray(val?.payments)
-            ? val.payments
-            : Array.isArray(val?.data)
-            ? val.data
-            : [];
+              ? val.pending
+              : Array.isArray(val?.payments)
+                ? val.payments
+                : Array.isArray(val?.data)
+                  ? val.data
+                  : [];
           count = list.length;
         }
 
@@ -302,7 +302,7 @@ const BranchAdminSidebar = ({
           savedSidebarScrollTop = navRef.current.scrollTop;
           try {
             sessionStorage.setItem("ba_sidebar_scroll", String(savedSidebarScrollTop));
-          } catch {}
+          } catch { }
         }
       }
     }
@@ -312,7 +312,7 @@ const BranchAdminSidebar = ({
     savedSidebarScrollTop = e.currentTarget.scrollTop;
     try {
       sessionStorage.setItem("ba_sidebar_scroll", String(savedSidebarScrollTop));
-    } catch {}
+    } catch { }
   };
 
   const routerNavigate = useNavigate();
@@ -324,7 +324,7 @@ const BranchAdminSidebar = ({
       savedSidebarScrollTop = navRef.current.scrollTop;
       try {
         sessionStorage.setItem("ba_sidebar_scroll", String(savedSidebarScrollTop));
-      } catch {}
+      } catch { }
     }
     if (path === "/branch-admin/messages") setUnreadMessageCount(0);
     closeSidebar();
@@ -379,9 +379,8 @@ const BranchAdminSidebar = ({
 
       {/* ---- Sidebar ---- */}
       <aside
-        className={`branch-admin-sidebar fixed inset-y-0 left-0 z-40 flex w-60 shrink-0 flex-col transition-transform duration-300 md:sticky md:top-0 md:h-screen md:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-        }`}
+        className={`branch-admin-sidebar fixed inset-y-0 left-0 z-40 flex w-60 shrink-0 flex-col transition-transform duration-300 md:sticky md:top-0 md:h-screen md:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+          }`}
         style={{
           ...sans,
           background: "#faf8f4",
@@ -446,9 +445,8 @@ const BranchAdminSidebar = ({
                         type="button"
                         onClick={() => goTo(path)}
                         aria-current={isActive ? "page" : undefined}
-                        className={`relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${
-                          isActive ? "font-medium" : "hover:bg-[#f1ede4]"
-                        } ${FOCUS_RING}`}
+                        className={`relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${isActive ? "font-medium" : "hover:bg-[#f1ede4]"
+                          } ${FOCUS_RING}`}
                         style={{
                           background: isActive ? "#f7efe0" : undefined,
                           color: isActive ? "#17140f" : "#5b5346",

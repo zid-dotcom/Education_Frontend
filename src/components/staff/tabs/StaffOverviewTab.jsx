@@ -8,8 +8,6 @@ import {
   Loader2,
   Eye,
   FileCheck2,
-  GraduationCap,
-  Award,
   Plus,
   ArrowRight,
   MoreVertical,
@@ -23,6 +21,7 @@ import {
 import StaffAnnouncementTicker from '../announcements/StaffAnnouncementTicker';
 import StaffRecentAnnouncements from '../announcements/StaffRecentAnnouncements';
 import StaffAnnouncementDetailModal from '../modals/StaffAnnouncementDetailModal';
+import courseOverviewClassroomHero from '../../../assets/Course Overview Classroom Illustration.png';
 
 /* ── Custom Watermark Illustrations matching Staff Portal Quick Access Design ── */
 const StackedBooksGraphic = () => (
@@ -378,23 +377,13 @@ const StaffOverviewTab = ({
           </p>
         </div>
 
-        {/* 3D-styled Staff / Faculty Animated Emblem (Matching Student Portal Style) */}
-        <div className="hidden sm:flex items-center justify-center shrink-0 pr-2 sm:pr-4 relative z-10">
-          <div className="relative flex items-center justify-center group cursor-default">
-            {/* Floating decorative elements in warm amber & gold theme */}
-            <div className="absolute -top-2.5 -left-2.5 h-6 w-6 rounded-full bg-gradient-to-tr from-[#9C6B2E] to-[#F4B942] shadow-md shadow-[#9C6B2E]/40 animate-bounce flex items-center justify-center text-white">
-              <Award className="h-3.5 w-3.5 text-white stroke-[2.2]" />
-            </div>
-            <div className="absolute -bottom-1.5 -right-1.5 h-4 w-4 rounded-full bg-[#F4B942] shadow-md shadow-[#F4B942]/30 animate-pulse" />
-            <div className="absolute top-1/2 -right-4 h-5 w-5 rounded-full bg-[#9C6B2E] shadow-md shadow-[#9C6B2E]/30 flex items-center justify-center text-[10px] font-black text-white">
-              ★
-            </div>
-
-            {/* Center Floating Faculty Emblem */}
-            <div className="flex h-20 w-20 sm:h-22 sm:w-22 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FAF8F4] via-[#F1EDE4] to-[#FAF8F4] backdrop-blur-md border border-[#E3DDD0] shadow-lg shadow-[#9C6B2E]/10 transform hover:rotate-3 hover:scale-105 transition-all duration-300">
-              <GraduationCap className="h-10 w-10 sm:h-12 sm:w-12 text-[#9C6B2E] drop-shadow-sm transition-transform duration-300 group-hover:scale-110" />
-            </div>
-          </div>
+        {/* Course Overview Classroom Illustration */}
+        <div className="flex items-center justify-center sm:justify-end shrink-0 relative z-10 self-center sm:self-auto mt-2 sm:mt-0">
+          <img
+            src={courseOverviewClassroomHero}
+            alt="Course Overview Classroom"
+            className="h-24 sm:h-28 md:h-32 lg:h-36 w-auto max-w-[190px] sm:max-w-[220px] object-contain drop-shadow-sm select-none pointer-events-none"
+          />
         </div>
       </div>
 

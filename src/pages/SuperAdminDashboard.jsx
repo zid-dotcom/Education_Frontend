@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import {
   BookOpen, Building2, CalendarCheck, GraduationCap, IndianRupee,
   Loader2, MessageCircle, RefreshCw, ShoppingCart, TrendingUp, UserPlus, Users,
-  CheckCircle, Clock, KeyRound, Wallet, X, Layers, Crown, ShieldCheck
+  CheckCircle, Clock, KeyRound, Wallet, X, Layers, Crown
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
 import NavLogoutButton from "../components/common/NavLogoutButton";
 import { getSuperAdminDashboardOverviewApi } from '../services/superadmin';
+import superAdminWorkspaceHero from '../assets/Super Admin Dashboard Workspace.png';
 
 const PAGE_CSS = `
 @keyframes sa-rise { from { opacity:0; transform:translateY(16px) scale(.97); } to { opacity:1; transform:translateY(0) scale(1); } }
@@ -670,7 +671,7 @@ const SuperAdminDashboard = () => {
           </div>
         </header>
 
-        <div className="mx-auto max-w-7xl px-6 py-8 sm:px-10 space-y-8">
+        <div className="w-full px-6 py-8 sm:px-10 space-y-8">
           {/* ── Welcome Header Banner (Warm Light Theme - Matching Staff & Student Portals) ── */}
           <div className="sa-rise bg-white rounded-3xl p-5 sm:p-6 border border-[#E3DDD0] shadow-sm relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             {/* Soft warm background gradient glow */}
@@ -705,23 +706,13 @@ const SuperAdminDashboard = () => {
               )}
             </div>
 
-            {/* 3D-styled Super Admin Animated Emblem (Crown & Shield in Warm Gold Theme) */}
-            <div className="hidden sm:flex items-center justify-center shrink-0 pr-2 sm:pr-4 relative z-10">
-              <div className="relative flex items-center justify-center group cursor-default">
-                {/* Floating decorative elements in warm amber & gold theme */}
-                <div className="absolute -top-2.5 -left-2.5 h-6 w-6 rounded-full bg-gradient-to-tr from-[#9C6B2E] to-[#F4B942] shadow-md shadow-[#9C6B2E]/40 animate-bounce flex items-center justify-center text-white" title="Master Security & Authority">
-                  <ShieldCheck className="h-3.5 w-3.5 text-white stroke-[2.3]" />
-                </div>
-                <div className="absolute -bottom-1.5 -right-1.5 h-4 w-4 rounded-full bg-[#F4B942] shadow-md shadow-[#F4B942]/30 animate-pulse" />
-                <div className="absolute top-1/2 -right-4 h-5 w-5 rounded-full bg-[#9C6B2E] shadow-md shadow-[#9C6B2E]/30 flex items-center justify-center text-[10px] font-black text-white">
-                  ★
-                </div>
-
-                {/* Center Floating Super Admin Emblem */}
-                <div className="flex h-20 w-20 sm:h-22 sm:w-22 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FAF8F4] via-[#F1EDE4] to-[#FAF8F4] backdrop-blur-md border border-[#E3DDD0] shadow-lg shadow-[#9C6B2E]/10 transform hover:rotate-3 hover:scale-105 transition-all duration-300">
-                  <Crown className="h-10 w-10 sm:h-12 sm:w-12 text-[#9C6B2E] drop-shadow-sm transition-transform duration-300 group-hover:scale-110" />
-                </div>
-              </div>
+            {/* Super Admin Dashboard Workspace Illustration */}
+            <div className="flex items-center justify-center sm:justify-end shrink-0 relative z-10 self-center sm:self-auto mt-2 sm:mt-0">
+              <img
+                src={superAdminWorkspaceHero}
+                alt="Super Admin Dashboard Workspace"
+                className="h-24 sm:h-28 md:h-32 lg:h-36 w-auto max-w-[190px] sm:max-w-[220px] object-contain drop-shadow-sm select-none pointer-events-none"
+              />
             </div>
           </div>
 
