@@ -1,6 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Clock, BarChart, ArrowLeft, Send, AlertCircle, Loader2, ChevronDown } from 'lucide-react';
+import {
+  Clock,
+  BarChart,
+  ArrowLeft,
+  Send,
+  AlertCircle,
+  Loader2,
+  ChevronDown,
+  BookOpen,
+  GraduationCap,
+  Award,
+  Layers,
+  ShieldCheck,
+  CheckCircle2,
+  Check,
+  Lock,
+} from 'lucide-react';
 import Button from '../components/common/Button';
 import CurriculumAccordion from '../components/courses/CurriculumAccordion';
 import CourseCard from '../components/courses/CourseCard';
@@ -9,6 +25,580 @@ import { createPaymentOrderApi, loadRazorpayScript, verifyPaymentApi } from '../
 import { getPublicBranchesWithCoursesApi } from '../services/branches';
 import { useAuth } from '../context/AuthContext';
 import PaymentSuccessReceiptModal from '../components/common/PaymentSuccessReceiptModal';
+
+const serif = { fontFamily: "'Fraunces', ui-serif, Georgia, serif" };
+
+/* ── Enhanced Student Portal Course Detail View ── */
+const StudentCourseDetailView = ({
+  course,
+  title,
+  shortDesc,
+  fullDesc,
+  priceDisplay,
+  category,
+  duration,
+  level,
+  imageUrl,
+  coursePath,
+  paymentType,
+  setPaymentType,
+  selectedInstallment,
+  setSelectedInstallment,
+  handleApplyClick,
+  paymentLoading,
+  paymentMessage,
+  paymentError,
+  relatedCourses,
+  onOpenApplyModal,
+  showReceiptModal,
+  setShowReceiptModal,
+  successReceipt,
+  token,
+  navigate,
+}) => {
+  let parsedCurriculum = course?.curriculum || [];
+  if (typeof parsedCurriculum === 'string') {
+    try {
+      parsedCurriculum = JSON.parse(parsedCurriculum);
+    } catch {
+      parsedCurriculum = [];
+    }
+  }
+  if (!Array.isArray(parsedCurriculum)) {
+    parsedCurriculum = [];
+  }
+
+  const totalTopics = useMemo(() => {
+    return parsedCurriculum.reduce(
+      (acc, mod) => acc + (Array.isArray(mod.topics) ? mod.topics.length : 0),
+      0
+    );
+  }, [parsedCurriculum]);
+
+  const hasInstallments = Boolean(course?.installment_count && course.installment_count > 1);
+
+  return (
+    <div className="w-full pb-14 space-y-8 font-['Plus_Jakarta_Sans',sans-serif] opacity-0 animate-[studentCourseOpen_0.4s_ease-out_forwards]">
+      <style>{`
+        @keyframes studentCourseOpen {
+          0% { opacity: 0; transform: translateY(12px) scale(0.99); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `}</style>
+
+      {/* 1. Header Navigation Bar & Breadcrumb */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link
+          to={coursePath}
+          className="group inline-flex items-center gap-2 rounded-xl bg-white border border-[#E3DDD0] px-4 py-2 text-xs font-bold text-[#5B5346] shadow-2xs transition-all hover:bg-[#F1EDE4] hover:text-[#17140F] hover:border-[#9C6B2E]/40"
+        >
+          <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-1 text-[#9C6B2E]" />
+          <span>Back to All Courses</span>
+        </Link>
+
+        <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-[#8A8175]">
+          <span>Student Catalog</span>
+          <span>/</span>
+          <span className="text-[#9C6B2E]">{category}</span>
+          <span>/</span>
+          <span className="text-[#17140F] font-bold max-w-[220px] truncate">{title}</span>
+        </div>
+      </div>
+
+      {/* 2. Hero Showcase Banner Card */}
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#FAF6EE] via-[#FDFBF7] to-[#F5ECE0] border border-[#ECDDC6] shadow-sm p-6 sm:p-8 lg:p-10">
+        {/* Ambient warm glow in background */}
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-gradient-to-bl from-[#F4B942]/20 via-[#9C6B2E]/10 to-transparent pointer-events-none blur-2xl" />
+
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          {/* Left Hero Content */}
+          <div className="space-y-4 lg:col-span-7 xl:col-span-8">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-white text-[#9C6B2E] border border-[#ECD8B5] shadow-2xs">
+                <BookOpen className="h-3.5 w-3.5 text-[#9C6B2E]" />
+                <span>{category}</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 shadow-2xs">
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                <span>Aurum FX Certified</span>
+              </span>
+            </div>
+
+            <h1
+              className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold tracking-tight text-[#17140F] leading-[1.18]"
+              style={serif}
+            >
+              {title}
+            </h1>
+
+            <p className="text-sm sm:text-base text-[#5B5346] leading-relaxed max-w-2xl font-normal">
+              {shortDesc}
+            </p>
+
+            {/* Quick Spec Badges */}
+            <div className="flex flex-wrap items-center gap-2.5 pt-2">
+              <div className="flex items-center gap-2 rounded-xl bg-white/95 border border-[#ECDDC6] px-3.5 py-2 text-xs font-bold text-[#17140F] shadow-2xs">
+                <Clock className="h-4 w-4 text-[#9C6B2E]" />
+                <span>Duration: <span className="font-normal text-[#5B5346]">{duration}</span></span>
+              </div>
+              <div className="flex items-center gap-2 rounded-xl bg-white/95 border border-[#ECDDC6] px-3.5 py-2 text-xs font-bold text-[#17140F] shadow-2xs">
+                <BarChart className="h-4 w-4 text-[#9C6B2E]" />
+                <span>Level: <span className="font-normal text-[#5B5346]">{level}</span></span>
+              </div>
+              {parsedCurriculum.length > 0 && (
+                <div className="flex items-center gap-2 rounded-xl bg-white/95 border border-[#ECDDC6] px-3.5 py-2 text-xs font-bold text-[#17140F] shadow-2xs">
+                  <Layers className="h-4 w-4 text-[#9C6B2E]" />
+                  <span>Modules: <span className="font-normal text-[#5B5346]">{parsedCurriculum.length} Sections</span></span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 rounded-xl bg-white/95 border border-[#ECDDC6] px-3.5 py-2 text-xs font-bold text-[#17140F] shadow-2xs">
+                <Award className="h-4 w-4 text-[#9C6B2E]" />
+                <span>Certificate: <span className="font-normal text-[#5B5346]">Included</span></span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Visual Image Card */}
+          <div className="lg:col-span-5 xl:col-span-4 flex justify-center">
+            <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white border-2 border-white shadow-xl shadow-[#9C6B2E]/10 relative group">
+              <div className="aspect-[16/10] sm:aspect-[4/3] w-full overflow-hidden bg-[#FAF8F4]">
+                <img
+                  src={imageUrl}
+                  alt={title}
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src =
+                      'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80';
+                  }}
+                />
+              </div>
+              <div className="p-3 bg-white/95 backdrop-blur-xs border-t border-[#F1EDE4] flex items-center justify-between">
+                <span className="text-[11px] font-bold text-[#9C6B2E]">
+                  Official Academy Program
+                </span>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/60">
+                  Enrolling Now
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. Main Two-Column Workspace (Left: Details Cards / Right: Sticky Enrollment Card) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* LEFT COLUMN: Course details cards */}
+        <div className="space-y-6 lg:col-span-8">
+          {/* Card 1: Course Overview & Objectives */}
+          <div className="rounded-3xl bg-white border border-[#E3DDD0] p-6 sm:p-8 shadow-xs">
+            <div className="flex items-center gap-2.5 mb-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#FAF8F4] border border-[#ECDDC6] text-[#9C6B2E]">
+                <BookOpen className="h-4 w-4" />
+              </span>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#9C6B2E]">
+                  Program Overview
+                </span>
+                <h2 className="text-xl sm:text-2xl font-bold text-[#17140F] tracking-tight" style={serif}>
+                  Course Overview & Objectives
+                </h2>
+              </div>
+            </div>
+
+            <p className="text-sm sm:text-base font-normal leading-relaxed text-[#5B5346] mt-4">
+              {fullDesc}
+            </p>
+
+            {/* 4 Program Highlights Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mt-6 pt-6 border-t border-[#F1EDE4]">
+              <div className="flex items-start gap-3 rounded-2xl bg-[#FAF8F4] border border-[#E3DDD0]/80 p-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white border border-[#ECD8B5] text-[#9C6B2E] shadow-2xs">
+                  <Layers className="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-[#17140F]">Industry-Standard Syllabus</h4>
+                  <p className="text-[11px] text-[#8A8175] mt-0.5 leading-relaxed">
+                    Curated by domain specialists with up-to-date real-world tools and workflows.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-2xl bg-[#FAF8F4] border border-[#E3DDD0]/80 p-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white border border-[#ECD8B5] text-[#9C6B2E] shadow-2xs">
+                  <CheckCircle2 className="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-[#17140F]">Assignments & Evaluation</h4>
+                  <p className="text-[11px] text-[#8A8175] mt-0.5 leading-relaxed">
+                    Hands-on practical tasks submitted directly to faculty for personalized grading.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-2xl bg-[#FAF8F4] border border-[#E3DDD0]/80 p-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white border border-[#ECD8B5] text-[#9C6B2E] shadow-2xs">
+                  <Award className="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-[#17140F]">Accredited Certification</h4>
+                  <p className="text-[11px] text-[#8A8175] mt-0.5 leading-relaxed">
+                    Receive a verifiable course completion certificate backed by Aurum FX Academy.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-2xl bg-[#FAF8F4] border border-[#E3DDD0]/80 p-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white border border-[#ECD8B5] text-[#9C6B2E] shadow-2xs">
+                  <ShieldCheck className="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-[#17140F]">Faculty Mentorship</h4>
+                  <p className="text-[11px] text-[#8A8175] mt-0.5 leading-relaxed">
+                    Communicate with branch instructors through direct student-faculty message channels.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Key Skills Acquired (if skills array exists) */}
+          {Array.isArray(course?.skills) && course.skills.length > 0 && (
+            <div className="rounded-3xl bg-white border border-[#E3DDD0] p-6 sm:p-8 shadow-xs">
+              <div className="flex items-center gap-2.5 mb-4">
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#FAF8F4] border border-[#ECDDC6] text-[#9C6B2E]">
+                  <Award className="h-4 w-4" />
+                </span>
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#9C6B2E]">
+                    Core Competencies
+                  </span>
+                  <h2 className="text-xl sm:text-2xl font-bold text-[#17140F] tracking-tight" style={serif}>
+                    Key Skills You Will Acquire
+                  </h2>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 pt-2">
+                {course.skills.map((skill, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-3 rounded-xl border border-[#E3DDD0] bg-[#FAF8F4] p-3 text-xs font-semibold text-[#17140F] hover:border-[#9C6B2E]/40 transition"
+                  >
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#F1EDE4] text-[#9C6B2E] font-bold text-xs">
+                      ✓
+                    </div>
+                    <span className="truncate">{skill}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Card 3: Detailed Curriculum Accordion */}
+          {parsedCurriculum.length > 0 && (
+            <div className="rounded-3xl bg-white border border-[#E3DDD0] p-6 sm:p-8 shadow-xs">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-6 pb-4 border-b border-[#F1EDE4]">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#FAF8F4] border border-[#ECDDC6] text-[#9C6B2E]">
+                    <Layers className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#9C6B2E]">
+                      Syllabus Architecture
+                    </span>
+                    <h2 className="text-xl sm:text-2xl font-bold text-[#17140F] tracking-tight" style={serif}>
+                      Detailed Course Curriculum
+                    </h2>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs font-semibold text-[#8A8175]">
+                  <span className="rounded-full bg-[#FAF8F4] border border-[#E3DDD0] px-3 py-1 text-[#9C6B2E] font-bold">
+                    {parsedCurriculum.length} Modules
+                  </span>
+                  {totalTopics > 0 && (
+                    <span className="rounded-full bg-[#FAF8F4] border border-[#E3DDD0] px-3 py-1 text-[#5B5346]">
+                      {totalTopics} Topics
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <p className="text-xs text-[#8A8175] mb-5">
+                Click on any module below to inspect the topics, lessons, and practical exercises included.
+              </p>
+
+              <CurriculumAccordion curriculum={parsedCurriculum} studentView={true} />
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT COLUMN: Sticky Premium Enrollment Card */}
+        <div className="lg:col-span-4">
+          <div className="sticky top-6 rounded-3xl border border-[#ECD8B5] bg-gradient-to-b from-white via-[#FAF8F4] to-[#FAF6EE] p-6 sm:p-7 shadow-lg shadow-[#9C6B2E]/10 space-y-6">
+            {/* Top Enrollment Header Badge */}
+            <div className="flex items-center justify-between pb-4 border-b border-[#ECDDC6]">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#9C6B2E] uppercase tracking-wider">
+                <GraduationCap className="h-4 w-4 text-[#9C6B2E]" />
+                <span>Program Enrollment</span>
+              </span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Active Branch
+              </span>
+            </div>
+
+            {/* Price Display */}
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#8A8175]">
+                Total Program Fee
+              </span>
+              <div className="mt-1 flex items-baseline gap-2.5 flex-wrap">
+                <span className="text-3xl sm:text-4xl font-extrabold text-[#17140F] tracking-tight">
+                  {priceDisplay}
+                </span>
+                <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                  Includes GST
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Specs Overview */}
+            <div className="space-y-2.5 py-3 border-y border-[#ECDDC6] text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[#8A8175] flex items-center gap-1.5 font-medium">
+                  <Clock className="h-3.5 w-3.5 text-[#9C6B2E]" />
+                  <span>Program Duration:</span>
+                </span>
+                <span className="font-bold text-[#17140F]">{duration}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#8A8175] flex items-center gap-1.5 font-medium">
+                  <BarChart className="h-3.5 w-3.5 text-[#9C6B2E]" />
+                  <span>Target Level:</span>
+                </span>
+                <span className="font-bold text-[#17140F]">{level}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#8A8175] flex items-center gap-1.5 font-medium">
+                  <Award className="h-3.5 w-3.5 text-[#9C6B2E]" />
+                  <span>Certification:</span>
+                </span>
+                <span className="font-bold text-[#17140F]">Verifiable Credential</span>
+              </div>
+            </div>
+
+            {/* Payment Plan Selection */}
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#17140F] mb-2">
+                Payment Plan
+              </label>
+
+              {hasInstallments ? (
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentType('full')}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold text-center border transition-all ${
+                      paymentType === 'full'
+                        ? 'bg-[#17140F] text-[#F4B942] border-[#17140F] shadow-xs'
+                        : 'bg-white text-[#5B5346] border-[#E3DDD0] hover:bg-[#FAF8F4]'
+                    }`}
+                  >
+                    Full Payment
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentType('installment')}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold text-center border transition-all ${
+                      paymentType === 'installment'
+                        ? 'bg-[#17140F] text-[#F4B942] border-[#17140F] shadow-xs'
+                        : 'bg-white text-[#5B5346] border-[#E3DDD0] hover:bg-[#FAF8F4]'
+                    }`}
+                  >
+                    Installments
+                  </button>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-[#E3DDD0] bg-white px-3.5 py-2.5 text-xs font-semibold text-[#17140F] mb-3 flex items-center justify-between">
+                  <span>Full Course Payment</span>
+                  <span className="font-bold text-[#9C6B2E]">{priceDisplay}</span>
+                </div>
+              )}
+
+              {/* Installments Breakdown Card */}
+              {paymentType === 'installment' && hasInstallments && (
+                <div className="mt-2.5 p-3.5 rounded-2xl bg-white border border-[#ECD8B5] space-y-2.5 shadow-2xs">
+                  <div className="flex items-center justify-between pb-1.5 border-b border-[#F1EDE4]">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#9C6B2E]">
+                      Select Installment Term
+                    </span>
+                    {course.installment_schedule && (
+                      <span className="text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full text-[#9C6B2E] bg-[#F1EDE4]">
+                        {course.installment_schedule}
+                      </span>
+                    )}
+                  </div>
+
+                  {Array.isArray(course.installment_terms) && course.installment_terms.length > 0 ? (
+                    <div className="space-y-2">
+                      {course.installment_terms.map((term, index) => {
+                        const isSelected = selectedInstallment === term.term_number;
+                        return (
+                          <label
+                            key={index}
+                            className={`flex justify-between items-center text-xs p-2.5 rounded-xl cursor-pointer transition-all border ${
+                              isSelected
+                                ? 'bg-[#FAF6EE] border-[#9C6B2E] shadow-2xs ring-1 ring-[#9C6B2E]/30'
+                                : 'bg-[#FAF8F4] border-[#E3DDD0] hover:border-[#9C6B2E]/40'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <input
+                                type="radio"
+                                name="studentInstallmentTerm"
+                                value={term.term_number}
+                                checked={isSelected}
+                                onChange={() => setSelectedInstallment(term.term_number)}
+                                className="text-[#9C6B2E] focus:ring-[#9C6B2E] h-4 w-4"
+                              />
+                              <span className="font-bold text-[#17140F]">
+                                Installment {term.term_number}
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-extrabold text-[#17140F]">₹{term.amount}</div>
+                              {term.due_date && (
+                                <div className="text-[10px] text-[#9C6B2E] font-medium">
+                                  Due: {new Date(term.due_date).toLocaleDateString()}
+                                </div>
+                              )}
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-xs font-medium text-[#5B5346] py-1">
+                      {course.installment_count} installments of approx. ₹
+                      {Math.round((course.price || course.fee || 0) / course.installment_count)} each
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* CTA Enroll Button */}
+            <button
+              type="button"
+              onClick={handleApplyClick}
+              disabled={paymentLoading}
+              className="flex w-full cursor-pointer items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#9C6B2E] to-[#B37E38] hover:from-[#855923] hover:to-[#9C6B2E] py-4 px-6 text-xs sm:text-sm font-bold uppercase tracking-wider text-white shadow-md shadow-[#9C6B2E]/25 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 disabled:cursor-wait disabled:opacity-75 disabled:pointer-events-none"
+            >
+              {paymentLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin text-white" />
+                  <span>Processing Payment...</span>
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 text-white" />
+                  <span>Pay & Enroll</span>
+                </>
+              )}
+            </button>
+
+            {/* Notification messages */}
+            {paymentMessage && (
+              <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-center text-xs font-semibold text-emerald-800">
+                {paymentMessage}
+              </p>
+            )}
+            {paymentError && (
+              <p className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-center text-xs font-semibold text-rose-800">
+                {paymentError}
+              </p>
+            )}
+
+            {/* Value checklist */}
+            <div className="space-y-2 pt-2 text-xs font-semibold text-[#5B5346]">
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span>Instant curriculum & materials access</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span>Direct student-faculty message access</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span>Verified digital credential upon graduation</span>
+              </div>
+            </div>
+
+            {/* Trust Footer */}
+            <div className="pt-2 border-t border-[#ECDDC6] flex items-center justify-center gap-2 text-[11px] text-[#8A8175]">
+              <Lock className="h-3.5 w-3.5 text-[#9C6B2E]" />
+              <span>256-bit SSL encrypted checkout via Razorpay</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Related Recommended Courses */}
+      {relatedCourses.length > 0 && (
+        <section className="mt-12 pt-10 border-t border-[#E3DDD0]">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#FAF8F4] border border-[#ECDDC6] text-[#9C6B2E]">
+                <BookOpen className="h-4 w-4" />
+              </span>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#9C6B2E]">
+                  Related Programs
+                </span>
+                <h3 className="text-xl sm:text-2xl font-bold text-[#17140F] tracking-tight" style={serif}>
+                  Explore Other Recommended Courses
+                </h3>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {relatedCourses.map((rCourse) => (
+              <CourseCard
+                key={rCourse.id}
+                course={rCourse}
+                onApply={onOpenApplyModal}
+                linkPrefix={coursePath}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 5. Payment Success Receipt Modal */}
+      <PaymentSuccessReceiptModal
+        isOpen={showReceiptModal}
+        onClose={() => {
+          setShowReceiptModal(false);
+          navigate('/student-dashboard');
+        }}
+        receipt={successReceipt}
+        receiptUrl={successReceipt?.receipt_url}
+        downloadUrl={successReceipt?.download_url}
+        token={token}
+        title="Congratulations! Your course has been purchased"
+        subtitle="Your enrollment has been successfully confirmed. Below is your official fee payment receipt."
+        onViewReceipt={(rcpt, url) => {
+          if (url) window.open(url, '_blank');
+          else navigate('/student-dashboard/receipts');
+        }}
+      />
+    </div>
+  );
+};
 
 const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
   const { courseId } = useParams();
@@ -112,6 +702,17 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
   }, [courseId]);
 
   if (loading) {
+    if (studentView) {
+      return (
+        <div className="py-20 px-4 text-center min-h-[50vh] flex flex-col items-center justify-center gap-3">
+          <div className="h-12 w-12 rounded-2xl bg-[#FAF8F4] border border-[#ECDDC6] flex items-center justify-center shadow-xs">
+            <Loader2 className="w-6 h-6 animate-spin text-[#9C6B2E]" />
+          </div>
+          <p className="text-sm font-bold text-[#17140F]">Loading course program...</p>
+          <p className="text-xs text-[#8A8175]">Retrieving curriculum and branch details</p>
+        </div>
+      );
+    }
     return (
       <div className="py-24 px-4 text-center min-h-[60vh] flex flex-col items-center justify-center gap-3">
         <Loader2 className="w-10 h-10 animate-spin text-amber-500" />
@@ -121,6 +722,25 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
   }
 
   if (!course) {
+    if (studentView) {
+      return (
+        <div className="py-16 px-4 text-center min-h-[50vh] flex flex-col items-center justify-center">
+          <div className="w-16 h-16 rounded-2xl bg-[#FAF8F4] border border-[#ECDDC6] text-[#9C6B2E] flex items-center justify-center mb-4 shadow-xs">
+            <AlertCircle className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-bold text-[#17140F]">Course Not Found</h2>
+          <p className="mt-2 text-[#5B5346] text-xs sm:text-sm max-w-md">
+            The course you are looking for is currently unavailable or may have been updated.
+          </p>
+          <Link
+            to="/student-dashboard/courses"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#9C6B2E] hover:bg-[#855923] text-white px-5 py-2.5 text-xs font-bold shadow-xs transition"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back to Catalog
+          </Link>
+        </div>
+      );
+    }
     return (
       <div className="py-24 px-4 text-center min-h-[60vh] flex flex-col items-center justify-center">
         <div className="w-16 h-16 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mb-4">
@@ -256,6 +876,39 @@ const CourseDetails = ({ onOpenApplyModal, studentView = false }) => {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
+
+  /* ── When rendered within the Student Portal, return the dedicated enhanced view ── */
+  if (studentView) {
+    return (
+      <StudentCourseDetailView
+        course={course}
+        title={title}
+        shortDesc={shortDesc}
+        fullDesc={fullDesc}
+        priceDisplay={priceDisplay}
+        category={category}
+        duration={duration}
+        level={level}
+        imageUrl={imageUrl}
+        coursePath={coursePath}
+        paymentType={paymentType}
+        setPaymentType={setPaymentType}
+        selectedInstallment={selectedInstallment}
+        setSelectedInstallment={setSelectedInstallment}
+        handleApplyClick={handleApplyClick}
+        paymentLoading={paymentLoading}
+        paymentMessage={paymentMessage}
+        paymentError={paymentError}
+        relatedCourses={relatedCourses}
+        onOpenApplyModal={onOpenApplyModal}
+        showReceiptModal={showReceiptModal}
+        setShowReceiptModal={setShowReceiptModal}
+        successReceipt={successReceipt}
+        token={token}
+        navigate={navigate}
+      />
+    );
+  }
 
   return (
     <div className="bg-white text-slate-900 opacity-0 animate-[detailOpen_0.5s_ease-out_forwards]">

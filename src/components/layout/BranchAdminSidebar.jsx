@@ -379,7 +379,7 @@ const BranchAdminSidebar = ({
 
       {/* ---- Sidebar ---- */}
       <aside
-        className={`branch-admin-sidebar fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col transition-transform duration-300 md:sticky md:top-0 md:h-screen md:translate-x-0 ${
+        className={`branch-admin-sidebar fixed inset-y-0 left-0 z-40 flex w-60 shrink-0 flex-col transition-transform duration-300 md:sticky md:top-0 md:h-screen md:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
         style={{
