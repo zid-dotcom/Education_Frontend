@@ -3,7 +3,6 @@ import { AlertCircle, Eye, EyeOff, KeyRound, Loader2, LogIn, Mail } from 'lucide
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import adminImage from '../assets/admin.png';
-import adminDesktopImage from '../assets/admindesktop.png';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 
@@ -52,29 +51,91 @@ const SuperAdminLogin = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#FAF6ED] text-slate-900">
+    <div className="flex min-h-screen flex-col bg-white text-slate-900">
       <Navbar />
-      <main className="branch-admin-login-page super-admin-login-page flex min-h-screen flex-1 items-center justify-center bg-white px-0 py-6 sm:px-4 sm:py-10" style={{ '--branch-admin-desktop-image': `url(${adminDesktopImage})` }}>
-        <div className="branch-login-shell relative flex w-full max-w-7xl justify-center lg:justify-start">
-          <section className="branch-login-panel order-2 flex min-h-64 items-stretch justify-start overflow-hidden bg-white p-0 lg:hidden">
-            <img src={adminImage} alt="Aurum FX super administration" className="h-full min-h-64 w-full object-contain" />
-          </section>
-
-          <section className="branch-login-form order-1 w-full max-w-xl self-center justify-self-start rounded-3xl border border-slate-200/80 bg-white/90 p-7 shadow-xl backdrop-blur-md sm:p-12 lg:order-2 lg:ml-0 lg:-translate-x-12 lg:-translate-y-14 lg:self-center lg:mt-0">
-            <div className="mb-8"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-700">Super Administrator Portal</p><p className="mt-2 text-[10px] font-black uppercase tracking-[0.2em] text-blue-700">Aurum FX Academy</p><h1 className="mt-2 text-2xl font-black text-slate-950 sm:text-3xl">Sign in to admin portal</h1><p className="mt-2 text-sm font-medium text-slate-500">Enter the credentials provided for super administrator access.</p></div>
-            {noticeMsg && !error && !success && (
-              <div className="mb-5 flex items-center gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900 animate-in fade-in duration-200">
-                <AlertCircle className="h-5 w-5 shrink-0 text-amber-600" />
-                <span>{noticeMsg}</span>
+      <main className="login-page min-h-[calc(100vh-92px)] flex flex-1 flex-col lg:flex-row bg-white relative overflow-hidden">
+        {/* Form: on mobile on top (order-1), on desktop on left (lg:order-1) */}
+        <div className="order-1 lg:order-1 w-full lg:w-[45%] flex items-center justify-center p-4 sm:p-8 lg:p-12 relative z-10">
+          <div className="max-w-md w-full lg:max-w-lg">
+            <div className="rounded-3xl border border-slate-200/80 bg-white/90 p-6 sm:p-8 shadow-xl backdrop-blur-md">
+              <div className="mb-6">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-700">Super Administrator Portal</p>
+                <p className="mt-1 text-[10px] font-black uppercase tracking-[0.2em] text-blue-700">Aurum FX Academy</p>
+                <h1 className="mt-2 text-2xl font-black text-slate-950 sm:text-3xl">Sign in to admin portal</h1>
+                <p className="mt-2 text-sm font-medium text-slate-500">Enter the credentials provided for super administrator access.</p>
               </div>
-            )}
-            {(error || success) && <div className={`mb-5 rounded-2xl border px-4 py-3 text-sm font-semibold ${error ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>{error || success}</div>}
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-700">Email address<span className="relative mt-2 block"><Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input name="email" type="email" autoComplete="username" required value={form.email} onChange={handleChange} className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-sm font-semibold outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100" placeholder="admin@example.com" /></span></label>
-              <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-700">Password<span className="relative mt-2 block"><KeyRound className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" required value={form.password} onChange={handleChange} className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-12 text-sm font-semibold outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100" placeholder="Enter your password" /><button type="button" onClick={() => setShowPassword((visible) => !visible)} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-500 hover:bg-slate-200" aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></span></label>
-              <button type="submit" disabled={loading} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3.5 text-xs font-extrabold uppercase tracking-wider text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60">{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4 text-blue-400" />}{loading ? 'Signing in...' : 'Sign in to admin portal'}</button>
-            </form>
-          </section>
+              {noticeMsg && !error && !success && (
+                <div className="mb-5 flex items-center gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900 animate-in fade-in duration-200">
+                  <AlertCircle className="h-5 w-5 shrink-0 text-amber-600" />
+                  <span>{noticeMsg}</span>
+                </div>
+              )}
+              {(error || success) && (
+                <div className={`mb-5 rounded-2xl border px-4 py-3 text-sm font-semibold ${error ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
+                  {error || success}
+                </div>
+              )}
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-700">
+                  Email address
+                  <span className="relative mt-2 block">
+                    <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      name="email"
+                      type="email"
+                      autoComplete="username"
+                      required
+                      value={form.email}
+                      onChange={handleChange}
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-sm font-semibold outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                      placeholder="admin@example.com"
+                    />
+                  </span>
+                </label>
+                <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-700">
+                  Password
+                  <span className="relative mt-2 block">
+                    <KeyRound className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
+                      required
+                      value={form.password}
+                      onChange={handleChange}
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-12 text-sm font-semibold outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                      placeholder="Enter your password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((visible) => !visible)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-500 hover:bg-slate-200"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                    </button>
+                  </span>
+                </label>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3.5 text-xs font-extrabold uppercase tracking-wider text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4 text-blue-400" />}
+                  {loading ? 'Signing in...' : 'Sign in to admin portal'}
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        {/* Image: on mobile on down side (order-2) with increased size; on desktop on right (lg:order-2) */}
+        <div className="order-2 lg:order-2 flex w-full lg:w-[55%] relative bg-white items-center justify-center pt-2 pb-8 px-4 sm:px-6 lg:p-0">
+          <img
+            src={adminImage}
+            alt="Aurum FX super administration"
+            className="w-full max-w-[360px] sm:max-w-md md:max-w-lg lg:max-w-none h-60 sm:h-72 md:h-80 lg:h-full lg:w-full object-contain object-center lg:pr-8 lg:scale-105"
+          />
         </div>
       </main>
       <Footer />

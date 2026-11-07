@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ForgotPasswordModal from '../components/common/ForgotPasswordModal';
-import hero3 from '../assets/hero3.png';
 import hero4 from '../assets/hero4.png';
 import { 
   Mail, 
@@ -137,13 +136,10 @@ const Login = () => {
   };
 
   return (
-    <div
-      className="login-page min-h-[calc(100vh-92px)] flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8 lg:py-6 bg-cover bg-[position:15%_center] lg:bg-center relative overflow-hidden"
-      style={{ backgroundImage: `url(${hero3})` }}
-    >
-      <div className="w-full max-w-7xl flex flex-col lg:flex-row lg:justify-end relative z-10">
-      
-      <div className="max-w-md w-full relative z-10 lg:max-w-lg">
+    <div className="login-page min-h-[calc(100vh-92px)] flex flex-col lg:flex-row bg-white relative overflow-hidden">
+      {/* Form: on mobile on top (order-1), on desktop on right (lg:order-2) */}
+      <div className="order-1 lg:order-2 w-full lg:w-[45%] flex items-center justify-center p-4 sm:p-8 lg:p-12 relative z-10">
+        <div className="max-w-md w-full lg:max-w-lg">
         
         {/* Header Branding */}
         <div className="text-center mb-8">
@@ -353,7 +349,7 @@ const Login = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-700"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
                 </button>
               </div>
             </div>
@@ -381,7 +377,7 @@ const Login = () => {
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-700"
                   >
-                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    {showConfirmPassword ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
@@ -422,20 +418,19 @@ const Login = () => {
               </button>
             </p>
           </div>
-
         </div>
-
-
-
       </div>
-      <div className="lg:hidden w-full h-52 mt-6 overflow-hidden rounded-3xl shadow-lg">
-        <img
-          src={hero4}
-          alt="Students learning at Aurumfx"
-          className="h-full w-full object-cover"
+      </div>
+
+      {/* Image: on mobile on down side (order-2) with increased size; on desktop on left (lg:order-1) */}
+      <div className="order-2 lg:order-1 flex w-full lg:w-[55%] relative bg-white items-center justify-center pt-2 pb-8 px-4 sm:px-6 lg:p-0">
+        <img 
+          src={hero4} 
+          alt="Students learning at Aurumfx" 
+          className="w-full max-w-[360px] sm:max-w-md md:max-w-lg lg:max-w-none h-60 sm:h-72 md:h-80 lg:h-full lg:w-full object-contain object-center lg:pl-8 lg:scale-105" 
         />
       </div>
-      </div>
+
       {/* Student Forgot Password Modal */}
       <ForgotPasswordModal
         isOpen={showForgotPassword}

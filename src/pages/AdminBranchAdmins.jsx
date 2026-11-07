@@ -188,7 +188,7 @@ export default function AdminBranchAdmins() {
                     className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-slate-600"
                     aria-label="Toggle password visibility"
                   >
-                    {showPassword ? <EyeOff /> : <Eye />}
+                    {showPassword ? <Eye /> : <EyeOff />}
                   </button>
                 </span>
               </label>

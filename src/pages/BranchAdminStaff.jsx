@@ -394,8 +394,8 @@ const BranchAdminStaff = () => {
       let hList = Array.isArray(data?.holidays)
         ? data.holidays
         : Array.isArray(data?.branch_holidays)
-        ? data.branch_holidays
-        : [];
+          ? data.branch_holidays
+          : [];
       if (dFrom || dTo) {
         hList = hList.filter((h) => {
           const hd = String(h.date || h.holiday_date || "").slice(0, 10);
@@ -447,7 +447,7 @@ const BranchAdminStaff = () => {
           const list = Array.isArray(data) ? data : Array.isArray(data?.holidays) ? data.holidays : [];
           setHolidays(list);
         })
-        .catch(() => {});
+        .catch(() => { });
       getMyCoursesApi(token)
         .then((data) => setCourses(Array.isArray(data) ? data : []))
         .catch((err) => setError(err.message || "Failed to load courses."));
@@ -557,9 +557,9 @@ const BranchAdminStaff = () => {
       const saved = editingStaff
         ? await updateBranchStaffApi(editingStaff.id, payload, token)
         : await createBranchStaffApi(
-            { ...payload, password: form.password },
-            token,
-          );
+          { ...payload, password: form.password },
+          token,
+        );
       setStaff((current) =>
         editingStaff
           ? current.map((member) => (member.id === saved.id ? saved : member))
@@ -828,8 +828,8 @@ const BranchAdminStaff = () => {
                 onMonthChange={handleCalendarMonthChange}
                 holidays={holidays}
               />
-        </section>
-      )}
+            </section>
+          )}
 
           {/* ---- Attendance history ---- */}
           {activeTab === "history" && (
@@ -947,11 +947,10 @@ const BranchAdminStaff = () => {
                       <TabIcon className="h-4 w-4 shrink-0" />
                       <span>{label}</span>
                       <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
-                          isActive
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${isActive
                             ? "bg-[#17140f] text-[#f4b942]"
                             : "bg-slate-200/80 text-slate-600"
-                        }`}
+                          }`}
                       >
                         {count}
                       </span>
@@ -979,387 +978,387 @@ const BranchAdminStaff = () => {
                     className="overflow-hidden rounded-2xl bg-white shadow-xs"
                     style={{ border: "1px solid #e3ddd0" }}
                   >
-                {/* Header bar */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e8e2d5] bg-[#faf8f4] px-6 py-4.5">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-[#9c6b2e]" />
-                      <h3
-                        className="text-base font-bold text-slate-900 tracking-tight"
-                        style={serif}
-                      >
-                        Staff Attendance Records
-                      </h3>
+                    {/* Header bar */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e8e2d5] bg-[#faf8f4] px-6 py-4.5">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-[#9c6b2e]" />
+                          <h3
+                            className="text-base font-bold text-slate-900 tracking-tight"
+                            style={serif}
+                          >
+                            Staff Attendance Records
+                          </h3>
+                        </div>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          Aggregated breakdown of present days, half days, and leave per staff member
+                        </p>
+                      </div>
+                      <span className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full bg-white border border-[#e3ddd0] px-3 py-1 text-xs font-bold text-slate-700 shadow-2xs">
+                        <span className="h-2 w-2 rounded-full bg-[#9c6b2e]" />
+                        {staffAttendanceTotals.length}{" "}
+                        {staffAttendanceTotals.length === 1 ? "Staff Account" : "Staff Accounts"}
+                      </span>
                     </div>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      Aggregated breakdown of present days, half days, and leave per staff member
-                    </p>
-                  </div>
-                  <span className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full bg-white border border-[#e3ddd0] px-3 py-1 text-xs font-bold text-slate-700 shadow-2xs">
-                    <span className="h-2 w-2 rounded-full bg-[#9c6b2e]" />
-                    {staffAttendanceTotals.length}{" "}
-                    {staffAttendanceTotals.length === 1 ? "Staff Account" : "Staff Accounts"}
-                  </span>
-                </div>
 
-                {/* Table */}
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-[#e8e2d5] bg-[#fbf9f5]">
-                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
-                          Staff
-                        </th>
-                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-emerald-800">
-                          Present Days
-                        </th>
-                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-amber-800">
-                          Half Days
-                        </th>
-                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-indigo-800">
-                          Leave
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#f1ede4]">
-                      {attendanceLoading ? (
-                        <tr>
-                          <td colSpan="4" className="px-6 py-12 text-center text-slate-400">
-                            <Loader2 className="mx-auto h-6 w-6 animate-spin text-[#9c6b2e]" />
-                            <p className="mt-2 text-xs font-medium text-slate-500">
-                              Loading staff attendance...
-                            </p>
-                          </td>
-                        </tr>
-                      ) : staffAttendanceTotals.length === 0 ? (
-                        <tr>
-                          <td colSpan="4" className="px-6 py-14 text-center">
-                            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#f4eee2] text-[#9c6b2e] mb-3">
-                              <Users className="h-6 w-6" />
-                            </div>
-                            <p className="text-sm font-bold text-slate-800">No staff accounts found</p>
-                            <p className="mt-1 text-xs text-slate-500">
-                              Add staff accounts under the Staff Accounts tab to track attendance.
-                            </p>
-                          </td>
-                        </tr>
-                      ) : (
-                        staffAttendanceTotals.map((member) => {
-                          const initials = (member.name || "S")
-                            .split(" ")
-                            .map((n) => n[0])
-                            .slice(0, 2)
-                            .join("")
-                            .toUpperCase();
-                          return (
-                            <tr
-                              key={member.id}
-                              className="hover:bg-[#fcfbf9] transition-colors"
-                            >
-                              <td className="px-6 py-4.5">
-                                <div className="flex items-center gap-3">
-                                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f5efe4] text-xs font-extrabold text-[#9c6b2e] border border-[#e8dfd0] shadow-2xs">
-                                    {initials}
-                                  </div>
-                                  <div>
-                                    <div className="font-bold text-slate-900 leading-tight">
-                                      {member.name}
-                                    </div>
-                                    <div className="text-xs font-medium text-slate-400">
-                                      #{member.staff_code || member.id}
-                                      {member.email ? ` • ${member.email}` : ""}
-                                    </div>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4.5">
-                                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e6f7ec] border border-[#a9e6bf] px-3 py-1 text-xs font-extrabold text-[#1e6b37] shadow-2xs">
-                                  <Check className="h-3.5 w-3.5" strokeWidth={2.8} />
-                                  {member.presentDays}{" "}
-                                  {member.presentDays === 1 ? "day" : "days"}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4.5">
-                                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fef7e6] border border-[#fde096] px-3 py-1 text-xs font-extrabold text-[#b45309] shadow-2xs">
-                                  <Clock className="h-3.5 w-3.5" strokeWidth={2.5} />
-                                  {member.halfDay}{" "}
-                                  {member.halfDay === 1 ? "day" : "days"}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4.5">
-                                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#eef2fe] border border-[#b9cbfd] px-3 py-1 text-xs font-extrabold text-[#3730a3] shadow-2xs">
-                                  <CalendarCheck className="h-3.5 w-3.5" strokeWidth={2.5} />
-                                  {member.leave}{" "}
-                                  {member.leave === 1 ? "day" : "days"}
-                                </span>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* C. Detailed Attendance History Table */}
-              <div
-                className="overflow-hidden rounded-2xl bg-white shadow-xs"
-                style={{ border: "1px solid #e3ddd0" }}
-              >
-                {/* Header bar */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e8e2d5] bg-[#faf8f4] px-6 py-4.5">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <History className="h-4 w-4 text-[#9c6b2e]" />
-                      <h3
-                        className="text-base font-bold text-slate-900 tracking-tight"
-                        style={serif}
-                      >
-                        Detailed Attendance History
-                      </h3>
-                    </div>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      Chronological audit log of all marked staff attendances
-                    </p>
-                  </div>
-                  <span className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full bg-white border border-[#e3ddd0] px-3 py-1 text-xs font-bold text-slate-700 shadow-2xs">
-                    <span className="h-2 w-2 rounded-full bg-[#1e6b37]" />
-                    {filteredAttendanceHistory.length}{" "}
-                    {filteredAttendanceHistory.length === 1 ? "Record" : "Records"}
-                  </span>
-                </div>
-
-                {/* Table */}
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-[#e8e2d5] bg-[#fbf9f5]">
-                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
-                          Staff
-                        </th>
-                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
-                          Date
-                        </th>
-                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
-                          Status
-                        </th>
-                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
-                          Marked At
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#f1ede4]">
-                      {attendanceLoading ? (
-                        <tr>
-                          <td colSpan="4" className="px-6 py-14 text-center text-slate-400">
-                            <Loader2 className="mx-auto h-6 w-6 animate-spin text-[#9c6b2e]" />
-                            <p className="mt-2 text-xs font-medium text-slate-500">
-                              Loading attendance logs...
-                            </p>
-                          </td>
-                        </tr>
-                      ) : filteredAttendanceHistory.length === 0 ? (
-                        <tr>
-                          <td colSpan="4" className="px-6 py-14 text-center">
-                            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#f4eee2] text-[#9c6b2e] mb-3">
-                              <ClipboardCheck className="h-6 w-6" />
-                            </div>
-                            <p className="text-sm font-bold text-slate-800">
-                              No attendance records found
-                            </p>
-                            <p className="mt-1 text-xs text-slate-500">
-                              {attendanceStartDate || attendanceEndDate
-                                ? "No logs match the selected date range. Try clearing or expanding the date filter."
-                                : "No staff attendance has been recorded yet."}
-                            </p>
-                            {(attendanceStartDate || attendanceEndDate) && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setAttendanceStartDate("");
-                                  setAttendanceEndDate("");
-                                }}
-                                className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[#e3ddd0] bg-white px-3 py-1.5 text-xs font-bold text-[#9c6b2e] shadow-2xs hover:bg-[#f6f2e9] cursor-pointer"
-                              >
-                                <RotateCcw className="h-3.5 w-3.5" /> Clear Filters
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredAttendanceHistory.map((record) => {
-                          const memberObj = staff.find(
-                            (m) => String(m.id) === String(record.staff_id)
-                          );
-                          const staffName =
-                            record.staff_name ||
-                            memberObj?.name ||
-                            `Staff #${memberObj?.staff_code || record.staff_id}`;
-                          const initials = staffName
-                            .split(" ")
-                            .map((n) => n[0])
-                            .slice(0, 2)
-                            .join("")
-                            .toUpperCase();
-
-                          return (
-                            <tr
-                              key={record.id}
-                              className="hover:bg-[#fcfbf9] transition-colors"
-                            >
-                              <td className="px-6 py-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#f5efe4] text-[11px] font-extrabold text-[#9c6b2e] border border-[#e8dfd0]">
-                                    {initials}
-                                  </div>
-                                  <div>
-                                    <div className="font-bold text-slate-900 leading-tight">
-                                      {staffName}
-                                    </div>
-                                    <div className="text-[11px] font-medium text-slate-400">
-                                      #{memberObj?.staff_code || record.staff_id}
-                                    </div>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 font-semibold text-slate-700 whitespace-nowrap">
-                                <div className="flex items-center gap-2">
-                                  <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                                  <span>{formatAttendanceDate(record.date)}</span>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4">
-                                <AttendanceStatusBadge status={record.status} />
-                              </td>
-                              <td className="px-6 py-4 text-xs font-medium text-slate-500 whitespace-nowrap">
-                                <div className="flex items-center gap-1.5">
-                                  <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                                  <span>
-                                    {formatAttendanceTimestamp(record.marked_at)}
-                                  </span>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </>
-          ) : (
-            /* Branch Holidays Table */
-            <div
-              className="overflow-hidden rounded-2xl bg-white shadow-xs"
-              style={{ border: "1px solid #e3ddd0" }}
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e8e2d5] bg-[#faf8f4] px-6 py-4.5">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <CalendarDays className="h-4 w-4 text-[#9c6b2e]" />
-                    <h3 className="text-base font-bold text-slate-900 tracking-tight" style={serif}>
-                      Branch Declared Holidays
-                    </h3>
-                  </div>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    Official scheduled branch holidays and calendar closures
-                  </p>
-                </div>
-                <span className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full bg-white border border-[#e3ddd0] px-3 py-1 text-xs font-bold text-slate-700 shadow-2xs">
-                  <span className="h-2 w-2 rounded-full bg-[#9c6b2e]" />
-                  {historyHolidays.length} {historyHolidays.length === 1 ? "Holiday" : "Holidays"}
-                </span>
-              </div>
-
-              {historyHolidays.length === 0 ? (
-                <div className="p-10 sm:p-14 text-center">
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#f4eee2] text-[#9c6b2e] mb-3">
-                    <CalendarCheck className="h-6 w-6" />
-                  </div>
-                  <p className="text-sm font-bold text-slate-800">
-                    No holidays declared for this period
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
-                    No holidays are recorded for this branch within the chosen date range.
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-[#e8e2d5] bg-[#fbf9f5]">
-                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
-                          Holiday Date
-                        </th>
-                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
-                          Day
-                        </th>
-                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
-                          Occasion / Reason
-                        </th>
-                        <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
-                          Status
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#f1ede4]">
-                      {historyHolidays.map((h, i) => {
-                        const hDate = h.date || h.holiday_date;
-                        const today = getToday();
-                        const isUpcoming = hDate > today;
-                        const isToday = hDate === today;
-
-                        let weekday = "—";
-                        try {
-                          weekday = new Intl.DateTimeFormat("en-IN", { weekday: "long" }).format(
-                            new Date(`${hDate}T00:00:00`)
-                          );
-                        } catch {}
-
-                        return (
-                          <tr key={h.id ?? i} className="hover:bg-[#fcfbf9] transition-colors">
-                            <td className="px-6 py-4.5 font-bold text-slate-900 whitespace-nowrap">
-                              <div className="flex items-center gap-2">
-                                <Calendar className="h-4 w-4 text-[#9c6b2e] shrink-0" />
-                                <span>{formatAttendanceDate(hDate)}</span>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4.5 text-xs font-semibold text-slate-600">
-                              {weekday}
-                            </td>
-                            <td className="px-6 py-4.5">
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#faf5ec] text-[#9c6b2e] border border-[#ebd8b6] font-bold text-xs">
-                                <span>{h.reason || "Declared Holiday"}</span>
-                              </span>
-                            </td>
-                            <td className="px-6 py-4.5 whitespace-nowrap">
-                              {isToday ? (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 text-[11px] font-extrabold animate-pulse">
-                                  Today
-                                </span>
-                              ) : isUpcoming ? (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 text-sky-700 border border-sky-200 px-2.5 py-0.5 text-[11px] font-bold">
-                                  Upcoming
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200 px-2.5 py-0.5 text-[11px] font-medium">
-                                  Past
-                                </span>
-                              )}
-                            </td>
+                    {/* Table */}
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-left text-sm">
+                        <thead>
+                          <tr className="border-b border-[#e8e2d5] bg-[#fbf9f5]">
+                            <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                              Staff
+                            </th>
+                            <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-emerald-800">
+                              Present Days
+                            </th>
+                            <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-amber-800">
+                              Half Days
+                            </th>
+                            <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-indigo-800">
+                              Leave
+                            </th>
                           </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                        </thead>
+                        <tbody className="divide-y divide-[#f1ede4]">
+                          {attendanceLoading ? (
+                            <tr>
+                              <td colSpan="4" className="px-6 py-12 text-center text-slate-400">
+                                <Loader2 className="mx-auto h-6 w-6 animate-spin text-[#9c6b2e]" />
+                                <p className="mt-2 text-xs font-medium text-slate-500">
+                                  Loading staff attendance...
+                                </p>
+                              </td>
+                            </tr>
+                          ) : staffAttendanceTotals.length === 0 ? (
+                            <tr>
+                              <td colSpan="4" className="px-6 py-14 text-center">
+                                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#f4eee2] text-[#9c6b2e] mb-3">
+                                  <Users className="h-6 w-6" />
+                                </div>
+                                <p className="text-sm font-bold text-slate-800">No staff accounts found</p>
+                                <p className="mt-1 text-xs text-slate-500">
+                                  Add staff accounts under the Staff Accounts tab to track attendance.
+                                </p>
+                              </td>
+                            </tr>
+                          ) : (
+                            staffAttendanceTotals.map((member) => {
+                              const initials = (member.name || "S")
+                                .split(" ")
+                                .map((n) => n[0])
+                                .slice(0, 2)
+                                .join("")
+                                .toUpperCase();
+                              return (
+                                <tr
+                                  key={member.id}
+                                  className="hover:bg-[#fcfbf9] transition-colors"
+                                >
+                                  <td className="px-6 py-4.5">
+                                    <div className="flex items-center gap-3">
+                                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f5efe4] text-xs font-extrabold text-[#9c6b2e] border border-[#e8dfd0] shadow-2xs">
+                                        {initials}
+                                      </div>
+                                      <div>
+                                        <div className="font-bold text-slate-900 leading-tight">
+                                          {member.name}
+                                        </div>
+                                        <div className="text-xs font-medium text-slate-400">
+                                          #{member.staff_code || member.id}
+                                          {member.email ? ` • ${member.email}` : ""}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4.5">
+                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e6f7ec] border border-[#a9e6bf] px-3 py-1 text-xs font-extrabold text-[#1e6b37] shadow-2xs">
+                                      <Check className="h-3.5 w-3.5" strokeWidth={2.8} />
+                                      {member.presentDays}{" "}
+                                      {member.presentDays === 1 ? "day" : "days"}
+                                    </span>
+                                  </td>
+                                  <td className="px-6 py-4.5">
+                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fef7e6] border border-[#fde096] px-3 py-1 text-xs font-extrabold text-[#b45309] shadow-2xs">
+                                      <Clock className="h-3.5 w-3.5" strokeWidth={2.5} />
+                                      {member.halfDay}{" "}
+                                      {member.halfDay === 1 ? "day" : "days"}
+                                    </span>
+                                  </td>
+                                  <td className="px-6 py-4.5">
+                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#eef2fe] border border-[#b9cbfd] px-3 py-1 text-xs font-extrabold text-[#3730a3] shadow-2xs">
+                                      <CalendarCheck className="h-3.5 w-3.5" strokeWidth={2.5} />
+                                      {member.leave}{" "}
+                                      {member.leave === 1 ? "day" : "days"}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* C. Detailed Attendance History Table */}
+                  <div
+                    className="overflow-hidden rounded-2xl bg-white shadow-xs"
+                    style={{ border: "1px solid #e3ddd0" }}
+                  >
+                    {/* Header bar */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e8e2d5] bg-[#faf8f4] px-6 py-4.5">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <History className="h-4 w-4 text-[#9c6b2e]" />
+                          <h3
+                            className="text-base font-bold text-slate-900 tracking-tight"
+                            style={serif}
+                          >
+                            Detailed Attendance History
+                          </h3>
+                        </div>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          Chronological audit log of all marked staff attendances
+                        </p>
+                      </div>
+                      <span className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full bg-white border border-[#e3ddd0] px-3 py-1 text-xs font-bold text-slate-700 shadow-2xs">
+                        <span className="h-2 w-2 rounded-full bg-[#1e6b37]" />
+                        {filteredAttendanceHistory.length}{" "}
+                        {filteredAttendanceHistory.length === 1 ? "Record" : "Records"}
+                      </span>
+                    </div>
+
+                    {/* Table */}
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-left text-sm">
+                        <thead>
+                          <tr className="border-b border-[#e8e2d5] bg-[#fbf9f5]">
+                            <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                              Staff
+                            </th>
+                            <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                              Date
+                            </th>
+                            <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                              Status
+                            </th>
+                            <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                              Marked At
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#f1ede4]">
+                          {attendanceLoading ? (
+                            <tr>
+                              <td colSpan="4" className="px-6 py-14 text-center text-slate-400">
+                                <Loader2 className="mx-auto h-6 w-6 animate-spin text-[#9c6b2e]" />
+                                <p className="mt-2 text-xs font-medium text-slate-500">
+                                  Loading attendance logs...
+                                </p>
+                              </td>
+                            </tr>
+                          ) : filteredAttendanceHistory.length === 0 ? (
+                            <tr>
+                              <td colSpan="4" className="px-6 py-14 text-center">
+                                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#f4eee2] text-[#9c6b2e] mb-3">
+                                  <ClipboardCheck className="h-6 w-6" />
+                                </div>
+                                <p className="text-sm font-bold text-slate-800">
+                                  No attendance records found
+                                </p>
+                                <p className="mt-1 text-xs text-slate-500">
+                                  {attendanceStartDate || attendanceEndDate
+                                    ? "No logs match the selected date range. Try clearing or expanding the date filter."
+                                    : "No staff attendance has been recorded yet."}
+                                </p>
+                                {(attendanceStartDate || attendanceEndDate) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setAttendanceStartDate("");
+                                      setAttendanceEndDate("");
+                                    }}
+                                    className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[#e3ddd0] bg-white px-3 py-1.5 text-xs font-bold text-[#9c6b2e] shadow-2xs hover:bg-[#f6f2e9] cursor-pointer"
+                                  >
+                                    <RotateCcw className="h-3.5 w-3.5" /> Clear Filters
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredAttendanceHistory.map((record) => {
+                              const memberObj = staff.find(
+                                (m) => String(m.id) === String(record.staff_id)
+                              );
+                              const staffName =
+                                record.staff_name ||
+                                memberObj?.name ||
+                                `Staff #${memberObj?.staff_code || record.staff_id}`;
+                              const initials = staffName
+                                .split(" ")
+                                .map((n) => n[0])
+                                .slice(0, 2)
+                                .join("")
+                                .toUpperCase();
+
+                              return (
+                                <tr
+                                  key={record.id}
+                                  className="hover:bg-[#fcfbf9] transition-colors"
+                                >
+                                  <td className="px-6 py-4">
+                                    <div className="flex items-center gap-3">
+                                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#f5efe4] text-[11px] font-extrabold text-[#9c6b2e] border border-[#e8dfd0]">
+                                        {initials}
+                                      </div>
+                                      <div>
+                                        <div className="font-bold text-slate-900 leading-tight">
+                                          {staffName}
+                                        </div>
+                                        <div className="text-[11px] font-medium text-slate-400">
+                                          #{memberObj?.staff_code || record.staff_id}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 font-semibold text-slate-700 whitespace-nowrap">
+                                    <div className="flex items-center gap-2">
+                                      <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                                      <span>{formatAttendanceDate(record.date)}</span>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    <AttendanceStatusBadge status={record.status} />
+                                  </td>
+                                  <td className="px-6 py-4 text-xs font-medium text-slate-500 whitespace-nowrap">
+                                    <div className="flex items-center gap-1.5">
+                                      <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                                      <span>
+                                        {formatAttendanceTimestamp(record.marked_at)}
+                                      </span>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* Branch Holidays Table */
+                <div
+                  className="overflow-hidden rounded-2xl bg-white shadow-xs"
+                  style={{ border: "1px solid #e3ddd0" }}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e8e2d5] bg-[#faf8f4] px-6 py-4.5">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <CalendarDays className="h-4 w-4 text-[#9c6b2e]" />
+                        <h3 className="text-base font-bold text-slate-900 tracking-tight" style={serif}>
+                          Branch Declared Holidays
+                        </h3>
+                      </div>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        Official scheduled branch holidays and calendar closures
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full bg-white border border-[#e3ddd0] px-3 py-1 text-xs font-bold text-slate-700 shadow-2xs">
+                      <span className="h-2 w-2 rounded-full bg-[#9c6b2e]" />
+                      {historyHolidays.length} {historyHolidays.length === 1 ? "Holiday" : "Holidays"}
+                    </span>
+                  </div>
+
+                  {historyHolidays.length === 0 ? (
+                    <div className="p-10 sm:p-14 text-center">
+                      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#f4eee2] text-[#9c6b2e] mb-3">
+                        <CalendarCheck className="h-6 w-6" />
+                      </div>
+                      <p className="text-sm font-bold text-slate-800">
+                        No holidays declared for this period
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
+                        No holidays are recorded for this branch within the chosen date range.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-left text-sm">
+                        <thead>
+                          <tr className="border-b border-[#e8e2d5] bg-[#fbf9f5]">
+                            <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                              Holiday Date
+                            </th>
+                            <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                              Day
+                            </th>
+                            <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                              Occasion / Reason
+                            </th>
+                            <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                              Status
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#f1ede4]">
+                          {historyHolidays.map((h, i) => {
+                            const hDate = h.date || h.holiday_date;
+                            const today = getToday();
+                            const isUpcoming = hDate > today;
+                            const isToday = hDate === today;
+
+                            let weekday = "—";
+                            try {
+                              weekday = new Intl.DateTimeFormat("en-IN", { weekday: "long" }).format(
+                                new Date(`${hDate}T00:00:00`)
+                              );
+                            } catch { }
+
+                            return (
+                              <tr key={h.id ?? i} className="hover:bg-[#fcfbf9] transition-colors">
+                                <td className="px-6 py-4.5 font-bold text-slate-900 whitespace-nowrap">
+                                  <div className="flex items-center gap-2">
+                                    <Calendar className="h-4 w-4 text-[#9c6b2e] shrink-0" />
+                                    <span>{formatAttendanceDate(hDate)}</span>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4.5 text-xs font-semibold text-slate-600">
+                                  {weekday}
+                                </td>
+                                <td className="px-6 py-4.5">
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#faf5ec] text-[#9c6b2e] border border-[#ebd8b6] font-bold text-xs">
+                                    <span>{h.reason || "Declared Holiday"}</span>
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4.5 whitespace-nowrap">
+                                  {isToday ? (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 text-[11px] font-extrabold animate-pulse">
+                                      Today
+                                    </span>
+                                  ) : isUpcoming ? (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 text-sky-700 border border-sky-200 px-2.5 py-0.5 text-[11px] font-bold">
+                                      Upcoming
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200 px-2.5 py-0.5 text-[11px] font-medium">
+                                      Past
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
+            </section>
           )}
-        </section>
-      )}
 
           {/* ---- Staff accounts ---- */}
           {activeTab === "staff" && (
@@ -1460,16 +1459,14 @@ const BranchAdminStaff = () => {
                                   type="button"
                                   disabled={isUpdating}
                                   onClick={() => handleToggleStaffStatus(member, isActive ? "Inactive" : "Active")}
-                                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                    isActive ? "bg-emerald-600" : "bg-stone-300"
-                                  } ${isUpdating ? "opacity-60 cursor-not-allowed" : ""}`}
+                                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isActive ? "bg-emerald-600" : "bg-stone-300"
+                                    } ${isUpdating ? "opacity-60 cursor-not-allowed" : ""}`}
                                   title={`Click to set ${isActive ? "Inactive" : "Active"}`}
                                 >
                                   <span
                                     aria-hidden="true"
-                                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out flex items-center justify-center ${
-                                      isActive ? "translate-x-4" : "translate-x-0"
-                                    }`}
+                                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out flex items-center justify-center ${isActive ? "translate-x-4" : "translate-x-0"
+                                      }`}
                                   >
                                     {isUpdating && (
                                       <Loader2 className="h-2.5 w-2.5 animate-spin text-stone-500" />
@@ -1573,9 +1570,9 @@ const BranchAdminStaff = () => {
                         aria-label={showPassword ? "Hide password" : "Show password"}
                       >
                         {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
                           <Eye className="h-4 w-4" />
+                        ) : (
+                          <EyeOff className="h-4 w-4" />
                         )}
                       </button>
                     </div>

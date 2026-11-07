@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useLayoutEffect, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Bell,
   BookOpen,
@@ -120,6 +120,11 @@ const NAV_GROUPS = [
   },
 ];
 
+let savedSidebarScrollTop = 0;
+try {
+  savedSidebarScrollTop = Number(sessionStorage.getItem("ba_sidebar_scroll")) || 0;
+} catch {}
+
 const BranchAdminSidebar = ({
   user,
   navigate,
@@ -130,6 +135,8 @@ const BranchAdminSidebar = ({
   activePage = "courses",
 }) => {
   useDisplayFonts();
+  const location = useLocation();
+  const navRef = useRef(null);
   const [unreadMessageCount, setUnreadMessageCount] = React.useState(0);
   const [pendingApprovalCount, setPendingApprovalCount] = React.useState(0);
   const [navSettings, setNavSettings] = React.useState(() => {
@@ -276,11 +283,49 @@ const BranchAdminSidebar = ({
     };
   }, [activePage]);
 
+  // Restore scroll position immediately upon component mounting
+  useLayoutEffect(() => {
+    if (navRef.current && savedSidebarScrollTop > 0) {
+      navRef.current.scrollTop = savedSidebarScrollTop;
+    }
+  }, []);
+
+  // Ensure active navigation item is comfortably visible
+  useEffect(() => {
+    if (navRef.current) {
+      const activeEl = navRef.current.querySelector('[aria-current="page"]');
+      if (activeEl) {
+        const navRect = navRef.current.getBoundingClientRect();
+        const activeRect = activeEl.getBoundingClientRect();
+        if (activeRect.top < navRect.top || activeRect.bottom > navRect.bottom) {
+          activeEl.scrollIntoView({ block: "nearest", behavior: "auto" });
+          savedSidebarScrollTop = navRef.current.scrollTop;
+          try {
+            sessionStorage.setItem("ba_sidebar_scroll", String(savedSidebarScrollTop));
+          } catch {}
+        }
+      }
+    }
+  }, [location?.pathname, activePage]);
+
+  const handleNavScroll = (e) => {
+    savedSidebarScrollTop = e.currentTarget.scrollTop;
+    try {
+      sessionStorage.setItem("ba_sidebar_scroll", String(savedSidebarScrollTop));
+    } catch {}
+  };
+
   const routerNavigate = useNavigate();
   const effectiveNavigate = typeof navigate === "function" ? navigate : routerNavigate;
 
   const closeSidebar = () => setSidebarOpen(false);
   const goTo = (path) => {
+    if (navRef.current) {
+      savedSidebarScrollTop = navRef.current.scrollTop;
+      try {
+        sessionStorage.setItem("ba_sidebar_scroll", String(savedSidebarScrollTop));
+      } catch {}
+    }
     if (path === "/branch-admin/messages") setUnreadMessageCount(0);
     closeSidebar();
     if (typeof effectiveNavigate === "function") {
@@ -362,6 +407,8 @@ const BranchAdminSidebar = ({
         </div>
 
         <nav
+          ref={navRef}
+          onScroll={handleNavScroll}
           className="ba-sidebar-nav no-scrollbar flex-1 space-y-6 overflow-y-auto px-3 py-5"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           aria-label="Branch navigation"
@@ -390,7 +437,8 @@ const BranchAdminSidebar = ({
                 </p>
                 <div className="space-y-0.5">
                   {visibleItems.map(({ id, label, icon: Icon, path }) => {
-                    const isActive = activePage === id;
+                    const isPathMatch = location?.pathname === path;
+                    const isActive = activePage === id || isPathMatch;
                     const showUnreadCount = id === "messages" && unreadMessageCount > 0;
                     return (
                       <button

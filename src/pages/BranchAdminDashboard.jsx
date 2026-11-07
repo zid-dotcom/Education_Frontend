@@ -180,7 +180,7 @@ const CountUp = ({ value, currency }) => {
 
 /* ── 10 Custom 3D-styled Watermark Graphics Matching the Screenshot ── */
 const Books3DGraphic = () => (
-  <svg className="w-[74px] h-[66px] sm:w-[84px] sm:h-[76px]" viewBox="0 0 100 90" fill="none">
+  <svg className="w-[46px] h-[40px] sm:w-[50px] sm:h-[44px] lg:w-[48px] lg:h-[42px] xl:w-[50px] xl:h-[44px] 2xl:w-[62px] 2xl:h-[54px]" viewBox="0 0 100 90" fill="none">
     <defs>
       <radialGradient id="blue-card-glow" cx="80%" cy="80%" r="65%">
         <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.22" />
@@ -215,7 +215,7 @@ const Books3DGraphic = () => (
 );
 
 const Students3DGraphic = () => (
-  <svg className="w-[74px] h-[66px] sm:w-[84px] sm:h-[76px]" viewBox="0 0 100 90" fill="none">
+  <svg className="w-[46px] h-[40px] sm:w-[50px] sm:h-[44px] lg:w-[48px] lg:h-[42px] xl:w-[50px] xl:h-[44px] 2xl:w-[62px] 2xl:h-[54px]" viewBox="0 0 100 90" fill="none">
     <defs>
       <radialGradient id="purple-card-glow" cx="80%" cy="80%" r="65%">
         <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.25" />
@@ -247,7 +247,7 @@ const Students3DGraphic = () => (
 );
 
 const Enrollments3DGraphic = () => (
-  <svg className="w-[74px] h-[66px] sm:w-[84px] sm:h-[76px]" viewBox="0 0 100 90" fill="none">
+  <svg className="w-[46px] h-[40px] sm:w-[50px] sm:h-[44px] lg:w-[48px] lg:h-[42px] xl:w-[50px] xl:h-[44px] 2xl:w-[62px] 2xl:h-[54px]" viewBox="0 0 100 90" fill="none">
     <defs>
       <radialGradient id="green-card-glow" cx="80%" cy="80%" r="65%">
         <stop offset="0%" stopColor="#10b981" stopOpacity="0.22" />
@@ -274,7 +274,7 @@ const Enrollments3DGraphic = () => (
 );
 
 const Staff3DGraphic = () => (
-  <svg className="w-[74px] h-[66px] sm:w-[84px] sm:h-[76px]" viewBox="0 0 100 90" fill="none">
+  <svg className="w-[46px] h-[40px] sm:w-[50px] sm:h-[44px] lg:w-[48px] lg:h-[42px] xl:w-[50px] xl:h-[44px] 2xl:w-[62px] 2xl:h-[54px]" viewBox="0 0 100 90" fill="none">
     <defs>
       <radialGradient id="orange-card-glow" cx="80%" cy="80%" r="65%">
         <stop offset="0%" stopColor="#f97316" stopOpacity="0.22" />
@@ -302,7 +302,7 @@ const Staff3DGraphic = () => (
 );
 
 const TodayEnrollments3DGraphic = () => (
-  <svg className="w-[74px] h-[66px] sm:w-[84px] sm:h-[76px]" viewBox="0 0 100 90" fill="none">
+  <svg className="w-[46px] h-[40px] sm:w-[50px] sm:h-[44px] lg:w-[48px] lg:h-[42px] xl:w-[50px] xl:h-[44px] 2xl:w-[62px] 2xl:h-[54px]" viewBox="0 0 100 90" fill="none">
     <defs>
       <radialGradient id="teal-card-glow" cx="80%" cy="80%" r="65%">
         <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.22" />
@@ -333,7 +333,7 @@ const TodayEnrollments3DGraphic = () => (
 );
 
 const NewStudents3DGraphic = () => (
-  <svg className="w-[74px] h-[66px] sm:w-[84px] sm:h-[76px]" viewBox="0 0 100 90" fill="none">
+  <svg className="w-[46px] h-[40px] sm:w-[50px] sm:h-[44px] lg:w-[48px] lg:h-[42px] xl:w-[50px] xl:h-[44px] 2xl:w-[62px] 2xl:h-[54px]" viewBox="0 0 100 90" fill="none">
     <defs>
       <radialGradient id="rose-card-glow" cx="80%" cy="80%" r="65%">
         <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.22" />
@@ -356,7 +356,7 @@ const NewStudents3DGraphic = () => (
 );
 
 const FullyPaid3DGraphic = () => (
-  <svg className="w-[74px] h-[66px] sm:w-[84px] sm:h-[76px]" viewBox="0 0 100 90" fill="none">
+  <svg className="w-[46px] h-[40px] sm:w-[50px] sm:h-[44px] lg:w-[48px] lg:h-[42px] xl:w-[50px] xl:h-[44px] 2xl:w-[62px] 2xl:h-[54px]" viewBox="0 0 100 90" fill="none">
     <defs>
       <radialGradient id="amber-card-glow" cx="80%" cy="80%" r="65%">
         <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.25" />
@@ -384,7 +384,7 @@ const FullyPaid3DGraphic = () => (
 );
 
 const Balance3DGraphic = () => (
-  <svg className="w-[74px] h-[66px] sm:w-[84px] sm:h-[76px]" viewBox="0 0 100 90" fill="none">
+  <svg className="w-[46px] h-[40px] sm:w-[50px] sm:h-[44px] lg:w-[48px] lg:h-[42px] xl:w-[50px] xl:h-[44px] 2xl:w-[62px] 2xl:h-[54px]" viewBox="0 0 100 90" fill="none">
     <defs>
       <radialGradient id="emerald-card-glow" cx="80%" cy="80%" r="65%">
         <stop offset="0%" stopColor="#10b981" stopOpacity="0.22" />
@@ -409,7 +409,7 @@ const Balance3DGraphic = () => (
 );
 
 const DueStudents3DGraphic = () => (
-  <svg className="w-[74px] h-[66px] sm:w-[84px] sm:h-[76px]" viewBox="0 0 100 90" fill="none">
+  <svg className="w-[46px] h-[40px] sm:w-[50px] sm:h-[44px] lg:w-[48px] lg:h-[42px] xl:w-[50px] xl:h-[44px] 2xl:w-[62px] 2xl:h-[54px]" viewBox="0 0 100 90" fill="none">
     <defs>
       <radialGradient id="red-card-glow" cx="80%" cy="80%" r="65%">
         <stop offset="0%" stopColor="#ef4444" stopOpacity="0.22" />
@@ -435,7 +435,7 @@ const DueStudents3DGraphic = () => (
 );
 
 const DueInstallments3DGraphic = () => (
-  <svg className="w-[74px] h-[66px] sm:w-[84px] sm:h-[76px]" viewBox="0 0 100 90" fill="none">
+  <svg className="w-[46px] h-[40px] sm:w-[50px] sm:h-[44px] lg:w-[48px] lg:h-[42px] xl:w-[50px] xl:h-[44px] 2xl:w-[62px] 2xl:h-[54px]" viewBox="0 0 100 90" fill="none">
     <defs>
       <radialGradient id="violet-card-glow" cx="80%" cy="80%" r="65%">
         <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.22" />
@@ -789,12 +789,12 @@ const BranchAdminDashboard = () => {
               </section>
 
               {/* ---- Overview Metric Cards (10 cards) ---- */}
-              <section className="grid gap-3.5 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              <section className="grid gap-3.5 sm:gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {OVERVIEW_METRICS.map(
                   ({ key, label, helper, icon: Icon, iconBg, gradient, Graphic }, index) => (
                     <article
                       key={key}
-                      className={`ba-card ba-rise relative overflow-hidden rounded-2xl sm:rounded-3xl border border-[#e3ddd0] p-4 sm:p-4.5 lg:p-5 shadow-xs bg-gradient-to-br ${gradient} transition-all duration-300 hover:shadow-md hover:-translate-y-0.5`}
+                      className={`ba-card ba-rise relative overflow-hidden rounded-2xl sm:rounded-3xl border border-[#e3ddd0] p-3.5 sm:p-4 lg:p-4 shadow-xs bg-gradient-to-br ${gradient} transition-all duration-300 hover:shadow-md hover:-translate-y-0.5`}
                       style={{
                         animationDelay: `${100 + index * 40}ms`,
                       }}
@@ -822,7 +822,7 @@ const BranchAdminDashboard = () => {
                       </div>
 
                       {/* 3D Illustrated Watermark Graphic */}
-                      <div className="absolute -bottom-1 -right-1 sm:bottom-0 sm:right-0 pointer-events-none select-none z-0">
+                      <div className="absolute -bottom-1 -right-1 sm:bottom-0 sm:right-0 pointer-events-none select-none z-0 opacity-45 sm:opacity-55 xl:opacity-50 2xl:opacity-75 transition-opacity">
                         <Graphic />
                       </div>
                     </article>
