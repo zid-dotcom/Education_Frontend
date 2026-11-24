@@ -17,6 +17,7 @@ import {
   FolderDown,
   Receipt,
   Star,
+  User,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getUserAnnouncementsApi } from '../../services/userannouncements';
@@ -62,10 +63,13 @@ const StudentLayout = () => {
   const isMessagesActive = location.pathname.startsWith('/student-dashboard/messages');
   const isReceiptsActive = location.pathname.startsWith('/student-dashboard/receipts');
   const isReviewsActive = location.pathname.startsWith('/student-dashboard/reviews');
+  const isProfileActive = location.pathname.startsWith('/student-dashboard/profile');
   const isDashboardActive =
-    !isCatalogActive && !isInstitutionAnnouncementsActive && !isAnnouncementsActive && !isEnquiriesActive && !isAssignmentsActive && !isMessagesActive && !isStudyMaterialsActive && !isReceiptsActive && !isReviewsActive;
+    !isCatalogActive && !isInstitutionAnnouncementsActive && !isAnnouncementsActive && !isEnquiriesActive && !isAssignmentsActive && !isMessagesActive && !isStudyMaterialsActive && !isReceiptsActive && !isReviewsActive && !isProfileActive;
 
-  const pageTitle = isReviewsActive
+  const pageTitle = isProfileActive
+    ? 'My Profile'
+    : isReviewsActive
     ? 'Course Reviews'
     : isReceiptsActive
     ? 'Payment Receipts'
@@ -388,6 +392,20 @@ const StudentLayout = () => {
               <Star className={`h-4 w-4 ${isReviewsActive ? 'text-[#9C6B2E]' : 'text-[#8A8175]'}`} />
               <span>Course Reviews</span>
             </Link>
+
+            {/* My Profile */}
+            <Link
+              to="/student-dashboard/profile"
+              onClick={closeSidebar}
+              className={`flex items-center gap-3.5 rounded-2xl px-4 py-3 text-xs transition ${
+                isProfileActive
+                  ? 'bg-[#F1EDE4] font-bold text-[#17140F] shadow-xs border border-[#E3DDD0]/80'
+                  : 'font-semibold text-[#5B5346] hover:bg-[#F1EDE4] hover:text-[#17140F]'
+              }`}
+            >
+              <User className={`h-4 w-4 ${isProfileActive ? 'text-[#9C6B2E]' : 'text-[#8A8175]'}`} />
+              <span>My Profile</span>
+            </Link>
           </nav>
 
           {/* Bottom Actions */}
@@ -461,19 +479,23 @@ const StudentLayout = () => {
                 )}
               </Link>
 
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#17140F] text-[#F4B942] font-extrabold text-sm shadow-sm ring-2 ring-[#E3DDD0]">
+              <Link
+                to="/student-dashboard/profile"
+                className="flex items-center gap-2.5 p-1 rounded-xl hover:bg-[#FAF8F4] transition group"
+                title="View & Edit My Profile"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#17140F] text-[#F4B942] font-extrabold text-sm shadow-sm ring-2 ring-[#E3DDD0] group-hover:ring-[#9C6B2E] transition">
                   {displayName.charAt(0).toUpperCase()}
                 </div>
                 <div className="hidden md:block text-left">
-                  <p className="text-xs font-extrabold text-slate-900 leading-tight">
+                  <p className="text-xs font-extrabold text-slate-900 leading-tight group-hover:text-[#9C6B2E] transition">
                     {displayName}
                   </p>
                   <p className="text-[10px] font-semibold text-slate-400">
                     Enrolled Student
                   </p>
                 </div>
-              </div>
+              </Link>
 
               <NavLogoutButton redirectTo="/login" />
             </div>

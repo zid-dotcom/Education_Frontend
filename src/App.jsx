@@ -97,6 +97,7 @@ import StudentStudyMaterials from './pages/StudentStudyMaterials';
 import StudentMessages from './pages/StudentMessages';
 import StudentReceipts from './pages/StudentReceipts';
 import StudentReviews from './pages/StudentReviews';
+import StudentProfile from './pages/StudentProfile';
 import StudentLayout from './components/layout/StudentLayout';
 
 // Scroll to top helper component on route change
@@ -871,6 +872,17 @@ function App() {
             }
           >
             <Route index element={<StudentReviews />} />
+          </Route>
+
+          <Route
+            path="/student-dashboard/profile"
+            element={
+              <ProtectedRoute studentOnly>
+                <StudentLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<StudentProfile />} />
           </Route>
 
           {/* Public Frontend Routes with Main Navbar & Footer */}
