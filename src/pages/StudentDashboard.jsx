@@ -55,6 +55,7 @@ import { getCourseImageUrl } from '../services/courses';
 import { getMyEnrollmentsApi, getEnrollmentInstallmentsApi } from '../services/enrollments';
 import { createPaymentOrderApi, loadRazorpayScript, verifyPaymentApi } from '../services/payments';
 import { getStudentAssignmentsApi } from '../services/studentassignments';
+import { getStudentProfileApi, getProfileImageUrl } from '../services/studentProfile';
 
 import {
   getUserAnnouncementsApi,
@@ -2033,6 +2034,38 @@ const StudentDashboard = () => {
     user?.gender || student?.gender || enrollments[0]?.gender || enrollments[0]?.student_details?.gender
   );
   const studentBannerAvatar = studentGender === 'girl' ? girlImage : boyImage;
+  const [studentProfileImage, setStudentProfileImage] = useState(() => {
+    try {
+      const stored = localStorage.getItem('studentUser');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return parsed.profile_image || null;
+      }
+    } catch { /* ignore */ }
+    return user?.profile_image || null;
+  });
+
+  useEffect(() => {
+    if (user?.profile_image) {
+      setStudentProfileImage(user.profile_image);
+    } else if (token) {
+      getStudentProfileApi(token)
+        .then((data) => {
+          if (data?.profile_image) {
+            setStudentProfileImage(data.profile_image);
+          }
+        })
+        .catch(() => {});
+    }
+
+    const handleProfileUpdated = (e) => {
+      if (e.detail?.profile_image) {
+        setStudentProfileImage(e.detail.profile_image);
+      }
+    };
+    window.addEventListener('student-profile-updated', handleProfileUpdated);
+    return () => window.removeEventListener('student-profile-updated', handleProfileUpdated);
+  }, [token, user?.profile_image]);
   const studentFirstName = displayName.trim().split(' ')[0] || 'Student';
   const displayEmail = user?.email || student?.email || enrollments[0]?.email || 'Email not available';
   const displayPhone = user?.phone || student?.phone || enrollments[0]?.phone || 'Phone not available';
@@ -2438,8 +2471,17 @@ const StudentDashboard = () => {
                 className="flex items-center gap-2.5 p-1 rounded-xl hover:bg-[#FAF8F4] transition group"
                 title="View & Edit My Profile"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#17140F] text-[#F4B942] font-extrabold text-sm shadow-sm ring-2 ring-[#E3DDD0] group-hover:ring-[#9C6B2E] transition">
-                  {displayName.charAt(0).toUpperCase()}
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#17140F] text-[#F4B942] font-extrabold text-sm shadow-sm ring-2 ring-[#E3DDD0] group-hover:ring-[#9C6B2E] transition overflow-hidden">
+                  {studentProfileImage ? (
+                    <img
+                      src={getProfileImageUrl(studentProfileImage)}
+                      alt={displayName}
+                      className="h-full w-full object-cover"
+                      onError={() => setStudentProfileImage(null)}
+                    />
+                  ) : (
+                    displayName.charAt(0).toUpperCase()
+                  )}
                 </div>
                 <div className="hidden md:block text-left">
                   <p className="text-xs font-extrabold text-slate-900 leading-tight group-hover:text-[#9C6B2E] transition">
@@ -2532,19 +2574,30 @@ const StudentDashboard = () => {
                     <Plus className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 text-white stroke-[2.8]" />
                   </div>
 
-                  {/* Character illustration without a rectangular frame */}
-                  <div className="flex h-16 w-16 sm:h-28 sm:w-28 md:h-32 md:w-32 lg:h-[132px] lg:w-[132px] items-center justify-center overflow-hidden select-none transition-transform duration-300 group-hover:scale-105">
-                    <img
-                      src={studentBannerAvatar}
-                      alt={`${studentGender === 'girl' ? 'Girl' : 'Boy'} Student Avatar`}
-                      className="w-full h-full object-cover mix-blend-multiply select-none pointer-events-none transition-transform duration-300"
-                      style={
-                        studentGender === 'girl'
-                          ? { transform: 'scale(1.7) translateY(8%)', transformOrigin: 'top center' }
-                          : { transform: 'scale(1.8) translateY(14%)', transformOrigin: 'top center' }
-                      }
-                    />
-                  </div>
+                  {/* Character illustration or uploaded photo */}
+                  {studentProfileImage ? (
+                    <div className="flex h-16 w-16 sm:h-24 sm:w-24 md:h-28 md:w-28 lg:h-[120px] lg:w-[120px] items-center justify-center rounded-full overflow-hidden border-2 sm:border-3 border-[#b8863b] shadow-md bg-white select-none transition-transform duration-300 group-hover:scale-105">
+                      <img
+                        src={getProfileImageUrl(studentProfileImage)}
+                        alt={displayName}
+                        className="w-full h-full object-cover select-none pointer-events-none"
+                        onError={() => setStudentProfileImage(null)}
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex h-16 w-16 sm:h-28 sm:w-28 md:h-32 md:w-32 lg:h-[132px] lg:w-[132px] items-center justify-center overflow-hidden select-none transition-transform duration-300 group-hover:scale-105">
+                      <img
+                        src={studentBannerAvatar}
+                        alt={`${studentGender === 'girl' ? 'Girl' : 'Boy'} Student Avatar`}
+                        className="w-full h-full object-cover mix-blend-multiply select-none pointer-events-none transition-transform duration-300"
+                        style={
+                          studentGender === 'girl'
+                            ? { transform: 'scale(1.7) translateY(8%)', transformOrigin: 'top center' }
+                            : { transform: 'scale(1.8) translateY(14%)', transformOrigin: 'top center' }
+                        }
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

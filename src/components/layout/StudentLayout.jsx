@@ -23,6 +23,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getUserAnnouncementsApi } from '../../services/userannouncements';
 import { getStudentAssignmentsApi } from '../../services/studentassignments';
 import { getStudentUnreadCountApi } from '../../services/studentStaffMessages';
+import { getStudentProfileApi, getProfileImageUrl } from '../../services/studentProfile';
 import NavLogoutButton from '../common/NavLogoutButton';
 
 // Load modern Plus Jakarta Sans + Inter + Fraunces fonts
@@ -49,6 +50,38 @@ const StudentLayout = () => {
   const [announcementCount, setAnnouncementCount] = useState(null);
   const [assignmentCount, setAssignmentCount] = useState(null);
   const [messagesCount, setMessagesCount] = useState(null);
+  const [profileImage, setProfileImage] = useState(() => {
+    try {
+      const stored = localStorage.getItem('studentUser');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return parsed.profile_image || null;
+      }
+    } catch { /* ignore */ }
+    return user?.profile_image || null;
+  });
+
+  useEffect(() => {
+    if (user?.profile_image) {
+      setProfileImage(user.profile_image);
+    } else if (token) {
+      getStudentProfileApi(token)
+        .then((data) => {
+          if (data?.profile_image) {
+            setProfileImage(data.profile_image);
+          }
+        })
+        .catch(() => {});
+    }
+
+    const handleProfileUpdate = (e) => {
+      if (e.detail?.profile_image) {
+        setProfileImage(e.detail.profile_image);
+      }
+    };
+    window.addEventListener('student-profile-updated', handleProfileUpdate);
+    return () => window.removeEventListener('student-profile-updated', handleProfileUpdate);
+  }, [token, user?.profile_image]);
 
   const displayName = user?.name || 'Student';
   const displayEmail = user?.email || 'Email not available';
@@ -484,8 +517,17 @@ const StudentLayout = () => {
                 className="flex items-center gap-2.5 p-1 rounded-xl hover:bg-[#FAF8F4] transition group"
                 title="View & Edit My Profile"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#17140F] text-[#F4B942] font-extrabold text-sm shadow-sm ring-2 ring-[#E3DDD0] group-hover:ring-[#9C6B2E] transition">
-                  {displayName.charAt(0).toUpperCase()}
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#17140F] text-[#F4B942] font-extrabold text-sm shadow-sm ring-2 ring-[#E3DDD0] group-hover:ring-[#9C6B2E] transition overflow-hidden">
+                  {profileImage ? (
+                    <img
+                      src={getProfileImageUrl(profileImage)}
+                      alt={displayName}
+                      className="h-full w-full object-cover"
+                      onError={() => setProfileImage(null)}
+                    />
+                  ) : (
+                    displayName.charAt(0).toUpperCase()
+                  )}
                 </div>
                 <div className="hidden md:block text-left">
                   <p className="text-xs font-extrabold text-slate-900 leading-tight group-hover:text-[#9C6B2E] transition">

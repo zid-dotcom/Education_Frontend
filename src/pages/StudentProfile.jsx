@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import {
   User,
   Mail,
@@ -15,23 +16,22 @@ import {
   ShieldCheck,
   RefreshCw,
   Building2,
-  Users
+  Users,
+  BookOpen,
+  Clock,
+  Receipt,
+  Star,
+  ChevronRight,
+  Calendar,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getStudentProfileApi, updateStudentProfileApi } from '../services/studentProfile';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
-const getProfileImageUrl = (img) => {
-  if (!img) return null;
-  if (img.startsWith('http://') || img.startsWith('https://') || img.startsWith('blob:') || img.startsWith('data:')) {
-    return img;
-  }
-  return `${API_BASE_URL.replace(/\/$/, '')}/${img.replace(/\\/g, '/').replace(/^\/+/, '')}`;
-};
+import { getStudentProfileApi, updateStudentProfileApi, getProfileImageUrl } from '../services/studentProfile';
+import { getMyEnrollmentsApi, getEnrollmentInstallmentsApi } from '../services/enrollments';
+import { getCourseImageUrl } from '../services/courses';
+import StudentPaymentEnrollmentModal from '../components/common/StudentPaymentEnrollmentModal';
 
 const StudentProfile = () => {
-  const { token, user } = useAuth();
+  const { token, user, updateUser } = useAuth();
   const fileInputRef = useRef(null);
 
   const [profile, setProfile] = useState(null);
@@ -53,30 +53,59 @@ const StudentProfile = () => {
 
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [enrollments, setEnrollments] = useState([]);
+  const [loadingEnrollments, setLoadingEnrollments] = useState(true);
+  const [selectedEnrollment, setSelectedEnrollment] = useState(null);
+
+  const handleOpenDetails = (enr) => {
+    setSelectedEnrollment(enr);
+  };
+
+  const handleCloseDetails = () => {
+    setSelectedEnrollment(null);
+  };
 
   const fetchProfile = async () => {
     if (!token) return;
     setLoading(true);
+    setLoadingEnrollments(true);
     setError('');
     try {
-      const data = await getStudentProfileApi(token);
-      setProfile(data);
-      setFormData({
-        name: data.name || '',
-        email: data.email || '',
-        phone: data.phone || '',
-        parent_name: data.parent_name || '',
-        parent_phone: data.parent_phone || '',
-        highest_qualification: data.highest_qualification || '',
-        address: data.address || '',
-      });
-      if (data.profile_image) {
-        setImagePreview(getProfileImageUrl(data.profile_image));
+      const [profileRes, enrollmentsRes] = await Promise.allSettled([
+        getStudentProfileApi(token),
+        getMyEnrollmentsApi(token),
+      ]);
+
+      if (profileRes.status === 'fulfilled') {
+        const data = profileRes.value;
+        setProfile(data);
+        setFormData({
+          name: data.name || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          parent_name: data.parent_name || '',
+          parent_phone: data.parent_phone || '',
+          highest_qualification: data.highest_qualification || '',
+          address: data.address || '',
+        });
+        if (data.profile_image) {
+          setImagePreview(getProfileImageUrl(data.profile_image));
+        }
+      } else {
+        setError(profileRes.reason?.message || 'Failed to load profile details.');
+      }
+
+      if (enrollmentsRes.status === 'fulfilled') {
+        const list = Array.isArray(enrollmentsRes.value) ? enrollmentsRes.value : [];
+        setEnrollments(list);
+      } else {
+        setEnrollments([]);
       }
     } catch (err) {
       setError(err?.message || 'Failed to load profile details.');
     } finally {
       setLoading(false);
+      setLoadingEnrollments(false);
     }
   };
 
@@ -126,6 +155,8 @@ const StudentProfile = () => {
       }
 
       const updated = await updateStudentProfileApi(payload, token);
+      const newImg = updated.profile_image || (updated.image ? getProfileImageUrl(updated.image) : null) || imagePreview || profile?.profile_image;
+
       setProfile((prev) => ({
         ...prev,
         ...updated,
@@ -136,8 +167,29 @@ const StudentProfile = () => {
         parent_phone: formData.parent_phone.trim(),
         highest_qualification: formData.highest_qualification.trim(),
         address: formData.address.trim(),
-        profile_image: updated.profile_image || imagePreview || prev?.profile_image,
+        profile_image: newImg,
       }));
+
+      if (updateUser) {
+        updateUser({
+          ...user,
+          ...updated,
+          name: formData.name.trim(),
+          profile_image: newImg,
+        });
+      }
+      try {
+        localStorage.setItem(
+          'studentUser',
+          JSON.stringify({ ...user, ...updated, name: formData.name.trim(), profile_image: newImg })
+        );
+      } catch { /* ignore */ }
+
+      window.dispatchEvent(
+        new CustomEvent('student-profile-updated', {
+          detail: { ...updated, name: formData.name.trim(), profile_image: newImg },
+        })
+      );
 
       setSuccess('Profile updated successfully!');
       setIsEditing(false);
@@ -609,6 +661,183 @@ const StudentProfile = () => {
             </button>
           </div>
         </form>
+      )}
+
+      {/* ── Enrolled Courses Section ── */}
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E7DFD3] shadow-xs space-y-5">
+        <div className="flex items-center justify-between pb-2 border-b border-[#F1EDE4]">
+          <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">
+            Enrolled Courses
+          </h3>
+          <Link
+            to="/student-dashboard/courses"
+            className="text-xs font-bold text-[#9C6B2E] hover:text-[#855923] transition flex items-center gap-1"
+          >
+            See all <ChevronRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+
+        {loadingEnrollments ? (
+          <div className="flex items-center justify-center py-10 space-x-2 text-slate-400">
+            <Loader2 className="h-5 w-5 animate-spin text-[#9C6B2E]" />
+            <span className="text-xs font-semibold">Loading enrolled courses...</span>
+          </div>
+        ) : enrollments.length === 0 ? (
+          <div className="text-center py-10 px-4 bg-[#FAF8F4] rounded-2xl border border-dashed border-[#E3DDD0]">
+            <BookOpen className="h-10 w-10 text-[#C4B7A5] mx-auto mb-2" />
+            <p className="text-sm font-bold text-[#17140F]">No Enrolled Courses Found</p>
+            <p className="text-xs text-[#8A8175] mt-1">You haven't enrolled in any active course yet.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+            {enrollments.map((enr, idx) => {
+              const courseTitle =
+                enr.course_title ||
+                enr.course_details?.title ||
+                'Enrolled Program';
+              const courseDuration =
+                enr.course_duration ||
+                enr.course_details?.duration ||
+                'Program Duration';
+              const branchApproval = (enr.branch_approval_status || '').toLowerCase();
+              const superApproval = (enr.super_admin_approval_status || '').toLowerCase();
+              const courseImg = getCourseImageUrl(
+                enr.course_image || enr.course_details?.image || enr.course_details?.image_url
+              );
+              const paidAmount = Number(enr.total_paid || 0);
+              const category = enr.course_details?.category;
+
+              return (
+                <div
+                  key={enr.id || enr.enrollment_id || idx}
+                  className="flex flex-col justify-between rounded-2xl bg-[#FAF8F4] border border-[#E3DDD0] hover:border-[#9C6B2E] hover:bg-white hover:shadow-lg transition-all duration-300 overflow-hidden group h-full"
+                >
+                  {/* Course Image on Top */}
+                  <div className="relative h-44 sm:h-48 w-full bg-slate-100 overflow-hidden shrink-0">
+                    {courseImg ? (
+                      <img
+                        src={courseImg}
+                        alt={courseTitle}
+                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-[#F1EDE4] to-[#FAF8F4]">
+                        <BookOpen className="h-12 w-12 text-[#9C6B2E]/60" />
+                      </div>
+                    )}
+
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent pointer-events-none" />
+
+                    {/* Floating Duration Badge on Image */}
+                    <div className="absolute top-3 left-3 z-10">
+                      <span className="inline-flex items-center gap-1 rounded-lg bg-white/95 backdrop-blur-md px-2.5 py-1 text-[11px] font-bold text-[#9C6B2E] shadow-sm border border-white/60">
+                        <Clock className="h-3 w-3 text-[#9C6B2E]" />
+                        {courseDuration}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Text Contents Below Image */}
+                  <div className="p-5 flex-1 flex flex-col justify-between">
+                    <div>
+                      {category && (
+                        <p className="text-[11px] font-bold tracking-wider uppercase text-[#9C6B2E] mb-1">
+                          {category}
+                        </p>
+                      )}
+                      <h4 className="text-base font-extrabold text-slate-900 leading-snug line-clamp-2 group-hover:text-[#9C6B2E] transition-colors">
+                        {courseTitle}
+                      </h4>
+
+                      {/* Approval Status Pills */}
+                      <div className="mt-3.5 flex flex-wrap items-center gap-1.5 text-[10px]">
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-bold capitalize ${
+                            branchApproval === 'approved'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : branchApproval === 'rejected'
+                              ? 'bg-rose-100 text-rose-800'
+                              : 'bg-amber-100 text-amber-900'
+                          }`}
+                        >
+                          <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                          {branchApproval === 'approved'
+                            ? 'Branch Admin Approved'
+                            : branchApproval === 'rejected'
+                            ? 'Branch Admin Rejected'
+                            : 'Branch Admin Approval Pending'}
+                        </span>
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-bold capitalize ${
+                            superApproval === 'approved'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : superApproval === 'rejected'
+                              ? 'bg-rose-100 text-rose-800'
+                              : 'bg-amber-100 text-amber-900'
+                          }`}
+                        >
+                          <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                          {superApproval === 'approved'
+                            ? 'Super Admin Approved'
+                            : superApproval === 'rejected'
+                            ? 'Super Admin Rejected'
+                            : 'Super Admin Approval Pending'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Bottom Row: Paid Amount + Action Buttons */}
+                    <div className="mt-5 pt-3.5 border-t border-[#E3DDD0] flex items-center justify-between gap-2">
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-[#8A8175] block leading-none mb-1">
+                          Paid Amount
+                        </span>
+                        <span className="text-sm font-extrabold text-emerald-700">
+                          ₹{paidAmount.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Link
+                          to="/student-dashboard/reviews"
+                          className="rounded-xl border border-[#E3DDD0] bg-[#FAF8F4] px-3 py-2 text-xs font-bold text-[#9C6B2E] transition hover:bg-[#F1EDE4] flex items-center gap-1.5 cursor-pointer"
+                          title="Write a review for this course"
+                        >
+                          <Star className="h-3.5 w-3.5 fill-[#9C6B2E]/20 text-[#9C6B2E]" />
+                          <span>Review</span>
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenDetails(enr)}
+                          className="rounded-xl bg-[#9C6B2E] px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#855923] flex items-center gap-1.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                        >
+                          <Receipt className="h-3.5 w-3.5" />
+                          <span>View</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ── Enrollment Details Modal ── */}
+      {selectedEnrollment && (
+        <StudentPaymentEnrollmentModal
+          isOpen={Boolean(selectedEnrollment)}
+          enrollment={selectedEnrollment}
+          onClose={handleCloseDetails}
+          token={token}
+          user={user}
+          onRefresh={fetchProfile}
+        />
       )}
     </div>
   );

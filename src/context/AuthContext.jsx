@@ -18,6 +18,8 @@ export const AuthProvider = ({ children }) => {
       if (storedBranch) return JSON.parse(storedBranch);
       const storedStaff = localStorage.getItem('staffUser');
       if (storedStaff) return JSON.parse(storedStaff);
+      const storedStudent = localStorage.getItem('studentUser');
+      if (storedStudent) return JSON.parse(storedStudent);
     } catch { /* ignore */ }
     return null; 
   });
@@ -89,6 +91,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('superAdminUser');
     localStorage.removeItem('branchAdminUser');
     localStorage.removeItem('staffUser');
+    localStorage.removeItem('studentUser');
     localStorage.removeItem('branchAdminNavSettings');
     setToken(null);
     setUser(null);
@@ -472,10 +475,22 @@ export const AuthProvider = ({ children }) => {
     return await login(registrationData.email, registrationData.password);
   };
 
+  const updateUser = useCallback((userData) => {
+    setUser((prev) => {
+      const merged = typeof userData === 'function' ? userData(prev) : { ...(prev || {}), ...userData };
+      try {
+        localStorage.setItem('studentUser', JSON.stringify(merged));
+      } catch { /* ignore */ }
+      return merged;
+    });
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
         user,
+        setUser,
+        updateUser,
         token,
         loading,
         login,

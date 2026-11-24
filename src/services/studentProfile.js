@@ -1,5 +1,13 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+export function getProfileImageUrl(img) {
+  if (!img) return null;
+  if (img.startsWith('http://') || img.startsWith('https://') || img.startsWith('blob:') || img.startsWith('data:')) {
+    return img;
+  }
+  return `${API_BASE_URL.replace(/\/$/, '')}/${img.replace(/\\/g, '/').replace(/^\/+/, '')}`;
+}
+
 const getHeaders = (token) => {
   const headers = {};
   if (token) {
