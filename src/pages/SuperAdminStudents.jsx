@@ -33,6 +33,8 @@ import {
   getSuperAdminAllStudentsApi,
   getSuperAdminBranchStudentsApi,
   getSuperAdminRecordBranchesApi,
+  getSuperAdminAllDueStudentsApi,
+  getSuperAdminBranchDueStudentsApi,
   getSuperAdminInstallmentStudentsApi,
   getSuperAdminFullyPaidStudentsApi,
   getSuperAdminBranchAdminInstallmentHistoryApi,
@@ -247,7 +249,9 @@ const SuperAdminStudents = () => {
         bId
           ? getSuperAdminBranchStudentsApi(bId, token)
           : getSuperAdminAllStudentsApi(token),
-        getSuperAdminInstallmentStudentsApi(bId, token),
+        bId
+          ? getSuperAdminBranchDueStudentsApi(bId, token)
+          : getSuperAdminAllDueStudentsApi(token),
         getSuperAdminFullyPaidStudentsApi(bId, token),
         getSuperAdminBranchAdminInstallmentHistoryApi(bId, token),
       ]);
@@ -259,9 +263,11 @@ const SuperAdminStudents = () => {
       }
 
       if (installmentRes.status === 'fulfilled') {
-        setInstallmentStudents(normalizeArray(installmentRes.value));
+        const val = installmentRes.value;
+        const list = Array.isArray(val) ? val : val?.due_students || [];
+        setInstallmentStudents(list);
       } else {
-        console.warn('Failed to load installment students:', installmentRes.reason);
+        console.warn('Failed to load due students:', installmentRes.reason);
       }
 
       if (fullyPaidRes.status === 'fulfilled') {
@@ -286,14 +292,10 @@ const SuperAdminStudents = () => {
     loadAllData(selectedBranchId);
   }, [token, selectedBranchId]);
 
-  // Fallbacks if dedicated endpoints return empty but all students exist
+  // Due students with active outstanding dues
   const effectiveInstallmentStudents = useMemo(() => {
-    if (installmentStudents.length > 0) return installmentStudents;
-    return students.filter((s) => {
-      const bal = Number(s.balance_amount ?? s.enrollments?.[0]?.balance_amount ?? 0);
-      return bal > 0;
-    });
-  }, [installmentStudents, students]);
+    return installmentStudents;
+  }, [installmentStudents]);
 
   const effectiveFullyPaidStudents = useMemo(() => {
     if (fullyPaidStudents.length > 0) return fullyPaidStudents;
@@ -307,7 +309,7 @@ const SuperAdminStudents = () => {
   // Calculate total outstanding balance
   const totalOutstandingBalance = useMemo(() => {
     return effectiveInstallmentStudents.reduce((sum, s) => {
-      const bal = Number(s.balance_amount ?? s.remaining_amount ?? s.enrollments?.[0]?.balance_amount ?? 0);
+      const bal = Number(s.total_due_amount ?? s.balance_amount ?? s.remaining_amount ?? s.enrollments?.[0]?.balance_amount ?? 0);
       return sum + bal;
     }, 0);
   }, [effectiveInstallmentStudents]);
@@ -444,6 +446,7 @@ const SuperAdminStudents = () => {
         matchedEnrollment.balance_amount ??
         0,
       status: item.status || item.student_status || matchedStudent?.status || (item.is_active === false ? 'Inactive' : 'Active'),
+      installments: item.due_installments || item.installments || primaryEnrollment.installments || [],
       is_active:
         item.is_active !== undefined
           ? item.is_active
@@ -575,8 +578,8 @@ const SuperAdminStudents = () => {
       const email = (s.email || '').toLowerCase();
       const phone = (s.phone || '').toLowerCase();
       const idStr = String(s.user_id || s.student_id || s.enrollment_id || s.id || '');
-      const course = (s.course_title || s.course_name || s.enrollments?.[0]?.course_title || '').toLowerCase();
-      const branch = (s.branch_name || s.enrollments?.[0]?.branch_name || '').toLowerCase();
+      const course = (s.course_title || s.course_name || s.due_enrollments?.[0]?.course_title || s.enrollments?.[0]?.course_title || '').toLowerCase();
+      const branch = (s.branch_name || s.due_enrollments?.[0]?.branch_name || s.enrollments?.[0]?.branch_name || '').toLowerCase();
       return (
         name.includes(term) ||
         email.includes(term) ||
@@ -596,8 +599,8 @@ const SuperAdminStudents = () => {
       const email = (s.email || '').toLowerCase();
       const phone = (s.phone || '').toLowerCase();
       const idStr = String(s.user_id || s.student_id || s.enrollment_id || s.id || '');
-      const course = (s.course_title || s.course_name || s.enrollments?.[0]?.course_title || '').toLowerCase();
-      const branch = (s.branch_name || s.enrollments?.[0]?.branch_name || '').toLowerCase();
+      const course = (s.course_title || s.course_name || s.due_enrollments?.[0]?.course_title || s.enrollments?.[0]?.course_title || '').toLowerCase();
+      const branch = (s.branch_name || s.due_enrollments?.[0]?.branch_name || s.enrollments?.[0]?.branch_name || '').toLowerCase();
       return (
         name.includes(term) ||
         email.includes(term) ||
@@ -764,7 +767,7 @@ const SuperAdminStudents = () => {
             >
               <div className="flex items-center justify-between">
                 <p className="text-xs font-bold text-amber-800 uppercase tracking-wider">
-                  Installments Due
+                  Due Students
                 </p>
                 <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-[#9c6b2e]">
                   <Clock className="h-4 w-4" />
@@ -919,7 +922,7 @@ const SuperAdminStudents = () => {
               }`}
             >
               <Clock className="h-3.5 w-3.5" />
-              <span>Installments Due</span>
+              <span>Due Students</span>
               <span
                 className={`ml-1 rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
                   activeTab === 'installment' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-800'
@@ -1142,15 +1145,16 @@ const SuperAdminStudents = () => {
                           {filteredInstallmentStudents.map((s, idx) => {
                             const studentId = s.student_id ?? s.user_id ?? s.id;
                             const studentName = s.name || s.student_name || 'Student';
-                            const branchName = s.branch_name || s.enrollments?.[0]?.branch_name || '—';
-                            const courseTitle = s.course_title || s.course_name || s.enrollments?.[0]?.course_title || '—';
-                            const balance = Number(s.balance_amount ?? s.remaining_amount ?? s.enrollments?.[0]?.balance_amount ?? 0);
+                            const branchName = s.branch_name || s.due_enrollments?.map(e => e.branch_name).join(', ') || s.enrollments?.[0]?.branch_name || '—';
+                            const courseTitle = s.course_title || s.course_name || s.due_enrollments?.map(e => e.course_title).join(', ') || s.enrollments?.[0]?.course_title || '—';
+                            const balance = Number(s.total_due_amount ?? s.balance_amount ?? s.remaining_amount ?? s.enrollments?.[0]?.balance_amount ?? 0);
                             const totalFee = Number(s.total_fee ?? s.course_fee ?? s.enrollments?.[0]?.total_fee ?? 0);
                             const totalPaid = Number(s.total_paid ?? s.amount ?? s.enrollments?.[0]?.total_paid ?? 0);
                             const currentStatus = String(s.status || s.student_status || (s.is_active === false ? 'inactive' : 'active')).toLowerCase();
                             const isActive = currentStatus === 'active';
                             const isUpdating = statusUpdatingId === studentId;
-                            const isOverdue = Number(s.due_installment_count) > 0;
+                            const overdueCount = Number(s.due_installment_count ?? s.pending_terms ?? s.due_installments?.length ?? 1);
+                            const isOverdue = overdueCount > 0;
 
                             return (
                               <tr key={s.enrollment_id ?? studentId ?? idx} className="sa-row transition hover:bg-stone-50/70">
@@ -1199,11 +1203,11 @@ const SuperAdminStudents = () => {
                                 <td className="px-4 py-3.5 whitespace-nowrap">
                                   {isOverdue ? (
                                     <span className="inline-flex items-center rounded-full bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-0.5 text-[10px] font-bold">
-                                      {s.due_installment_count} Overdue
+                                      {overdueCount} Due
                                     </span>
                                   ) : (
                                     <span className="inline-flex items-center rounded-full bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-0.5 text-[10px] font-bold">
-                                      Installment Active
+                                      Due
                                     </span>
                                   )}
                                 </td>
