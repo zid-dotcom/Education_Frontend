@@ -451,51 +451,66 @@ const StudentProfile = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {/* Full Name */}
+            {/* Full Name - Read only */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                Full Name <span className="text-rose-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Full Name
+                </label>
+                <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                  Read-only
+                </span>
+              </div>
               <input
                 type="text"
                 name="name"
                 value={formData.name}
-                onChange={handleInputChange}
-                required
-                className="w-full rounded-2xl border border-[#E3DDD0] bg-slate-50/60 px-4 py-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#9C6B2E]/40 focus:border-[#9C6B2E] transition"
-                placeholder="Enter full name"
+                readOnly
+                tabIndex={-1}
+                className="w-full rounded-2xl border border-[#E3DDD0] bg-slate-100/90 px-4 py-2.5 text-sm font-semibold text-slate-600 cursor-not-allowed select-none focus:outline-none"
+                placeholder="Full name"
               />
             </div>
 
-            {/* Email */}
+            {/* Email - Read only */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                Email Address <span className="text-rose-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Email Address
+                </label>
+                <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                  Read-only
+                </span>
+              </div>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
-                onChange={handleInputChange}
-                required
-                className="w-full rounded-2xl border border-[#E3DDD0] bg-slate-50/60 px-4 py-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#9C6B2E]/40 focus:border-[#9C6B2E] transition"
-                placeholder="Enter email address"
+                readOnly
+                tabIndex={-1}
+                className="w-full rounded-2xl border border-[#E3DDD0] bg-slate-100/90 px-4 py-2.5 text-sm font-semibold text-slate-600 cursor-not-allowed select-none focus:outline-none"
+                placeholder="Email address"
               />
             </div>
 
-            {/* Phone */}
+            {/* Phone - Read only */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                Phone Number <span className="text-rose-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Phone Number
+                </label>
+                <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                  Read-only
+                </span>
+              </div>
               <input
                 type="text"
                 name="phone"
                 value={formData.phone}
-                onChange={handleInputChange}
-                required
-                className="w-full rounded-2xl border border-[#E3DDD0] bg-slate-50/60 px-4 py-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#9C6B2E]/40 focus:border-[#9C6B2E] transition"
-                placeholder="Enter phone number"
+                readOnly
+                tabIndex={-1}
+                className="w-full rounded-2xl border border-[#E3DDD0] bg-slate-100/90 px-4 py-2.5 text-sm font-semibold text-slate-600 cursor-not-allowed select-none focus:outline-none"
+                placeholder="Phone number"
               />
             </div>
 

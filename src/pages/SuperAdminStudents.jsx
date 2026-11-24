@@ -1000,7 +1000,7 @@ const SuperAdminStudents = () => {
                       <table className="w-full min-w-[960px] text-sm text-left">
                         <thead>
                           <tr className="border-b border-[#e3ddd0] bg-[#faf8f4]">
-                            {['#', 'Student Details', 'Branch', 'Course', 'Course Fee', 'Paid / Due', 'Account Status', 'Action'].map((h) => (
+                            {['#', 'Student Details', 'Branch', 'Course', 'Course Fee', 'Paid', 'Account Status', 'Action'].map((h) => (
                               <th
                                 key={h}
                                 className="px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-[#9c6b2e]"
@@ -1062,12 +1062,7 @@ const SuperAdminStudents = () => {
                                   </span>
                                 </td>
                                 <td className="px-4 py-3.5 whitespace-nowrap">
-                                  <div>
-                                    <p className="text-xs font-bold text-emerald-700">{fmt(paid)} Paid</p>
-                                    <p className={`text-[10px] font-semibold mt-0.5 ${balance > 0 ? 'text-rose-600' : 'text-stone-400'}`}>
-                                      {balance > 0 ? `${fmt(balance)} Due` : 'Cleared'}
-                                    </p>
-                                  </div>
+                                  <p className="text-xs font-bold text-emerald-700">{fmt(paid)} Paid</p>
                                 </td>
                                 <td className="px-4 py-3.5 whitespace-nowrap">
                                   <div className="flex items-center gap-2">
