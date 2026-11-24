@@ -16,6 +16,7 @@ import {
   Mail,
   Menu,
   Phone,
+  Printer,
   Receipt,
   RefreshCw,
   RotateCcw,
@@ -32,6 +33,7 @@ import NavLogoutButton from "../components/common/NavLogoutButton";
 import {
   getBranchAdminReceiptApi,
   getBranchAdminReceiptsApi,
+  openBranchAdminReceiptPrint,
 } from "../services/branchadminreceipts";
 import { getDefaultFromDate, getDefaultToDate } from "../utils/dateFilters";
 import OfficialReceiptVoucherCard from "../components/common/OfficialReceiptVoucherCard";
@@ -1433,6 +1435,19 @@ export default function BranchAdminReceipts() {
   };
 
   /**
+   * Handle printing a receipt by opening the official receipt page
+   */
+  const handlePrint = (receiptSummary) => {
+    const receiptId =
+      receiptSummary?.receipt_id ||
+      receiptSummary?.id ||
+      receiptSummary?.receipt_number ||
+      (receiptSummary?.receipt_url ? String(receiptSummary.receipt_url).split("/").filter(Boolean).pop() : null);
+
+    openBranchAdminReceiptPrint(receiptId, token, receiptSummary);
+  };
+
+  /**
    * Handle downloading a receipt as a genuine single-page PDF
    */
   const handleDownload = async (receiptSummary, e) => {
@@ -2199,6 +2214,14 @@ export default function BranchAdminReceipts() {
                                   </button>
                                   <button
                                     type="button"
+                                    onClick={() => handlePrint(r)}
+                                    className={`rounded-lg border border-[#e3ddd0] bg-white p-1.5 text-slate-700 transition hover:bg-amber-50 hover:text-[#9c6b2e] ${FOCUS_RING}`}
+                                    title="Print Receipt"
+                                  >
+                                    <Printer className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
                                     disabled={isDownloading}
                                     onClick={(e) => handleDownload(r, e)}
                                     className={`rounded-lg border border-[#e3ddd0] bg-white p-1.5 text-slate-700 transition hover:bg-[#f1ede4] hover:text-[#9c6b2e] disabled:opacity-50 ${FOCUS_RING}`}
@@ -2261,6 +2284,16 @@ export default function BranchAdminReceipts() {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
+                  onClick={() => handlePrint(activeReceipt)}
+                  className={`flex items-center gap-1.5 rounded-lg border border-[#d9cdb5] bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-2xs transition hover:bg-amber-50 hover:text-[#9c6b2e] ${FOCUS_RING}`}
+                  title="Print receipt page"
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  <span>Print</span>
+                </button>
+
+                <button
+                  type="button"
                   disabled={
                     downloadingId ===
                     (activeReceipt.receipt_id || activeReceipt.id || activeReceipt.receipt_number)
@@ -2319,6 +2352,14 @@ export default function BranchAdminReceipts() {
                   className={`rounded-xl border border-[#e3ddd0] bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-[#f1ede4] ${FOCUS_RING}`}
                 >
                   Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePrint(activeReceipt)}
+                  className={`flex items-center gap-1.5 rounded-xl border border-[#d9cdb5] bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-2xs hover:bg-amber-50 hover:text-[#9c6b2e] transition ${FOCUS_RING}`}
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  <span>Print Receipt</span>
                 </button>
                 <button
                   type="button"

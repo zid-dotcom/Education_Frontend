@@ -10,7 +10,10 @@ import {
   createBranchAdmissionApi,
   getBranchAdmissionsApi,
 } from "../services/branchadminadmissions";
-import { downloadBranchAdminReceiptApi } from "../services/branchadminreceipts";
+import {
+  downloadBranchAdminReceiptApi,
+  openBranchAdminReceiptPrint,
+} from "../services/branchadminreceipts";
 import PaymentSuccessReceiptModal from "../components/common/PaymentSuccessReceiptModal";
 import Toast from "../components/common/Toast";
 import { updateBranchAdminCourseEnrollmentApi } from "../services/branchadmincourseenrollment";
@@ -1839,26 +1842,39 @@ function BranchAdminStudentRegistration() {
 
       let receiptObj = null;
       if (hasReceipt) {
-        receiptObj = createdAdmission?.receipt || {
+        const rawReceipt = createdAdmission?.receipt || {};
+        const resolvedReceiptId =
+          rawReceipt?.receipt_id ||
+          rawReceipt?.id ||
+          createdAdmission?.receipt_id ||
+          (rawReceipt?.receipt_url ? String(rawReceipt.receipt_url).split('/').filter(Boolean).pop() : null) ||
+          (createdAdmission?.receipt_url ? String(createdAdmission.receipt_url).split('/').filter(Boolean).pop() : null);
+
+        receiptObj = {
           ...createdAdmission,
-          receipt_url: createdAdmission?.receipt_url,
-          download_url: createdAdmission?.download_url,
-          receipt_id: createdAdmission?.receipt_id || (createdAdmission?.receipt_url ? String(createdAdmission.receipt_url).split('/').pop() : null),
-          receipt_number: createdAdmission?.receipt_number || createdAdmission?.receipt_id || `REC-${Date.now().toString().slice(-4)}`,
-          student_name: createdAdmission?.name || form.name.trim(),
-          student_phone: createdAdmission?.phone || form.phone.trim(),
-          student_email: createdAdmission?.email || form.email.trim(),
-          course_title: selectedCourse?.title || "Course",
-          course_fee: courseFee,
-          amount_paid: (isPaymentReceived ? totalPay : 0) || createdAdmission?.amount || createdAdmission?.paid_amount,
-          amount: (isPaymentReceived ? totalPay : 0) || createdAdmission?.amount || createdAdmission?.paid_amount,
-          payment_method: cashAmt > 0 && upiAmt > 0 ? "split" : cashAmt > 0 ? "cash" : "upi",
-          payment_type: isInstallment ? "installment" : "full",
-          installment_number: isInstallment && isPaymentReceived ? registrationPayment.term_number : null,
-          cash_amount: cashAmt,
-          upi_amount: upiAmt,
-          upi_transaction_id: isPaymentReceived && upiAmt > 0 ? (registrationPayment.upi_transaction_id?.trim() || null) : null,
-          payment_date: new Date().toISOString(),
+          ...rawReceipt,
+          receipt_url: rawReceipt?.receipt_url || createdAdmission?.receipt_url,
+          download_url: rawReceipt?.download_url || createdAdmission?.download_url,
+          receipt_id: resolvedReceiptId,
+          receipt_number:
+            rawReceipt?.receipt_number ||
+            createdAdmission?.receipt_number ||
+            resolvedReceiptId ||
+            `REC-${Date.now().toString().slice(-4)}`,
+          student_name: rawReceipt?.student_name || createdAdmission?.name || form.name.trim(),
+          student_phone: rawReceipt?.student_phone || createdAdmission?.phone || form.phone.trim(),
+          student_email: rawReceipt?.student_email || createdAdmission?.email || form.email.trim(),
+          course_title: rawReceipt?.course_title || selectedCourse?.title || "Course",
+          course_fee: rawReceipt?.course_fee || courseFee,
+          amount_paid: (isPaymentReceived ? totalPay : 0) || rawReceipt?.amount_paid || rawReceipt?.amount || createdAdmission?.amount || createdAdmission?.paid_amount,
+          amount: (isPaymentReceived ? totalPay : 0) || rawReceipt?.amount || rawReceipt?.amount_paid || createdAdmission?.amount || createdAdmission?.paid_amount,
+          payment_method: rawReceipt?.payment_method || (cashAmt > 0 && upiAmt > 0 ? "split" : cashAmt > 0 ? "cash" : "upi"),
+          payment_type: rawReceipt?.payment_type || (isInstallment ? "installment" : "full"),
+          installment_number: rawReceipt?.installment_number || (isInstallment && isPaymentReceived ? registrationPayment.term_number : null),
+          cash_amount: rawReceipt?.cash_amount ?? cashAmt,
+          upi_amount: rawReceipt?.upi_amount ?? upiAmt,
+          upi_transaction_id: rawReceipt?.upi_transaction_id || (isPaymentReceived && upiAmt > 0 ? (registrationPayment.upi_transaction_id?.trim() || null) : null),
+          payment_date: rawReceipt?.payment_date || new Date().toISOString(),
         };
         setRegistrationReceipt(receiptObj);
       }
@@ -3076,23 +3092,34 @@ function BranchAdminStudentRegistration() {
                         },
                         token
                       );
-                      const receiptObj =
-                        paymentRes?.receipt ||
-                        (paymentRes?.receipt_id || paymentRes?.receipt_url
-                          ? {
-                              id: paymentRes.receipt_id,
-                              receipt_id: paymentRes.receipt_id,
-                              receipt_url: paymentRes.receipt_url,
-                              download_url: paymentRes.download_url,
-                              student_name: selectedAdmissionForPayment?.student_name || selectedAdmissionForPayment?.name,
-                              course_title: selectedAdmissionForPayment?.course_title || selectedAdmissionForPayment?.course_name,
-                              amount_paid: cashVal + upiVal,
-                              installment_number: Number(paymentForm.installment_number),
-                              payment_date: paymentForm.payment_date,
-                              upi_transaction_id: upiVal > 0 ? paymentForm.upi_transaction_id.trim() : null,
-                              ...paymentRes,
-                            }
-                          : null);
+                      const rawReceipt = paymentRes?.receipt || {};
+                      const resolvedReceiptId =
+                        rawReceipt?.receipt_id ||
+                        rawReceipt?.id ||
+                        paymentRes?.receipt_id ||
+                        (rawReceipt?.receipt_url ? String(rawReceipt.receipt_url).split('/').filter(Boolean).pop() : null) ||
+                        (paymentRes?.receipt_url ? String(paymentRes.receipt_url).split('/').filter(Boolean).pop() : null);
+
+                      const receiptObj = {
+                        ...paymentRes,
+                        ...rawReceipt,
+                        id: resolvedReceiptId || paymentRes?.id,
+                        receipt_id: resolvedReceiptId,
+                        receipt_url: rawReceipt?.receipt_url || paymentRes?.receipt_url,
+                        download_url: rawReceipt?.download_url || paymentRes?.download_url,
+                        receipt_number:
+                          rawReceipt?.receipt_number ||
+                          paymentRes?.receipt_number ||
+                          resolvedReceiptId ||
+                          `REC-${Date.now().toString().slice(-4)}`,
+                        student_name: rawReceipt?.student_name || selectedAdmissionForPayment?.student_name || selectedAdmissionForPayment?.name,
+                        course_title: rawReceipt?.course_title || selectedAdmissionForPayment?.course_title || selectedAdmissionForPayment?.course_name,
+                        amount_paid: cashVal + upiVal,
+                        amount: cashVal + upiVal,
+                        installment_number: Number(paymentForm.installment_number),
+                        payment_date: paymentForm.payment_date,
+                        upi_transaction_id: upiVal > 0 ? paymentForm.upi_transaction_id.trim() : null,
+                      };
                       if (receiptObj) {
                         setRegistrationReceipt(receiptObj);
                       }
@@ -3232,6 +3259,14 @@ function BranchAdminStudentRegistration() {
         onViewReceipt={(rcpt, url) => {
           if (url) window.open(url, "_blank");
           else navigate("/branch-admin/receipts");
+        }}
+        onPrintReceipt={(rcpt, url) => {
+          const rawId =
+            rcpt?.receipt_id ||
+            rcpt?.id ||
+            rcpt?.receipt_number ||
+            (url ? String(url).split("/").filter(Boolean).pop() : null);
+          openBranchAdminReceiptPrint(rawId, token, rcpt);
         }}
       />
     </div>

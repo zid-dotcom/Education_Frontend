@@ -1,6 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState, Suspense } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
+  Activity,
+  AlertCircle,
+  Bell,
   BookOpen,
   Building2,
   CalendarCheck,
@@ -14,11 +17,18 @@ import {
   ListFilter,
   Loader2,
   MapPin,
+  Megaphone,
   MessageCircle,
+  MessageSquare,
+  Receipt,
   RefreshCw,
   Search,
+  ShieldCheck,
+  ShoppingCart,
   SlidersHorizontal,
+  Star,
   Table,
+  TrendingDown,
   TrendingUp,
   UserPlus,
   Users,
@@ -28,19 +38,130 @@ import {
 import { useAuth } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
 import NavLogoutButton from "../components/common/NavLogoutButton";
-import { getSuperAdminDashboardOverviewApi } from '../services/superadmin';
+import {
+  getSuperAdminDashboardOverviewApi,
+  getSuperAdminPendingPurchasesApi,
+  getSuperAdminUnreadMessagesCountApi,
+} from '../services/superadmin';
+import { getSuperAdminStaffUnreadCountApi } from '../services/staffSuperAdminMessages';
+import { SuperAdminEmbeddedContext } from '../context/SuperAdminEmbeddedContext';
+
+// Sub-page components for instant tab navigation
+import AdminBranches from './AdminBranches';
+import AdminBranchAdmins from './AdminBranchAdmins';
+import SuperAdminBranchNavigation from './SuperAdminBranchNavigation';
+import SuperAdminProfit from './SuperAdminProfit';
+import SuperAdminExpenses from './SuperAdminExpenses';
+import SuperAdminAttendance from './SuperAdminAttendance';
+import SuperAdminAnnouncements from './SuperAdminAnnouncements';
+import SuperAdminMessages from './SuperAdminMessages';
+
+import SuperAdminCourses from './SuperAdminCourses';
+import SuperAdminEnrollments from './SuperAdminEnrollments';
+import SuperAdminPurchases from './SuperAdminPurchases';
+import SuperAdminReviews from './SuperAdminReviews';
+
+import SuperAdminStudents from './SuperAdminStudents';
+import SuperAdminDueStudents from './SuperAdminDueStudents';
+import SuperAdminReceipts from './SuperAdminReceipts';
+import SuperAdminEnquiries from './SuperAdminEnquiries';
+
+import SuperAdminStaff from './SuperAdminStaff';
+import SuperAdminStaffAttendance from './SuperAdminStaffAttendance';
+import SuperAdminStaffVerification from './SuperAdminStaffVerification';
+import SuperAdminStaffMonitoring from './SuperAdminStaffMonitoring';
+import SuperAdminStaffMessages from './SuperAdminStaffMessages';
 
 const PAGE_CSS = `
 @keyframes sa-rise { from { opacity:0; transform:translateY(14px) scale(.98); } to { opacity:1; transform:translateY(0) scale(1); } }
 @keyframes sa-fade { from { opacity:0; } to { opacity:1; } }
 .sa-rise { animation: sa-rise .35s ease both; }
 .sa-fade { animation: sa-fade .25s ease both; }
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+/* Ensure clean integration of embedded sub-pages */
+.sa-embedded-page > div > aside,
+.sa-embedded-page > div > .md\\:block.w-64,
+.sa-embedded-page > div > .md\\:hidden,
+.sa-embedded-page > div > div > header:first-child,
+.sa-embedded-page > div > header:first-child,
+.sa-embedded-page header.sticky,
+.sa-embedded-page aside.fixed {
+  display: none !important;
+}
+/* Completely suppress redundant inner logout buttons in embedded views */
+.sa-embedded-page [data-logout-button],
+.sa-embedded-page .nav-logout-btn,
+.sa-embedded-page button[aria-label="Logout"],
+.sa-embedded-page button[title="Logout"] {
+  display: none !important;
+}
+.sa-embedded-page > div {
+  background: transparent !important;
+  min-height: auto !important;
+  display: block !important;
+}
+.sa-embedded-page > div > div {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+}
+.sa-embedded-page main {
+  padding-top: 0.5rem !important;
+}
 `;
 
 const fmt = (v) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(
     Number(v) || 0
   );
+
+const MAIN_TABS = [
+  { id: 'overview', label: 'Overview', icon: TrendingUp },
+  { id: 'branches', label: 'Branches', icon: Building2 },
+  { id: 'courses', label: 'Courses', icon: BookOpen },
+  { id: 'students', label: 'Students', icon: Users },
+  { id: 'staff', label: 'Staff', icon: UserPlus },
+];
+
+const SUB_TABS = {
+  branches: [
+    { id: 'branches', label: 'Branches', icon: Building2 },
+    { id: 'branch-admins', label: 'Branch Admins', icon: Users },
+    { id: 'navigation', label: 'Branch Navigation', icon: SlidersHorizontal },
+    { id: 'revenue', label: 'Branch Revenue', icon: IndianRupee },
+    { id: 'expenses', label: 'Branch Expenses', icon: TrendingDown },
+    { id: 'attendance', label: 'Branch Attendance', icon: CalendarCheck },
+    { id: 'announcements', label: 'Branch Announcements', icon: Megaphone },
+    { id: 'messages', label: 'Branch Admin Messages', icon: MessageSquare },
+  ],
+  courses: [
+    { id: 'courses', label: 'Courses', icon: BookOpen },
+    { id: 'enrollments', label: 'Course Enrollments', icon: GraduationCap },
+    { id: 'purchases', label: 'Purchase Approval', icon: ShoppingCart },
+    { id: 'reviews', label: 'Course Reviews', icon: Star },
+  ],
+  students: [
+    { id: 'students', label: 'All Students', icon: Users },
+    { id: 'due-students', label: 'Due Students', icon: AlertCircle },
+    { id: 'receipts', label: 'Student Receipts', icon: Receipt },
+    { id: 'enquiries', label: 'Enquiries', icon: MessageCircle },
+  ],
+  staff: [
+    { id: 'staff', label: 'Staff Directory', icon: UserPlus },
+    { id: 'staff-attendance', label: 'Staff Attendance', icon: CalendarCheck },
+    { id: 'staff-verification', label: 'Staff Verification', icon: ShieldCheck },
+    { id: 'staff-monitoring', label: 'Staff Monitoring', icon: Activity },
+    { id: 'staff-messages', label: 'Staff Messages', icon: Users },
+  ],
+};
 
 const StatCard = ({ icon: Icon, label, value, subtext, accent, delay = 0 }) => (
   <div
@@ -73,7 +194,7 @@ const StatCard = ({ icon: Icon, label, value, subtext, accent, delay = 0 }) => (
   </div>
 );
 
-const BranchDetailsModal = ({ branch, onClose, navigate }) => {
+const BranchDetailsModal = ({ branch, onClose, onSelectTab }) => {
   if (!branch) return null;
 
   const totalPayments = ['cash', 'upi', 'razorpay'].reduce(
@@ -116,7 +237,7 @@ const BranchDetailsModal = ({ branch, onClose, navigate }) => {
           </div>
           <button
             onClick={onClose}
-            className="rounded-xl p-2 transition hover:bg-[#f1ede4]"
+            className="rounded-xl p-2 transition hover:bg-[#f1ede4] cursor-pointer"
             aria-label="Close details"
           >
             <X className="h-5 w-5" style={{ color: '#17140f' }} />
@@ -326,9 +447,9 @@ const BranchDetailsModal = ({ branch, onClose, navigate }) => {
                 type="button"
                 onClick={() => {
                   onClose();
-                  navigate('/admin/branch-admins');
+                  onSelectTab('branches', 'branch-admins');
                 }}
-                className="px-3.5 py-1.5 rounded-xl text-xs font-bold transition hover:bg-[#f1ede4] border"
+                className="px-3.5 py-1.5 rounded-xl text-xs font-bold transition hover:bg-[#f1ede4] border cursor-pointer"
                 style={{ borderColor: '#e3ddd0', color: '#17140f', background: '#ffffff' }}
               >
                 Branch Admins
@@ -337,9 +458,9 @@ const BranchDetailsModal = ({ branch, onClose, navigate }) => {
                 type="button"
                 onClick={() => {
                   onClose();
-                  navigate('/super-admin/navigation-settings');
+                  onSelectTab('branches', 'navigation');
                 }}
-                className="px-3.5 py-1.5 rounded-xl text-xs font-bold transition hover:bg-[#f1ede4] border"
+                className="px-3.5 py-1.5 rounded-xl text-xs font-bold transition hover:bg-[#f1ede4] border cursor-pointer"
                 style={{ borderColor: '#e3ddd0', color: '#9c6b2e', background: '#ffffff' }}
               >
                 Navigation Settings
@@ -348,9 +469,9 @@ const BranchDetailsModal = ({ branch, onClose, navigate }) => {
                 type="button"
                 onClick={() => {
                   onClose();
-                  navigate('/admin/branches');
+                  onSelectTab('branches', 'branches');
                 }}
-                className="px-3.5 py-1.5 rounded-xl text-xs font-bold transition hover:bg-[#9c6b2e]/90 text-white shadow-xs"
+                className="px-3.5 py-1.5 rounded-xl text-xs font-bold transition hover:bg-[#9c6b2e]/90 text-white shadow-xs cursor-pointer"
                 style={{ background: '#9c6b2e' }}
               >
                 Edit Branch
@@ -366,6 +487,21 @@ const BranchDetailsModal = ({ branch, onClose, navigate }) => {
 const SuperAdminBranchOverview = () => {
   const { user, token, logout } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Tab navigation states synced with URL
+  const activeTab = searchParams.get('tab') || 'overview';
+  const rawSubTab = searchParams.get('subtab');
+
+  const activeSubTab = useMemo(() => {
+    if (rawSubTab) return rawSubTab;
+    if (activeTab === 'branches') return 'branches';
+    if (activeTab === 'courses') return 'courses';
+    if (activeTab === 'students') return 'students';
+    if (activeTab === 'staff') return 'staff';
+    return '';
+  }, [activeTab, rawSubTab]);
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dashboardData, setDashboardData] = useState(null);
   const [selectedBranch, setSelectedBranch] = useState(null);
@@ -375,6 +511,11 @@ const SuperAdminBranchOverview = () => {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [sortBy, setSortBy] = useState('revenue_desc');
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'cards'
+
+  // Notification badges
+  const [pendingPurchasesCount, setPendingPurchasesCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [staffUnreadCount, setStaffUnreadCount] = useState(0);
 
   const load = async () => {
     if (!token) return;
@@ -394,10 +535,45 @@ const SuperAdminBranchOverview = () => {
     load();
   }, [token]);
 
+  // Fetch real-time count badges for Purchases & Messages
+  useEffect(() => {
+    if (!token) return;
+    let isMounted = true;
+
+    getSuperAdminPendingPurchasesApi(token)
+      .then((data) => {
+        if (!isMounted) return;
+        const count =
+          typeof data === 'number'
+            ? data
+            : (data?.count ?? data?.total ?? (Array.isArray(data) ? data.length : 0));
+        setPendingPurchasesCount(count || 0);
+      })
+      .catch(() => {});
+
+    getSuperAdminUnreadMessagesCountApi(token)
+      .then((res) => {
+        if (!isMounted) return;
+        setUnreadCount(res?.unread_count ?? res?.count ?? 0);
+      })
+      .catch(() => {});
+
+    getSuperAdminStaffUnreadCountApi(token)
+      .then((res) => {
+        if (!isMounted) return;
+        setStaffUnreadCount(res?.unread_count ?? res?.count ?? 0);
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [token]);
+
   const rawBranches = dashboardData?.branches || [];
   const overview = dashboardData?.overview || {};
 
-  // Filter & sort
+  // Filter & sort for Overview Directory
   const filteredBranches = useMemo(() => {
     let list = [...rawBranches];
 
@@ -436,6 +612,101 @@ const SuperAdminBranchOverview = () => {
     return list;
   }, [rawBranches, search, statusFilter, sortBy]);
 
+  // Tab change handlers
+  const handleMainTabChange = (newTab) => {
+    if (newTab === 'overview') {
+      setSearchParams({ tab: 'overview' });
+    } else {
+      const defaultSub = SUB_TABS[newTab]?.[0]?.id || '';
+      setSearchParams({ tab: newTab, subtab: defaultSub });
+    }
+  };
+
+  const handleSubTabChange = (newSubTab) => {
+    setSearchParams({ tab: activeTab, subtab: newSubTab });
+  };
+
+  const handleSelectTabFromModal = (targetTab, targetSubTab) => {
+    setSearchParams({ tab: targetTab, subtab: targetSubTab });
+  };
+
+  // Render child sub-page component
+  const renderSubTabComponent = () => {
+    if (activeTab === 'branches') {
+      switch (activeSubTab) {
+        case 'branches':
+          return <AdminBranches />;
+        case 'branch-admins':
+          return <AdminBranchAdmins />;
+        case 'navigation':
+          return <SuperAdminBranchNavigation />;
+        case 'revenue':
+          return <SuperAdminProfit />;
+        case 'expenses':
+          return <SuperAdminExpenses />;
+        case 'attendance':
+          return <SuperAdminAttendance />;
+        case 'announcements':
+          return <SuperAdminAnnouncements />;
+        case 'messages':
+          return <SuperAdminMessages />;
+        default:
+          return <AdminBranches />;
+      }
+    }
+
+    if (activeTab === 'courses') {
+      switch (activeSubTab) {
+        case 'courses':
+          return <SuperAdminCourses />;
+        case 'enrollments':
+          return <SuperAdminEnrollments />;
+        case 'purchases':
+          return <SuperAdminPurchases />;
+        case 'reviews':
+          return <SuperAdminReviews />;
+        default:
+          return <SuperAdminCourses />;
+      }
+    }
+
+    if (activeTab === 'students') {
+      switch (activeSubTab) {
+        case 'students':
+          return <SuperAdminStudents />;
+        case 'due-students':
+          return <SuperAdminDueStudents />;
+        case 'receipts':
+          return <SuperAdminReceipts />;
+        case 'enquiries':
+          return <SuperAdminEnquiries />;
+        default:
+          return <SuperAdminStudents />;
+      }
+    }
+
+    if (activeTab === 'staff') {
+      switch (activeSubTab) {
+        case 'staff':
+          return <SuperAdminStaff />;
+        case 'staff-attendance':
+          return <SuperAdminStaffAttendance />;
+        case 'staff-verification':
+          return <SuperAdminStaffVerification />;
+        case 'staff-monitoring':
+          return <SuperAdminStaffMonitoring />;
+        case 'staff-messages':
+          return <SuperAdminStaffMessages />;
+        default:
+          return <SuperAdminStaff />;
+      }
+    }
+
+    return null;
+  };
+
+  const currentSubTabs = SUB_TABS[activeTab] || [];
+
   return (
     <div
       className="min-h-screen md:flex max-w-full overflow-x-hidden"
@@ -451,21 +722,29 @@ const SuperAdminBranchOverview = () => {
         activePage="branch-overview"
       />
 
-      <main className="min-w-0 flex-1 relative max-w-full overflow-x-hidden">
+      <main className="min-w-0 flex-1 relative max-w-full overflow-x-hidden flex flex-col">
         {/* Top Header */}
         <header
-          className="hidden md:flex items-center justify-between border-b px-6 py-5 sm:px-10"
+          className="hidden md:flex items-center justify-between border-b px-6 py-4.5 sm:px-10 shrink-0"
           style={{ borderColor: '#e3ddd0', background: '#ffffff' }}
         >
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#9c6b2e' }}>
-              Super Admin
+              Super Admin Management
             </p>
             <h1
-              className="mt-1 text-2xl font-bold tracking-tight"
+              className="mt-1 text-2xl font-bold tracking-tight capitalize"
               style={{ fontFamily: "'Fraunces', serif", color: '#17140f' }}
             >
-              Branch Overview
+              {activeTab === 'overview'
+                ? 'Branch Overview'
+                : activeTab === 'branches'
+                ? 'Branches Hub'
+                : activeTab === 'courses'
+                ? 'Courses Hub'
+                : activeTab === 'students'
+                ? 'Students Hub'
+                : 'Staff Hub'}
             </h1>
           </div>
           <div className="flex items-center gap-3">
@@ -482,7 +761,7 @@ const SuperAdminBranchOverview = () => {
             <button
               onClick={load}
               disabled={loading}
-              className="rounded-xl p-2.5 transition hover:bg-[#f1ede4] border"
+              className="rounded-xl p-2.5 transition hover:bg-[#f1ede4] border cursor-pointer"
               style={{ borderColor: '#e3ddd0', background: '#ffffff' }}
               title="Refresh Data"
             >
@@ -498,422 +777,470 @@ const SuperAdminBranchOverview = () => {
           </div>
         </header>
 
-        <div className="w-full px-4 py-6 sm:px-8 sm:py-8 lg:px-10 space-y-8">
-          {/* Page Intro Banner */}
-          <div className="sa-rise flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
-            <div>
-              <h2
-                className="text-2xl sm:text-3xl font-bold"
-                style={{ color: '#17140f', fontFamily: "'Fraunces', serif" }}
-              >
-                All Branches Directory
-              </h2>
-              <p className="text-sm mt-1 font-medium" style={{ color: '#8a8175' }}>
-                Comprehensive cross-branch performance, enrollments, students, and financial metrics.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => navigate('/admin/branches')}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition hover:bg-[#f1ede4] border"
-                style={{ borderColor: '#e3ddd0', background: '#ffffff', color: '#17140f' }}
-              >
-                <Building2 className="h-4 w-4 text-[#9c6b2e]" />
-                Manage Branches
-              </button>
+        {/* ─────────────────────────────────────────────────────────────
+            PRIMARY TABS BAR (Overview, Branches, Courses, Students, Staff)
+           ───────────────────────────────────────────────────────────── */}
+        <div
+          className="border-b bg-white px-4 sm:px-8 lg:px-10 py-3 shadow-2xs sticky top-0 z-20 shrink-0"
+          style={{ borderColor: '#e3ddd0' }}
+        >
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+            {MAIN_TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              const badge =
+                tab.id === 'courses'
+                  ? pendingPurchasesCount
+                  : tab.id === 'branches'
+                  ? unreadCount
+                  : tab.id === 'staff'
+                  ? staffUnreadCount
+                  : 0;
+
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => handleMainTabChange(tab.id)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 ${
+                    isActive
+                      ? 'shadow-sm text-[#f4b942]'
+                      : 'hover:bg-[#f1ede4] text-[#5b5346] hover:text-[#17140f]'
+                  }`}
+                  style={{
+                    background: isActive ? '#17140f' : '#ffffff',
+                    border: isActive ? '1px solid #17140f' : '1px solid #e3ddd0',
+                  }}
+                >
+                  <Icon className="h-4 w-4" style={{ color: isActive ? '#f4b942' : '#9c6b2e' }} />
+                  <span>{tab.label}</span>
+                  {badge > 0 && (
+                    <span
+                      className={`inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[10px] font-extrabold ${
+                        isActive ? 'bg-[#9c6b2e] text-white' : 'bg-rose-500 text-white'
+                      }`}
+                    >
+                      {badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ─────────────────────────────────────────────────────────────
+            SECONDARY SUB-TABS BAR (When on Branches, Courses, Students, Staff)
+           ───────────────────────────────────────────────────────────── */}
+        {activeTab !== 'overview' && currentSubTabs.length > 0 && (
+          <div
+            className="border-b px-4 sm:px-8 lg:px-10 py-2.5 bg-[#faf8f4] shrink-0"
+            style={{ borderColor: '#e3ddd0' }}
+          >
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+              {currentSubTabs.map((sub) => {
+                const Icon = sub.icon;
+                const isSubActive = activeSubTab === sub.id;
+                const badge =
+                  sub.id === 'purchases'
+                    ? pendingPurchasesCount
+                    : sub.id === 'messages'
+                    ? unreadCount
+                    : sub.id === 'staff-messages'
+                    ? staffUnreadCount
+                    : 0;
+
+                return (
+                  <button
+                    key={sub.id}
+                    type="button"
+                    onClick={() => handleSubTabChange(sub.id)}
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                      isSubActive
+                        ? 'text-white shadow-xs'
+                        : 'hover:bg-[#f1ede4] text-[#5b5346] hover:text-[#17140f]'
+                    }`}
+                    style={{
+                      background: isSubActive ? '#9c6b2e' : '#ffffff',
+                      border: isSubActive ? '1px solid #9c6b2e' : '1px solid #e3ddd0',
+                    }}
+                  >
+                    <Icon className="h-3.5 w-3.5" style={{ color: isSubActive ? '#ffffff' : '#9c6b2e' }} />
+                    <span>{sub.label}</span>
+                    {badge > 0 && (
+                      <span
+                        className={`inline-flex items-center justify-center min-w-4.5 h-4.5 px-1 rounded-full text-[10px] font-extrabold ${
+                          isSubActive ? 'bg-white text-[#9c6b2e]' : 'bg-rose-500 text-white'
+                        }`}
+                      >
+                        {badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
+        )}
 
-          {error && (
-            <div
-              className="rounded-xl px-5 py-4 text-sm font-semibold"
-              style={{ background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }}
-            >
-              <div className="flex justify-between items-center">
-                <span>{error}</span>
-                <button onClick={load} className="underline hover:text-red-900 transition">
-                  Retry
+        {/* ─────────────────────────────────────────────────────────────
+            TAB CONTENT: OVERVIEW DIRECTORY TAB
+           ───────────────────────────────────────────────────────────── */}
+        {activeTab === 'overview' && (
+          <div className="w-full px-4 py-6 sm:px-8 sm:py-8 lg:px-10 space-y-8 flex-1">
+            {/* Page Intro Banner */}
+            <div className="sa-rise flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
+              <div>
+                <h2
+                  className="text-2xl sm:text-3xl font-bold"
+                  style={{ color: '#17140f', fontFamily: "'Fraunces', serif" }}
+                >
+                  All Branches Directory
+                </h2>
+                <p className="text-sm mt-1 font-medium" style={{ color: '#8a8175' }}>
+                  Comprehensive cross-branch performance, enrollments, students, and financial metrics.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleMainTabChange('branches')}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition hover:bg-[#f1ede4] border cursor-pointer"
+                  style={{ borderColor: '#e3ddd0', background: '#ffffff', color: '#17140f' }}
+                >
+                  <Building2 className="h-4 w-4 text-[#9c6b2e]" />
+                  Manage Branches
                 </button>
               </div>
             </div>
-          )}
 
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-32 space-y-4">
-              <Loader2 className="h-10 w-10 animate-spin" style={{ color: '#9c6b2e' }} />
-              <p className="text-sm font-semibold" style={{ color: '#8a8175' }}>
-                Loading branch overview data...
-              </p>
-            </div>
-          ) : (
-            <>
-              {/* Summary Metric Cards */}
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <StatCard
-                  icon={Building2}
-                  label="Total Branches"
-                  value={overview.total_branches ?? rawBranches.length}
-                  subtext={`${overview.active_branches ?? rawBranches.length} active`}
-                  accent="#9c6b2e"
-                  delay={0}
-                />
-                <StatCard
-                  icon={BookOpen}
-                  label="Total Courses"
-                  value={overview.total_courses ?? 0}
-                  subtext={`${overview.active_courses ?? 0} active courses`}
-                  accent="#3b82f6"
-                  delay={40}
-                />
-                <StatCard
-                  icon={Users}
-                  label="Total Students"
-                  value={overview.total_students ?? 0}
-                  subtext="Enrolled across branches"
-                  accent="#8b5cf6"
-                  delay={80}
-                />
-                <StatCard
-                  icon={IndianRupee}
-                  label="Total Revenue"
-                  value={fmt(overview.total_received)}
-                  subtext={`Today: ${fmt(overview.today_received)}`}
-                  accent="#10b981"
-                  delay={120}
-                />
-              </div>
-
-              {/* Filter and Search Bar */}
+            {error && (
               <div
-                className="sa-rise rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4"
-                style={{ background: '#ffffff', border: '1px solid #e3ddd0' }}
+                className="rounded-xl px-5 py-4 text-sm font-semibold"
+                style={{ background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }}
               >
-                {/* Search */}
-                <div className="relative w-full md:w-80">
-                  <Search
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4"
-                    style={{ color: '#a39a8c' }}
-                  />
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search by branch name or city..."
-                    className="w-full rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none transition border"
-                    style={{
-                      background: '#faf8f4',
-                      borderColor: '#e3ddd0',
-                      color: '#17140f',
-                    }}
-                  />
-                  {search && (
-                    <button
-                      onClick={() => setSearch('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 hover:bg-[#e3ddd0]"
-                    >
-                      <X className="h-3 w-3 text-slate-500" />
-                    </button>
-                  )}
-                </div>
-
-                {/* Filters & View Controls */}
-                <div className="flex flex-wrap items-center justify-between w-full md:w-auto gap-3">
-                  {/* Status Filter */}
-                  <div className="flex items-center rounded-xl p-1 border" style={{ background: '#faf8f4', borderColor: '#e3ddd0' }}>
-                    {['ALL', 'ACTIVE'].map((status) => (
-                      <button
-                        key={status}
-                        onClick={() => setStatusFilter(status)}
-                        className={`px-3 py-1 text-xs font-bold uppercase rounded-lg transition ${
-                          statusFilter === status
-                            ? 'bg-white shadow-xs text-[#9c6b2e]'
-                            : 'text-[#8a8175] hover:text-[#17140f]'
-                        }`}
-                      >
-                        {status === 'ALL' ? 'All' : 'Active'}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Sort Selector */}
-                  <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#5b5346' }}>
-                    <span className="hidden sm:inline">Sort:</span>
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
-                      className="rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none border cursor-pointer"
-                      style={{ background: '#faf8f4', borderColor: '#e3ddd0', color: '#17140f' }}
-                    >
-                      <option value="revenue_desc">Highest Revenue</option>
-                      <option value="revenue_asc">Lowest Revenue</option>
-                      <option value="students_desc">Most Students</option>
-                      <option value="courses_desc">Most Courses</option>
-                      <option value="enrollments_desc">Most Enrollments</option>
-                      <option value="name_asc">Branch Name (A-Z)</option>
-                    </select>
-                  </div>
-
-                  {/* View Mode Toggle */}
-                  <div className="flex items-center rounded-xl p-1 border" style={{ background: '#faf8f4', borderColor: '#e3ddd0' }}>
-                    <button
-                      type="button"
-                      onClick={() => setViewMode('table')}
-                      className={`p-1.5 rounded-lg transition ${
-                        viewMode === 'table' ? 'bg-white shadow-xs text-[#9c6b2e]' : 'text-[#8a8175] hover:text-[#17140f]'
-                      }`}
-                      title="Table View"
-                    >
-                      <Table className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setViewMode('cards')}
-                      className={`p-1.5 rounded-lg transition ${
-                        viewMode === 'cards' ? 'bg-white shadow-xs text-[#9c6b2e]' : 'text-[#8a8175] hover:text-[#17140f]'
-                      }`}
-                      title="Grid Cards View"
-                    >
-                      <LayoutGrid className="h-4 w-4" />
-                    </button>
-                  </div>
+                <div className="flex justify-between items-center">
+                  <span>{error}</span>
+                  <button onClick={load} className="underline hover:text-red-900 transition cursor-pointer">
+                    Retry
+                  </button>
                 </div>
               </div>
+            )}
 
-              {/* Data Presentation */}
-              {viewMode === 'table' ? (
-                /* Branches Overview Table */
-                <section
-                  className="sa-rise rounded-2xl overflow-hidden shadow-sm"
-                  style={{ background: '#ffffff', border: '1px solid #e3ddd0' }}
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-32 space-y-4">
+                <Loader2 className="h-10 w-10 animate-spin" style={{ color: '#9c6b2e' }} />
+                <p className="text-sm font-semibold" style={{ color: '#8a8175' }}>
+                  Loading branch overview data...
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Metric Cards Row */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                  <StatCard
+                    icon={Building2}
+                    label="Total Branches"
+                    value={overview.total_branches ?? rawBranches.length}
+                    subtext={`${overview.active_branches ?? rawBranches.length} active`}
+                    accent="#9c6b2e"
+                    delay={0}
+                  />
+                  <StatCard
+                    icon={BookOpen}
+                    label="Total Courses"
+                    value={overview.total_courses ?? 0}
+                    subtext={`${overview.active_courses ?? 0} active courses`}
+                    accent="#0284c7"
+                    delay={50}
+                  />
+                  <StatCard
+                    icon={Users}
+                    label="Total Students"
+                    value={overview.total_students ?? 0}
+                    subtext="Enrolled across branches"
+                    accent="#7c3aed"
+                    delay={100}
+                  />
+                  <StatCard
+                    icon={IndianRupee}
+                    label="Total Revenue"
+                    value={fmt(overview.total_received ?? 0)}
+                    subtext={`Today: ${fmt(overview.today_received ?? 0)}`}
+                    accent="#059669"
+                    delay={150}
+                  />
+                </div>
+
+                {/* Filter and View Mode Toolbar */}
+                <div
+                  className="rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 border bg-white shadow-2xs"
+                  style={{ borderColor: '#e3ddd0' }}
                 >
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: '#a39a8c' }} />
+                    <input
+                      type="text"
+                      placeholder="Search by branch name or city..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 text-xs sm:text-sm rounded-xl border bg-[#faf8f4] placeholder:text-[#a39a8c] focus:outline-none focus:ring-2 focus:ring-[#9c6b2e]/30"
+                      style={{ borderColor: '#e3ddd0', color: '#17140f' }}
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/* Status Filter */}
+                    <div className="flex items-center rounded-xl p-1 border bg-[#faf8f4]" style={{ borderColor: '#e3ddd0' }}>
+                      {['ALL', 'ACTIVE'].map((st) => (
+                        <button
+                          key={st}
+                          onClick={() => setStatusFilter(st)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                            statusFilter === st
+                              ? 'bg-white shadow-2xs text-[#17140f]'
+                              : 'text-[#8a8175] hover:text-[#17140f]'
+                          }`}
+                        >
+                          {st}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Sorting */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-[#8a8175] hidden sm:inline">Sort:</span>
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="px-3 py-1.5 text-xs font-semibold rounded-xl border bg-[#faf8f4] focus:outline-none cursor-pointer"
+                        style={{ borderColor: '#e3ddd0', color: '#17140f' }}
+                      >
+                        <option value="revenue_desc">Highest Revenue</option>
+                        <option value="revenue_asc">Lowest Revenue</option>
+                        <option value="students_desc">Most Students</option>
+                        <option value="courses_desc">Most Courses</option>
+                        <option value="enrollments_desc">Most Enrollments</option>
+                        <option value="name_asc">Name A-Z</option>
+                      </select>
+                    </div>
+
+                    {/* View Mode Toggle */}
+                    <div className="flex items-center rounded-xl p-1 border bg-[#faf8f4]" style={{ borderColor: '#e3ddd0' }}>
+                      <button
+                        onClick={() => setViewMode('table')}
+                        className={`p-1.5 rounded-lg transition cursor-pointer ${
+                          viewMode === 'table' ? 'bg-white shadow-2xs text-[#9c6b2e]' : 'text-[#8a8175]'
+                        }`}
+                        title="Table View"
+                      >
+                        <Table className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => setViewMode('cards')}
+                        className={`p-1.5 rounded-lg transition cursor-pointer ${
+                          viewMode === 'cards' ? 'bg-white shadow-2xs text-[#9c6b2e]' : 'text-[#8a8175]'
+                        }`}
+                        title="Grid View"
+                      >
+                        <LayoutGrid className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Table View */}
+                {viewMode === 'table' ? (
                   <div
-                    className="flex items-center justify-between px-6 py-5"
-                    style={{ borderBottom: '1px solid #f1ede4', background: '#faf8f4' }}
+                    className="sa-rise rounded-2xl border bg-white shadow-xs overflow-hidden"
+                    style={{ borderColor: '#e3ddd0' }}
                   >
-                    <div>
-                      <h2 className="text-lg font-bold" style={{ color: '#17140f' }}>
-                        Branch Overview
-                      </h2>
-                      <p className="text-xs mt-1" style={{ color: '#8a8175' }}>
+                    <div className="p-4 border-b border-[#f1ede4] flex items-center justify-between">
+                      <h3 className="font-bold text-sm text-[#17140f]">Branch Overview</h3>
+                      <p className="text-xs text-[#8a8175]">
                         Showing {filteredBranches.length} of {rawBranches.length} registered branches
                       </p>
                     </div>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr style={{ borderBottom: '1px solid #e3ddd0' }}>
-                          <th
-                            className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-widest whitespace-nowrap bg-[#faf8f4]"
-                            style={{ color: '#a39a8c' }}
-                          >
-                            Branch
-                          </th>
-                          <th
-                            className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-widest whitespace-nowrap bg-[#faf8f4]"
-                            style={{ color: '#a39a8c' }}
-                          >
-                            Courses
-                          </th>
-                          <th
-                            className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-widest whitespace-nowrap bg-[#faf8f4]"
-                            style={{ color: '#a39a8c' }}
-                          >
-                            Students
-                          </th>
-                          <th
-                            className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-widest whitespace-nowrap bg-[#faf8f4]"
-                            style={{ color: '#a39a8c' }}
-                          >
-                            Enrollments
-                          </th>
-                          <th
-                            className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-widest whitespace-nowrap bg-[#faf8f4]"
-                            style={{ color: '#a39a8c' }}
-                          >
-                            Revenue
-                          </th>
-                          <th
-                            className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-widest whitespace-nowrap bg-[#faf8f4]"
-                            style={{ color: '#a39a8c' }}
-                          >
-                            Action
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredBranches.length === 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm">
+                        <thead
+                          className="text-[10px] font-bold uppercase tracking-wider"
+                          style={{ background: '#faf8f4', color: '#8a8175', borderBottom: '1px solid #e3ddd0' }}
+                        >
                           <tr>
-                            <td
-                              colSpan={6}
-                              className="px-6 py-12 text-center text-sm font-medium"
-                              style={{ color: '#a39a8c' }}
-                            >
-                              No branches match your current search or filter criteria.
-                            </td>
+                            <th className="px-5 py-3">Branch</th>
+                            <th className="px-5 py-3 text-center">Courses</th>
+                            <th className="px-5 py-3 text-center">Students</th>
+                            <th className="px-5 py-3 text-center">Enrollments</th>
+                            <th className="px-5 py-3 text-right">Revenue</th>
+                            <th className="px-5 py-3 text-center">Action</th>
                           </tr>
-                        ) : (
-                          filteredBranches.map((b) => (
-                            <tr
-                              key={b.branch_id}
-                              className="transition hover:bg-[#faf8f4]"
-                              style={{ borderBottom: '1px solid #f1ede4' }}
-                            >
-                              <td className="px-6 py-4 whitespace-nowrap align-middle">
-                                <div className="flex items-center gap-2">
-                                  <p className="font-bold text-base" style={{ color: '#17140f' }}>
-                                    {b.branch_name}
-                                  </p>
-                                  {b.status && (
+                        </thead>
+                        <tbody className="divide-y divide-[#f1ede4]">
+                          {filteredBranches.length === 0 ? (
+                            <tr>
+                              <td colSpan="6" className="text-center py-12 text-sm text-[#8a8175]">
+                                No branches matching the criteria.
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredBranches.map((b) => (
+                              <tr key={b.branch_id || b.branch_name} className="hover:bg-[#faf8f4]/60 transition">
+                                <td className="px-5 py-4">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-[#17140f]">{b.branch_name}</span>
                                     <span
-                                      className="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider"
+                                      className="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-widest"
                                       style={{
                                         background: b.status === 'Active' ? '#ecfdf5' : '#fef2f2',
                                         color: b.status === 'Active' ? '#065f46' : '#991b1b',
                                       }}
                                     >
-                                      {b.status}
+                                      {b.status || 'Active'}
                                     </span>
-                                  )}
-                                </div>
-                                <p className="text-xs mt-1 font-medium flex items-center gap-1" style={{ color: '#5b5346' }}>
-                                  <MapPin className="h-3 w-3 text-[#9c6b2e]" />
-                                  {b.location}
-                                </p>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap align-middle text-sm font-medium" style={{ color: '#17140f' }}>
-                                <span className="font-bold">{b.total_courses ?? 0}</span>
-                                {b.active_courses !== undefined && (
-                                  <span className="text-xs ml-1.5 text-emerald-600 font-normal">
-                                    ({b.active_courses} active)
-                                  </span>
-                                )}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap align-middle text-sm font-medium" style={{ color: '#17140f' }}>
-                                <span className="font-bold">{b.total_students ?? 0}</span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap align-middle text-sm font-medium" style={{ color: '#17140f' }}>
-                                <span className="font-bold">{b.total_enrollments ?? 0}</span>
-                                {b.paid_enrollments !== undefined && (
-                                  <span className="text-xs ml-1.5 text-emerald-600 font-normal">
-                                    ({b.paid_enrollments} paid)
-                                  </span>
-                                )}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap align-middle text-sm font-semibold" style={{ color: '#10b981' }}>
-                                <div>{fmt(b.total_received)}</div>
-                                {Number(b.today_received || 0) > 0 && (
-                                  <div className="text-[11px] font-normal text-emerald-600">
-                                    +{fmt(b.today_received)} today
                                   </div>
-                                )}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap align-middle">
-                                <button
-                                  onClick={() => setSelectedBranch(b)}
-                                  className="px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition hover:-translate-y-0.5 shadow-sm"
-                                  style={{ background: '#ffffff', color: '#9c6b2e', border: '1px solid #e3ddd0' }}
-                                >
-                                  View Details
-                                </button>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-              ) : (
-                /* Branches Grid Cards View */
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {filteredBranches.length === 0 ? (
-                    <div
-                      className="col-span-full rounded-2xl p-12 text-center text-sm font-medium"
-                      style={{ background: '#ffffff', border: '1px solid #e3ddd0', color: '#a39a8c' }}
-                    >
-                      No branches match your current search or filter criteria.
+                                  <p className="text-xs text-[#8a8175] flex items-center gap-1 mt-0.5">
+                                    <MapPin className="h-3 w-3 text-[#9c6b2e]" /> {b.location || 'Not specified'}
+                                  </p>
+                                </td>
+                                <td className="px-5 py-4 text-center">
+                                  <span className="font-bold text-[#17140f]">{b.total_courses ?? 0}</span>
+                                  <span className="text-[11px] text-[#8a8175] ml-1">({b.active_courses ?? 0} active)</span>
+                                </td>
+                                <td className="px-5 py-4 text-center font-bold text-[#17140f]">
+                                  {b.total_students ?? 0}
+                                </td>
+                                <td className="px-5 py-4 text-center">
+                                  <span className="font-bold text-[#17140f]">{b.total_enrollments ?? 0}</span>
+                                  <span className="text-[11px] text-emerald-600 ml-1 font-semibold">
+                                    ({b.paid_enrollments ?? 0} paid)
+                                  </span>
+                                </td>
+                                <td className="px-5 py-4 text-right font-bold text-emerald-600">
+                                  {fmt(b.total_received)}
+                                </td>
+                                <td className="px-5 py-4 text-center">
+                                  <button
+                                    onClick={() => setSelectedBranch(b)}
+                                    className="px-3.5 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition hover:bg-[#faf8f4] border cursor-pointer"
+                                    style={{ borderColor: '#e3ddd0', color: '#17140f', background: '#ffffff' }}
+                                  >
+                                    View Details
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
                     </div>
-                  ) : (
-                    filteredBranches.map((b) => (
-                      <div
-                        key={b.branch_id}
-                        className="sa-rise rounded-2xl p-6 flex flex-col justify-between transition hover:shadow-md"
-                        style={{ background: '#ffffff', border: '1px solid #e3ddd0' }}
-                      >
-                        <div>
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <h3
-                                className="font-bold text-lg leading-tight"
-                                style={{ color: '#17140f', fontFamily: "'Fraunces', serif" }}
-                              >
-                                {b.branch_name}
-                              </h3>
-                              <p className="text-xs mt-1 font-medium flex items-center gap-1" style={{ color: '#5b5346' }}>
-                                <MapPin className="h-3.5 w-3.5 text-[#9c6b2e]" />
-                                {b.location}
-                              </p>
-                            </div>
-                            <span
-                              className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider"
-                              style={{
-                                background: b.status === 'Active' ? '#ecfdf5' : '#fef2f2',
-                                color: b.status === 'Active' ? '#065f46' : '#991b1b',
-                              }}
-                            >
-                              {b.status || 'Active'}
-                            </span>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-3 my-5 py-4 border-y border-[#f1ede4]">
-                            <div>
-                              <p className="text-[10px] font-bold uppercase tracking-wider text-[#a39a8c]">Courses</p>
-                              <p className="text-base font-bold text-[#17140f] mt-0.5">{b.total_courses ?? 0}</p>
-                            </div>
-                            <div>
-                              <p className="text-[10px] font-bold uppercase tracking-wider text-[#a39a8c]">Students</p>
-                              <p className="text-base font-bold text-[#17140f] mt-0.5">{b.total_students ?? 0}</p>
-                            </div>
-                            <div>
-                              <p className="text-[10px] font-bold uppercase tracking-wider text-[#a39a8c]">Enrollments</p>
-                              <p className="text-base font-bold text-[#17140f] mt-0.5">{b.total_enrollments ?? 0}</p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold text-[#8a8175]">Total Revenue:</span>
-                            <span className="text-base font-bold text-emerald-600">{fmt(b.total_received)}</span>
-                          </div>
-                        </div>
-
-                        <div className="mt-6 pt-4 border-t border-[#f1ede4] flex items-center justify-between">
-                          <span className="text-xs text-[#8a8175]">
-                            Staff: <strong className="text-[#17140f]">{b.total_staff ?? 0}</strong>
-                          </span>
-                          <button
-                            onClick={() => setSelectedBranch(b)}
-                            className="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition hover:bg-[#faf8f4] border"
-                            style={{ borderColor: '#e3ddd0', color: '#9c6b2e', background: '#ffffff' }}
-                          >
-                            View Details
-                          </button>
-                        </div>
+                  </div>
+                ) : (
+                  /* Cards / Grid View */
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sa-rise">
+                    {filteredBranches.length === 0 ? (
+                      <div className="col-span-full text-center py-12 text-sm text-[#8a8175]">
+                        No branches matching the criteria.
                       </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </div>
+                    ) : (
+                      filteredBranches.map((b) => (
+                        <div
+                          key={b.branch_id || b.branch_name}
+                          className="rounded-2xl border p-5 flex flex-col justify-between transition hover:shadow-md"
+                          style={{ borderColor: '#e3ddd0', background: '#ffffff' }}
+                        >
+                          <div>
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <h4 className="font-bold text-base text-[#17140f]">{b.branch_name}</h4>
+                                <p className="text-xs text-[#8a8175] flex items-center gap-1 mt-1">
+                                  <MapPin className="h-3 w-3 text-[#9c6b2e]" /> {b.location || 'Not specified'}
+                                </p>
+                              </div>
+                              <span
+                                className="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-widest shrink-0"
+                                style={{
+                                  background: b.status === 'Active' ? '#ecfdf5' : '#fef2f2',
+                                  color: b.status === 'Active' ? '#065f46' : '#991b1b',
+                                }}
+                              >
+                                {b.status || 'Active'}
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2 my-5 p-3 rounded-xl bg-[#faf8f4] border border-[#f1ede4]">
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-[#a39a8c]">Courses</p>
+                                <p className="text-base font-bold text-[#17140f] mt-0.5">{b.total_courses ?? 0}</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-[#a39a8c]">Students</p>
+                                <p className="text-base font-bold text-[#17140f] mt-0.5">{b.total_students ?? 0}</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-[#a39a8c]">Enrollments</p>
+                                <p className="text-base font-bold text-[#17140f] mt-0.5">{b.total_enrollments ?? 0}</p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-semibold text-[#8a8175]">Total Revenue:</span>
+                              <span className="text-base font-bold text-emerald-600">{fmt(b.total_received)}</span>
+                            </div>
+                          </div>
+
+                          <div className="mt-6 pt-4 border-t border-[#f1ede4] flex items-center justify-between">
+                            <span className="text-xs text-[#8a8175]">
+                              Staff: <strong className="text-[#17140f]">{b.total_staff ?? 0}</strong>
+                            </span>
+                            <button
+                              onClick={() => setSelectedBranch(b)}
+                              className="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition hover:bg-[#faf8f4] border cursor-pointer"
+                              style={{ borderColor: '#e3ddd0', color: '#9c6b2e', background: '#ffffff' }}
+                            >
+                              View Details
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ─────────────────────────────────────────────────────────────
+            SUB-TAB PAGE CONTENT (Embedded directly for seamless navigation)
+           ───────────────────────────────────────────────────────────── */}
+        {activeTab !== 'overview' && (
+          <div className="w-full flex-1 flex flex-col">
+            <SuperAdminEmbeddedContext.Provider value={true}>
+              <div className="sa-embedded-page w-full flex-1">
+                <Suspense
+                  fallback={
+                    <div className="flex flex-col items-center justify-center py-32 space-y-3">
+                      <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#9c6b2e' }} />
+                      <p className="text-xs font-bold uppercase tracking-wider text-[#8a8175]">
+                        Loading section...
+                      </p>
+                    </div>
+                  }
+                >
+                  {renderSubTabComponent()}
+                </Suspense>
+              </div>
+            </SuperAdminEmbeddedContext.Provider>
+          </div>
+        )}
 
         {/* Branch Details Modal */}
         <BranchDetailsModal
           branch={selectedBranch}
           onClose={() => setSelectedBranch(null)}
-          navigate={navigate}
+          onSelectTab={handleSelectTabFromModal}
         />
       </main>
     </div>

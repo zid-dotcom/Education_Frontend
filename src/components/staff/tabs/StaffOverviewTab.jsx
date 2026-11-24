@@ -22,6 +22,10 @@ import StaffAnnouncementTicker from '../announcements/StaffAnnouncementTicker';
 import StaffRecentAnnouncements from '../announcements/StaffRecentAnnouncements';
 import StaffAnnouncementDetailModal from '../modals/StaffAnnouncementDetailModal';
 import courseOverviewClassroomHero from '../../../assets/Course Overview Classroom Illustration.png';
+import transparentCampusBanner from '../../../assets/Transparent Campus Administration Banner.png';
+import professionalEducatorHero from '../../../assets/Professional Educator Giving Thumbs-Up.png';
+import { getStudentGenderFromName } from '../../../utils/genderHelper';
+import { UserCheck, ShieldCheck } from 'lucide-react';
 
 /* ── Custom Watermark Illustrations matching Staff Portal Quick Access Design ── */
 const StackedBooksGraphic = () => (
@@ -263,6 +267,10 @@ const StaffOverviewTab = ({
     0;
 
   const staffName = profileData?.name || user?.name || 'Faculty Member';
+  const isMaleStaff = useMemo(() => {
+    return getStudentGenderFromName(staffName, profileData?.gender || user?.gender) === 'boy';
+  }, [staffName, profileData?.gender, user?.gender]);
+  const staffBannerHero = isMaleStaff ? professionalEducatorHero : transparentCampusBanner;
 
   // Format date helper (handles ISO strings, date-only YYYY-MM-DD, and timestamp numbers)
   const formatDate = (val) => {
@@ -357,32 +365,63 @@ const StaffOverviewTab = ({
 
   return (
     <div className="space-y-7 sa-fade">
-      {/* ── 1. Welcome Header Banner with Staff Name (Warm Light Theme) ── */}
-      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-[#E3DDD0] shadow-sm relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        {/* Soft warm background gradient glow */}
-        <div className="absolute top-0 right-0 w-96 h-full bg-gradient-to-l from-[#FAF8F4] via-[#F1EDE4]/50 to-transparent pointer-events-none" />
+      {/* ── 1. Welcome Header Banner (Reference Design with Transparent Campus Administration Banner) ── */}
+      <div className="bg-[#FFFDF9] rounded-3xl p-6 sm:p-7 md:px-10 md:py-8 border border-[#E7DFD3] shadow-sm relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between min-h-[250px] sm:min-h-[265px] md:min-h-[275px]">
+        {/* Left Contents */}
+        <div className="relative z-10 max-w-xl md:max-w-[54%] lg:max-w-[58%] flex-1 flex flex-col justify-between">
+          {/* Top Row Badges / Pills */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 mb-3.5">
+            <span className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1 text-xs font-bold bg-[#FAF4E8] text-[#9C6B2E] border border-[#E8DFC9] shadow-2xs">
+              <UserCheck className="h-3.5 w-3.5 text-[#D97706]" />
+              Role: Staff
+            </span>
 
-        <div className="relative z-10 max-w-lg">
-          <div className="flex flex-wrap items-center gap-2 mb-1.5">
-            <h1 className="text-xl sm:text-2xl font-bold text-[#17140F] tracking-tight">
-              Welcome back, {staffName}! 👋
-            </h1>
-            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#F1EDE4] text-[#9C6B2E] border border-[#E3DDD0]">
-              Staff Portal
+            <span className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1 text-xs font-bold bg-[#FAF4E8] text-[#7A6340] border border-[#E8DFC9] shadow-2xs">
+              <Building2 className="h-3.5 w-3.5 text-[#B45309]" />
+              {branchName ? `Institute: ${branchName}` : 'Institute: Aurum FX'}
+            </span>
+
+            <span className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1 text-xs font-bold bg-[#ECFDF5] text-[#059669] border border-[#A7F3D0] shadow-2xs">
+              <span className="h-2 w-2 rounded-full bg-[#10B981] animate-pulse" />
+              Active
             </span>
           </div>
-          <p className="text-xs text-[#5B5346] font-medium flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span>{branchName ? `Faculty at ${branchName}` : 'Manage your courses, enrolled students, and classroom assignments.'}</span>
-            {branchLocation && <span>• {branchLocation}</span>}
-          </p>
+
+          {/* Heading with Amber Accent Bar */}
+          <div className="flex items-start gap-3">
+            <span className="w-1.5 h-8 sm:h-9 bg-[#F59E0B] rounded-full shrink-0 mt-0.5" />
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-[#17140F] tracking-tight">
+                Welcome, {staffName} 👋
+              </h1>
+              <p className="text-xs sm:text-sm text-[#6B5E4E] font-medium mt-1.5 leading-relaxed">
+                {branchName
+                  ? `Here's an overview of your schedule, students, and activities at ${branchName} today.`
+                  : "Here's an overview of your courses, students, and classroom activities today."}
+              </p>
+            </div>
+          </div>
+
+          {/* Bottom Row Badges */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-5 pt-3 border-t border-[#EFE7D8]/80 text-xs">
+            <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl font-bold text-[#17140F] bg-[#FAF5EC] border border-[#E8DEC7] shadow-2xs">
+              <BookOpen className="h-4 w-4 text-[#D97706]" />
+              <span>{totalCourses} {totalCourses === 1 ? 'Course' : 'Courses'} Assigned</span>
+            </span>
+
+            <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl font-bold text-[#065F46] bg-[#ECFDF5] border border-[#A7F3D0] shadow-2xs">
+              <ShieldCheck className="h-4 w-4 text-[#10B981]" />
+              <span>Verified Staff Portal</span>
+            </span>
+          </div>
         </div>
 
-        {/* Course Overview Classroom Illustration */}
-        <div className="flex items-center justify-center sm:justify-end shrink-0 relative z-10 self-center sm:self-auto mt-2 sm:mt-0">
+        {/* Right Illustration: Gender-adaptive Banner Image */}
+        <div className={`relative z-10 shrink-0 flex items-end justify-center md:justify-end mt-4 md:mt-0 md:absolute ${isMaleStaff ? 'md:right-4 lg:right-6 xl:right-8' : 'md:right-0'} md:bottom-0 md:h-[95%] lg:h-[97%] pointer-events-none`}>
           <img
-            src={courseOverviewClassroomHero}
-            alt="Course Overview Classroom"
-            className="h-24 sm:h-28 md:h-32 lg:h-36 w-auto max-w-[190px] sm:max-w-[220px] object-contain drop-shadow-sm select-none pointer-events-none"
+            src={staffBannerHero}
+            alt={isMaleStaff ? 'Male Professional Educator' : 'Female Campus Administrator'}
+            className="h-44 sm:h-52 md:h-full w-auto object-contain object-bottom select-none drop-shadow-sm"
           />
         </div>
       </div>

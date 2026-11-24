@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { getSuperAdminUnreadMessagesCountApi, getSuperAdminPendingPurchasesApi } from '../../services/superadmin';
 import { getSuperAdminStaffUnreadCountApi } from '../../services/staffSuperAdminMessages';
+import { useSuperAdminEmbedded } from '../../context/SuperAdminEmbeddedContext';
 
 const useDisplayFonts = () => {
   useEffect(() => {
@@ -298,6 +299,12 @@ const SuperAdminSidebar = ({
       </div>
     </div>
   );
+
+  const isEmbedded = useSuperAdminEmbedded();
+
+  if (isEmbedded) {
+    return null;
+  }
 
   return (
     <>

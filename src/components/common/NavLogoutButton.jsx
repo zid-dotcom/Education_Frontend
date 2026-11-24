@@ -2,6 +2,7 @@ import React from 'react';
 import { LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useSuperAdminEmbedded } from '../../context/SuperAdminEmbeddedContext';
 
 /**
  * Reusable top-right navbar Logout button designed for
@@ -18,6 +19,11 @@ const NavLogoutButton = ({
 }) => {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
+  const isEmbedded = useSuperAdminEmbedded();
+
+  if (isEmbedded) {
+    return null;
+  }
 
   const handleLogout = (e) => {
     e.preventDefault();
@@ -52,8 +58,9 @@ const NavLogoutButton = ({
   return (
     <button
       type="button"
+      data-logout-button="true"
       onClick={handleLogout}
-      className={`group flex items-center gap-1.5 rounded-xl border border-[#E3DDD0] bg-white px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-bold text-slate-700 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 transition cursor-pointer shadow-2xs shrink-0 select-none ${className}`}
+      className={`nav-logout-btn group flex items-center gap-1.5 rounded-xl border border-[#E3DDD0] bg-white px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-bold text-slate-700 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 transition cursor-pointer shadow-2xs shrink-0 select-none ${className}`}
       style={buttonStyle}
       title={label}
       aria-label={label}

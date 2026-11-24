@@ -8,13 +8,17 @@ import {
   Download,
   Eye,
   Loader2,
+  Printer,
   Receipt,
   X,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas-pro";
 import { getStudentReceiptApi } from "../../services/payments";
-import { getBranchAdminReceiptApi } from "../../services/branchadminreceipts";
+import {
+  getBranchAdminReceiptApi,
+  openBranchAdminReceiptPrint,
+} from "../../services/branchadminreceipts";
 import OfficialReceiptVoucherCard from "./OfficialReceiptVoucherCard";
 
 const serif = { fontFamily: "'Fraunces', ui-serif, Georgia, serif" };
@@ -381,6 +385,7 @@ export default function PaymentSuccessReceiptModal({
   title = "Congratulations! Your course payment has been received",
   subtitle = "Your installment payment has been cleared and verified. Below is your official receipt.",
   onViewReceipt = null,
+  onPrintReceipt = null,
   onViewAll = null,
 }) {
   const navigate = useNavigate();
@@ -397,6 +402,25 @@ export default function PaymentSuccessReceiptModal({
     } else {
       navigate('/student-dashboard');
     }
+  };
+
+  const handlePrintReceipt = () => {
+    const current = activeReceipt || receipt || {};
+    if (typeof onPrintReceipt === "function") {
+      onPrintReceipt(current, receiptUrl);
+      return;
+    }
+
+    const rawId =
+      current.receipt_id ||
+      current.id ||
+      (current.receipt && (current.receipt.receipt_id || current.receipt.id)) ||
+      current.receipt_number ||
+      (receiptUrl ? String(receiptUrl).split("/").filter(Boolean).pop() : null) ||
+      (current.receipt_url ? String(current.receipt_url).split("/").filter(Boolean).pop() : null) ||
+      (current.receipt_print_url ? String(current.receipt_print_url).split("/").filter(Boolean).pop() : null);
+
+    openBranchAdminReceiptPrint(rawId, token, current);
   };
 
   // When modal opens, always start at celebration step
@@ -760,6 +784,17 @@ export default function PaymentSuccessReceiptModal({
               <span>View Receipt</span>
             </button>
 
+            {/* Print Receipt Action (Opens official print page) */}
+            <button
+              type="button"
+              onClick={handlePrintReceipt}
+              className="w-full py-3 px-6 rounded-[14px] text-sm sm:text-base font-bold text-white shadow-[0_12px_24px_-8px_rgba(217,119,6,0.35)] hover:shadow-[0_16px_30px_-8px_rgba(217,119,6,0.45)] hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2 cursor-pointer bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800"
+              title="Print Receipt"
+            >
+              <Printer className="w-4 h-4 text-white" />
+              <span>Print Receipt</span>
+            </button>
+
             {/* Secondary Action: Download Receipt */}
             <button
               type="button"
@@ -829,14 +864,26 @@ export default function PaymentSuccessReceiptModal({
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-full p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
-              title="Close receipt popup"
-            >
-              <X className="h-5 w-5" />
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handlePrintReceipt}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#e3ddd0] bg-white hover:bg-amber-50 text-xs font-bold text-[#8a5d24] transition shadow-2xs cursor-pointer"
+                title="Print Receipt"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Print</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-full p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+                title="Close receipt popup"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
           </div>
 
           {/* Clean Receipt Body - Official Voucher */}
@@ -857,13 +904,23 @@ export default function PaymentSuccessReceiptModal({
               <span>Back to Confirmation</span>
             </button>
 
-            <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-end">
               <button
                 type="button"
                 onClick={handleDashboardNav}
                 className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 rounded-xl border border-transparent bg-slate-100 text-xs font-bold text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
               >
                 {isBranchAdmin ? "Back to Enrollments" : "Go to Dashboard"}
+              </button>
+
+              <button
+                type="button"
+                onClick={handlePrintReceipt}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4.5 py-2.5 rounded-xl border border-[#d9cdb5] bg-amber-50 hover:bg-amber-100 text-xs font-bold text-[#8a5d24] transition shadow-xs cursor-pointer"
+                title="Open receipt page to print"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Print Receipt</span>
               </button>
 
               <button

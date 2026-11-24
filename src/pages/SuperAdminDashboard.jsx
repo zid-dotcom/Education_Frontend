@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import {
   BookOpen, Building2, CalendarCheck, GraduationCap, IndianRupee,
   Loader2, MessageCircle, RefreshCw, ShoppingCart, TrendingUp, UserPlus, Users,
-  CheckCircle, Clock, KeyRound, Wallet, X, Layers, Crown
+  CheckCircle, Clock, KeyRound, Wallet, X, Layers, Crown, ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
 import NavLogoutButton from "../components/common/NavLogoutButton";
 import { getSuperAdminDashboardOverviewApi } from '../services/superadmin';
-import superAdminWorkspaceHero from '../assets/Super Admin Dashboard Workspace.png';
+import superAdminCompositeHero from '../assets/Super Admin Education Dashboard Composite.png';
 
 const PAGE_CSS = `
 @keyframes sa-rise { from { opacity:0; transform:translateY(16px) scale(.97); } to { opacity:1; transform:translateY(0) scale(1); } }
@@ -672,46 +672,61 @@ const SuperAdminDashboard = () => {
         </header>
 
         <div className="w-full px-6 py-8 sm:px-10 space-y-8">
-          {/* ── Welcome Header Banner (Warm Light Theme - Matching Staff & Student Portals) ── */}
-          <div className="sa-rise bg-white rounded-3xl p-5 sm:p-6 border border-[#E3DDD0] shadow-sm relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            {/* Soft warm background gradient glow */}
-            <div className="absolute top-0 right-0 w-96 h-full bg-gradient-to-l from-[#FAF8F4] via-[#F1EDE4]/50 to-transparent pointer-events-none" />
+          {/* ── Welcome Header Banner (Modern Hub Style matching Staff Portal) ── */}
+          <div className="sa-rise bg-[#FFFDF9] rounded-3xl p-6 sm:p-7 md:px-10 md:py-8 border border-[#E7DFD3] shadow-sm relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between min-h-[250px] sm:min-h-[265px] md:min-h-[275px]">
+            {/* Left Contents */}
+            <div className="relative z-10 max-w-xl md:max-w-[54%] lg:max-w-[58%] flex-1 flex flex-col justify-between">
+              {/* Top Row Badges / Pills */}
+              <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 mb-3.5">
+                <span className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1 text-xs font-bold bg-[#FAF4E8] text-[#9C6B2E] border border-[#E8DFC9] shadow-2xs">
+                  <Crown className="h-3.5 w-3.5 text-[#D97706]" />
+                  Role: Super Admin
+                </span>
 
-            <div className="relative z-10 max-w-xl">
-              <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                <h1 className="text-xl sm:text-2xl font-bold text-[#17140F] tracking-tight">
-                  Welcome super admin 👋
-                </h1>
-                <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#F1EDE4] text-[#9C6B2E] border border-[#E3DDD0]">
-                  <Crown className="h-3 w-3 text-[#9C6B2E]" />
-                  Super Admin Portal
+                <span className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1 text-xs font-bold bg-[#FAF4E8] text-[#7A6340] border border-[#E8DFC9] shadow-2xs">
+                  <Building2 className="h-3.5 w-3.5 text-[#B45309]" />
+                  Institute: Aurum FX
+                </span>
+
+                <span className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1 text-xs font-bold bg-[#ECFDF5] text-[#059669] border border-[#A7F3D0] shadow-2xs">
+                  <span className="h-2 w-2 rounded-full bg-[#10B981] animate-pulse" />
+                  Active
                 </span>
               </div>
-              <p className="text-xs sm:text-sm text-[#5B5346] font-medium">
-                Here's an overview of what's happening across all branches today.
-              </p>
 
-              {dashboardData && (
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-3 pt-3 border-t border-[#F1EDE4] text-[11px] text-[#8A8175]">
-                  <span className="flex items-center gap-1.5 font-semibold text-[#17140F]">
-                    <Building2 className="h-3.5 w-3.5 text-[#9C6B2E]" />
-                    <span>{overview?.total_branches ?? 0} Branches Active</span>
-                  </span>
-                  <span className="text-[#D9D0C1]">•</span>
-                  <span className="flex items-center gap-1 text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    Full System Control
-                  </span>
+              {/* Heading with Amber Accent Bar */}
+              <div className="flex items-start gap-3">
+                <span className="w-1.5 h-8 sm:h-9 bg-[#F59E0B] rounded-full shrink-0 mt-0.5" />
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-[#17140F] tracking-tight">
+                    Welcome, Super Admin 👋
+                  </h1>
+                  <p className="text-xs sm:text-sm text-[#6B5E4E] font-medium mt-1.5 leading-relaxed">
+                    Here's an overview of what's happening across all branches today.
+                  </p>
                 </div>
-              )}
+              </div>
+
+              {/* Bottom Row Badges */}
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-5 pt-3 border-t border-[#EFE7D8]/80 text-xs">
+                <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl font-bold text-[#17140F] bg-[#FAF5EC] border border-[#E8DEC7] shadow-2xs">
+                  <Building2 className="h-4 w-4 text-[#D97706]" />
+                  <span>{overview?.total_branches ?? 0} Branches Active</span>
+                </span>
+
+                <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl font-bold text-[#065F46] bg-[#ECFDF5] border border-[#A7F3D0] shadow-2xs">
+                  <ShieldCheck className="h-4 w-4 text-[#10B981]" />
+                  <span>Full System Control</span>
+                </span>
+              </div>
             </div>
 
-            {/* Super Admin Dashboard Workspace Illustration */}
-            <div className="flex items-center justify-center sm:justify-end shrink-0 relative z-10 self-center sm:self-auto mt-2 sm:mt-0">
+            {/* Right Illustration: Super Admin Education Dashboard Composite */}
+            <div className="relative z-10 shrink-0 flex items-end justify-center md:justify-end mt-4 md:mt-0 md:absolute md:right-3 lg:right-6 xl:right-8 md:bottom-0 md:h-[95%] lg:h-[97%] pointer-events-none">
               <img
-                src={superAdminWorkspaceHero}
-                alt="Super Admin Dashboard Workspace"
-                className="h-24 sm:h-28 md:h-32 lg:h-36 w-auto max-w-[190px] sm:max-w-[220px] object-contain drop-shadow-sm select-none pointer-events-none"
+                src={superAdminCompositeHero}
+                alt="Super Admin Education Dashboard"
+                className="h-44 sm:h-52 md:h-full w-auto object-contain object-bottom select-none drop-shadow-sm"
               />
             </div>
           </div>

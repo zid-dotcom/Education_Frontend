@@ -154,3 +154,47 @@ export async function downloadBranchAdminReceiptApi(
   triggerBlobDownload(blob, suggestedFileName);
   return { success: true, blob };
 }
+
+/**
+ * Generate print / direct view URL for branch admin receipt in the frontend print page.
+ * @param {number|string} receiptId
+ */
+export function getBranchAdminReceiptPrintUrl(receiptId) {
+  if (!receiptId) return "/branch-admin/receipt-print";
+  return `/branch-admin/receipts/print/${receiptId}`;
+}
+
+/**
+ * Open branch admin receipt print page in a new window/tab and trigger print.
+ * @param {number|string} receiptId
+ * @param {string} [token]
+ * @param {object} [receiptData]
+ */
+export function openBranchAdminReceiptPrint(receiptId, token = null, receiptData = null) {
+  const cleanId =
+    receiptId && typeof receiptId === "string" && receiptId.includes("/")
+      ? receiptId.split("/").filter(Boolean).pop()
+      : receiptId;
+
+  if (receiptData) {
+    try {
+      if (cleanId) {
+        sessionStorage.setItem(`print_receipt_${cleanId}`, JSON.stringify(receiptData));
+      }
+      sessionStorage.setItem("last_print_receipt", JSON.stringify(receiptData));
+    } catch {}
+  }
+
+  const url = cleanId
+    ? `/branch-admin/receipts/print/${cleanId}`
+    : `/branch-admin/receipt-print`;
+
+  const printWindow = window.open(url, "_blank");
+  if (printWindow) {
+    try {
+      printWindow.focus();
+    } catch {}
+  }
+  return printWindow;
+}
+

@@ -38,7 +38,10 @@ import {
   getBranchAdminInstallmentPaymentHistoryApi,
   updateBranchAdminStudentStatusApi,
 } from "../services/branchadminenrollments";
-import { downloadBranchAdminReceiptApi } from "../services/branchadminreceipts";
+import {
+  downloadBranchAdminReceiptApi,
+  openBranchAdminReceiptPrint,
+} from "../services/branchadminreceipts";
 import PaymentSuccessReceiptModal from "../components/common/PaymentSuccessReceiptModal";
 import Toast from "../components/common/Toast";
 
@@ -2047,13 +2050,27 @@ const BranchAdminEnrollments = () => {
         Boolean(payload.amount);
 
       if (hasReceipt) {
-        receiptObj = paymentRes?.receipt || {
+        const rawReceipt = paymentRes?.receipt || {};
+        const resolvedReceiptId =
+          rawReceipt?.receipt_id ||
+          rawReceipt?.id ||
+          paymentRes?.receipt_id ||
+          (rawReceipt?.receipt_url ? String(rawReceipt.receipt_url).split('/').filter(Boolean).pop() : null) ||
+          (paymentRes?.receipt_url ? String(paymentRes.receipt_url).split('/').filter(Boolean).pop() : null);
+
+        receiptObj = {
           ...paymentRes,
-          receipt_url: paymentRes?.receipt_url,
-          download_url: paymentRes?.download_url,
-          receipt_id: paymentRes?.receipt_id || (paymentRes?.receipt_url ? String(paymentRes.receipt_url).split('/').pop() : null),
-          receipt_number: paymentRes?.receipt_number || paymentRes?.receipt_id || `REC-${Date.now().toString().slice(-4)}`,
+          ...rawReceipt,
+          receipt_url: rawReceipt?.receipt_url || paymentRes?.receipt_url,
+          download_url: rawReceipt?.download_url || paymentRes?.download_url,
+          receipt_id: resolvedReceiptId,
+          receipt_number:
+            rawReceipt?.receipt_number ||
+            paymentRes?.receipt_number ||
+            resolvedReceiptId ||
+            `REC-${Date.now().toString().slice(-4)}`,
           student_name:
+            rawReceipt?.student_name ||
             recordingEnrollment?.student_name ||
             recordingEnrollment?.name ||
             paymentRes?.student_name ||
@@ -2061,18 +2078,19 @@ const BranchAdminEnrollments = () => {
           student_phone: recordingEnrollment?.phone || recordingEnrollment?.student_phone || "",
           student_email: recordingEnrollment?.email || recordingEnrollment?.student_email || "",
           course_title:
+            rawReceipt?.course_title ||
             recordingEnrollment?.course_title ||
             recordingEnrollment?.course_name ||
             paymentRes?.course_title ||
             "Course",
           course_fee: recordingEnrollment?.course_fee || recordingEnrollment?.fee,
-          amount_paid: payload.amount || paymentRes?.amount || paymentRes?.paid_amount,
-          amount: payload.amount || paymentRes?.amount || paymentRes?.paid_amount,
+          amount_paid: payload.amount || rawReceipt?.amount_paid || rawReceipt?.amount || paymentRes?.amount || paymentRes?.paid_amount,
+          amount: payload.amount || rawReceipt?.amount || rawReceipt?.amount_paid || paymentRes?.amount || paymentRes?.paid_amount,
           payment_method: payload.payment_method || (payload.cash_amount && payload.upi_amount ? "split" : payload.cash_amount ? "cash" : "upi"),
           payment_type: "installment",
           installment_number: payload.installment_number || payload.term_number,
           payment_date: payload.payment_date || new Date().toISOString(),
-          upi_transaction_id: payload.upi_transaction_id || paymentRes?.upi_transaction_id || null,
+          upi_transaction_id: payload.upi_transaction_id || rawReceipt?.upi_transaction_id || paymentRes?.upi_transaction_id || null,
         };
 
         setInstallmentReceipt(receiptObj);
@@ -3433,6 +3451,14 @@ const BranchAdminEnrollments = () => {
         onViewReceipt={(rcpt, url) => {
           if (url) window.open(url, "_blank");
           else navigate("/branch-admin/receipts");
+        }}
+        onPrintReceipt={(rcpt, url) => {
+          const rawId =
+            rcpt?.receipt_id ||
+            rcpt?.id ||
+            rcpt?.receipt_number ||
+            (url ? String(url).split("/").filter(Boolean).pop() : null);
+          openBranchAdminReceiptPrint(rawId, token, rcpt);
         }}
       />
     </div>

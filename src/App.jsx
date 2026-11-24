@@ -54,6 +54,7 @@ import BranchAdminAttendance from './pages/BranchAdminAttendance';
 import BranchAdminDashboard from './pages/BranchAdminDashboard';
 import BranchAdminProfit from './pages/BranchAdminProfit';
 import BranchAdminReceipts from './pages/BranchAdminReceipts';
+import BranchAdminReceiptPrint from './pages/BranchAdminReceiptPrint';
 import BranchAdminExpenses from './pages/BranchAdminExpenses';
 import BranchAdminFeesDue from './pages/BranchAdminFeesDue';
 import BranchAdminMessages from './pages/BranchAdminMessages';
@@ -353,6 +354,24 @@ function App() {
             element={
               <ProtectedRoute branchAdminOnly>
                 <BranchAdminReceipts />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/branch-admin/receipts/print/:receiptId"
+            element={
+              <ProtectedRoute branchAdminOnly>
+                <BranchAdminReceiptPrint />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/branch-admin/receipt-print"
+            element={
+              <ProtectedRoute branchAdminOnly>
+                <BranchAdminReceiptPrint />
               </ProtectedRoute>
             }
           />
