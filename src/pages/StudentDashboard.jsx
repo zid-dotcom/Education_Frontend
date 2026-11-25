@@ -309,7 +309,17 @@ export const enrichInstallmentsWithPayments = (installments = [], enrollment = {
         : null) ||
       (inst.payment_reference && String(inst.payment_reference).startsWith('pay_')
         ? inst.payment_reference
-        : null);
+        : null) ||
+      enrollment?.razorpay_payment_id ||
+      null;
+
+    const rzOrderId =
+      matchingPayment?.razorpay_order_id ||
+      matchingPayment?.order_id ||
+      inst.razorpay_order_id ||
+      inst.order_id ||
+      enrollment?.razorpay_order_id ||
+      null;
 
     return {
       ...inst,
@@ -323,6 +333,7 @@ export const enrichInstallmentsWithPayments = (installments = [], enrollment = {
       payment_method_label: pMethodLabel,
       upi_transaction_id: upiTxnId,
       razorpay_payment_id: rzPaymentId,
+      razorpay_order_id: rzOrderId,
       status: isRejected ? 'rejected' : isPendingReview ? 'pending_review' : isPaid ? 'paid' : matchingPayment.status || inst.status,
       payment_status: matchingPayment.payment_status || (isPaid ? 'paid' : inst.payment_status),
       approval_status: isRejected ? 'rejected' : matchingPayment.approval_status || (isPendingReview ? 'pending' : 'approved'),
@@ -357,6 +368,7 @@ export const getInstallmentPaymentDetails = (inst) => {
       upiAmount: null,
       upiTransactionId: '',
       razorpayPaymentId: '',
+      razorpayOrderId: '',
     };
   }
 
@@ -386,6 +398,7 @@ export const getInstallmentPaymentDetails = (inst) => {
       upiAmount: inst.upi_amount ?? null,
       upiTransactionId: inst.upi_transaction_id || '',
       razorpayPaymentId: inst.razorpay_payment_id || '',
+      razorpayOrderId: inst.razorpay_order_id || inst.order_id || '',
     };
   }
 
@@ -407,6 +420,7 @@ export const getInstallmentPaymentDetails = (inst) => {
       upiAmount: inst.upi_amount ?? null,
       upiTransactionId: inst.upi_transaction_id || '',
       razorpayPaymentId: inst.razorpay_payment_id || '',
+      razorpayOrderId: inst.razorpay_order_id || inst.order_id || '',
     };
   }
 
@@ -460,6 +474,7 @@ export const getInstallmentPaymentDetails = (inst) => {
     upiAmount: inst.upi_amount ?? null,
     upiTransactionId: inst.upi_transaction_id || '',
     razorpayPaymentId: inst.razorpay_payment_id || '',
+    razorpayOrderId: inst.razorpay_order_id || inst.order_id || '',
   };
 };
 
@@ -3763,23 +3778,32 @@ const StudentDashboard = () => {
 
                             const razorpayId = (() => {
                               if (inst.razorpay_payment_id) return inst.razorpay_payment_id;
+                              if (statusInfo.razorpayPaymentId) return statusInfo.razorpayPaymentId;
                               if (inst.payment_reference && String(inst.payment_reference).startsWith('pay_')) {
                                 return inst.payment_reference;
                               }
                               if (statusInfo.paymentReference && String(statusInfo.paymentReference).startsWith('pay_')) {
                                 return statusInfo.paymentReference;
                               }
-                              if (statusInfo.razorpayPaymentId) {
-                                return statusInfo.razorpayPaymentId;
-                              }
                               if (inst.transaction_id && String(inst.transaction_id).startsWith('pay_')) {
                                 return inst.transaction_id;
                               }
-                              if (selectedPaymentEnrollment?.razorpay_payment_id && (installmentsList.length === 1 || instNum === 1)) {
+                              if (selectedPaymentEnrollment?.razorpay_payment_id) {
                                 return selectedPaymentEnrollment.razorpay_payment_id;
                               }
-                              if (selectedPaymentEnrollment?.payment_reference && String(selectedPaymentEnrollment.payment_reference).startsWith('pay_') && (installmentsList.length === 1 || instNum === 1)) {
+                              if (selectedPaymentEnrollment?.payment_reference && String(selectedPaymentEnrollment.payment_reference).startsWith('pay_')) {
                                 return selectedPaymentEnrollment.payment_reference;
+                              }
+                              return '';
+                            })();
+
+                            const razorpayOrderId = (() => {
+                              if (inst.razorpay_order_id) return inst.razorpay_order_id;
+                              if (inst.order_id) return inst.order_id;
+                              if (statusInfo.razorpayOrderId) return statusInfo.razorpayOrderId;
+                              if (statusInfo.orderId) return statusInfo.orderId;
+                              if (selectedPaymentEnrollment?.razorpay_order_id) {
+                                return selectedPaymentEnrollment.razorpay_order_id;
                               }
                               return '';
                             })();
@@ -4017,12 +4041,22 @@ const StudentDashboard = () => {
                                       </div>
                                     )}
 
-                                    {/* Razorpay ID */}
+                                    {/* Razorpay Payment ID */}
                                     {isRazorpay && razorpayId && (
                                       <div className="flex items-center justify-between text-[11px] bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200">
-                                        <span className="text-slate-500 font-medium">Razorpay ID:</span>
+                                        <span className="text-slate-500 font-medium">Razorpay Payment ID:</span>
                                         <span className="font-mono font-bold text-slate-800 select-all truncate max-w-[160px]" title={razorpayId}>
                                           {razorpayId}
+                                        </span>
+                                      </div>
+                                    )}
+
+                                    {/* Razorpay Order ID */}
+                                    {isRazorpay && razorpayOrderId && (
+                                      <div className="flex items-center justify-between text-[11px] bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200">
+                                        <span className="text-slate-500 font-medium">Razorpay Order ID:</span>
+                                        <span className="font-mono font-bold text-slate-800 select-all truncate max-w-[160px]" title={razorpayOrderId}>
+                                          {razorpayOrderId}
                                         </span>
                                       </div>
                                     )}

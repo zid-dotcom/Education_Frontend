@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Building2,
@@ -22,7 +22,9 @@ import {
   AlertCircle,
   ShieldCheck,
   CreditCard,
-  BookOpen
+  BookOpen,
+  Circle,
+  XCircle,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/layout/SuperAdminSidebar';
@@ -36,6 +38,7 @@ import {
   rejectPurchaseAsSuperAdminApi,
   getSuperAdminRejectedPurchasesApi,
 } from '../services/superadmin';
+import { getEnrollmentInstallmentsApi } from '../services/enrollments';
 
 const PAGE_CSS = `
 @keyframes sa-rise { from { opacity:0; transform:translateY(16px) scale(.97); } to { opacity:1; transform:translateY(0) scale(1); } }
@@ -48,6 +51,87 @@ const fmt = (v) =>
     currency: 'INR',
     maximumFractionDigits: 0,
   }).format(Number(v) || 0);
+
+const STATUS_META = {
+  approved: { dot: '#5c7a5a', text: '#39533a', bg: '#eef2ea' },
+  received: { dot: '#5c7a5a', text: '#39533a', bg: '#eef2ea' },
+  paid: { dot: '#5c7a5a', text: '#39533a', bg: '#eef2ea' },
+  active: { dot: '#5c7a5a', text: '#39533a', bg: '#eef2ea' },
+  completed: { dot: '#5c7a5a', text: '#39533a', bg: '#eef2ea' },
+  pending: { dot: '#b0803a', text: '#7a531f', bg: '#f7efe0' },
+  awaiting_review: { dot: '#b0803a', text: '#7a531f', bg: '#f7efe0' },
+  pending_review: { dot: '#b0803a', text: '#7a531f', bg: '#f7efe0' },
+  partial: { dot: '#b0803a', text: '#7a531f', bg: '#f7efe0' },
+  rejected: { dot: '#a24a3a', text: '#7c3324', bg: '#f8eae5' },
+  failed: { dot: '#a24a3a', text: '#7c3324', bg: '#f8eae5' },
+  inactive: { dot: '#a24a3a', text: '#7c3324', bg: '#f8eae5' },
+  not_required: { dot: '#64748b', text: '#475569', bg: '#f1f5f9' },
+};
+
+const StatusPill = ({ status }) => {
+  const meta = STATUS_META[String(status || 'pending').toLowerCase()] || {
+    dot: '#a39a8c',
+    text: '#8a8175',
+    bg: '#f1ede4',
+  };
+  const raw = String(status || 'Pending').replace(/_/g, ' ');
+  const label = raw.charAt(0).toUpperCase() + raw.slice(1);
+  return (
+    <span
+      className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
+      style={{ background: meta.bg, color: meta.text }}
+    >
+      <Circle className="h-1.5 w-1.5" fill={meta.dot} stroke="none" />
+      {label}
+    </span>
+  );
+};
+
+const formatDate = (date) => {
+  if (!date) return 'Date unavailable';
+  try {
+    return new Intl.DateTimeFormat('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }).format(new Date(date));
+  } catch {
+    return String(date);
+  }
+};
+
+const formatDateTime = (date) => {
+  if (!date) return 'Date unavailable';
+  try {
+    return new Intl.DateTimeFormat('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(date));
+  } catch {
+    return String(date);
+  }
+};
+
+const formatCurrency = (value) =>
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(Number(value || 0));
+
+const DetailItem = ({ label, value }) => (
+  <div className="min-w-0">
+    <dt className="text-xs" style={{ color: '#a39a8c' }}>
+      {label}
+    </dt>
+    <dd className="mt-1 break-words text-sm font-medium" style={{ color: '#17140f' }}>
+      {value || 'Not provided'}
+    </dd>
+  </div>
+);
 
 const TABS = [
   { id: 'pending', label: 'Pending', icon: Clock },
@@ -136,6 +220,350 @@ const SuperAdminPurchases = () => {
   useEffect(() => {
     loadPurchases(activeTab, selectedBranchId);
   }, [activeTab, selectedBranchId, token]);
+
+  useEffect(() => {
+    if (!selectedPurchase) return;
+    const enrId = selectedPurchase.enrollment_id ?? selectedPurchase.id;
+    if (!enrId || !token) return;
+    if (!selectedPurchase.installments || selectedPurchase.installments.length === 0) {
+      getEnrollmentInstallmentsApi(enrId, token)
+        .then((data) => {
+          if (!data) return;
+          const fetchedInstallments = Array.isArray(data)
+            ? data
+            : data.installments || data.schedule || [];
+          setSelectedPurchase((prev) =>
+            prev && String(prev.enrollment_id ?? prev.id) === String(enrId)
+              ? {
+                  ...prev,
+                  ...(typeof data === 'object' && !Array.isArray(data) ? data : {}),
+                  installments: fetchedInstallments.length > 0 ? fetchedInstallments : prev.installments,
+                  payments: data.payments || prev.payments || [],
+                  installment_payments: data.installment_payments || prev.installment_payments || [],
+                  payment_history: data.payment_history || prev.payment_history || [],
+                  razorpay_order_id: data.razorpay_order_id || prev.razorpay_order_id || '',
+                  razorpay_payment_id: data.razorpay_payment_id || prev.razorpay_payment_id || '',
+                }
+              : prev
+          );
+        })
+        .catch((err) => {
+          console.warn('Could not load detailed installments for purchase:', err);
+        });
+    }
+  }, [selectedPurchase?.enrollment_id, selectedPurchase?.id, token]);
+
+  const allPurchasePayments = useMemo(() => {
+    if (!selectedPurchase) return [];
+    const list = [
+      ...(Array.isArray(selectedPurchase.installment_payments) ? selectedPurchase.installment_payments : []),
+      ...(Array.isArray(selectedPurchase.payments) ? selectedPurchase.payments : []),
+      ...(Array.isArray(selectedPurchase.payment_history) ? selectedPurchase.payment_history : []),
+      ...(Array.isArray(selectedPurchase.recent_payments) ? selectedPurchase.recent_payments : []),
+      ...(Array.isArray(selectedPurchase.history) ? selectedPurchase.history : []),
+      ...(Array.isArray(selectedPurchase.transactions) ? selectedPurchase.transactions : []),
+      ...(Array.isArray(selectedPurchase.records) ? selectedPurchase.records : []),
+      ...(Array.isArray(selectedPurchase.all_payments) ? selectedPurchase.all_payments : []),
+    ];
+    const seen = new Set();
+    return list.filter((p) => {
+      const idKey = p.payment_id ?? p.id ?? (p.receipt_number ? `rcpt-${p.receipt_number}` : null);
+      if (!idKey) return true;
+      if (seen.has(idKey)) return false;
+      seen.add(idKey);
+      return true;
+    });
+  }, [selectedPurchase]);
+
+  const enrichedInstallments = useMemo(() => {
+    if (!selectedPurchase) return [];
+
+    const rawBase = Array.isArray(selectedPurchase.installments)
+      ? selectedPurchase.installments
+      : Array.isArray(selectedPurchase.due_installments)
+      ? selectedPurchase.due_installments
+      : Array.isArray(selectedPurchase.installment_schedule)
+      ? selectedPurchase.installment_schedule
+      : Array.isArray(selectedPurchase.schedule)
+      ? selectedPurchase.schedule
+      : [];
+
+    const allPayments = allPurchasePayments;
+
+    return rawBase.map((inst, idx) => {
+      const instNum = Number(inst.installment_number ?? (idx + 1));
+      const instId = inst.installment_id ?? inst.id;
+      const totalInstAmount = Number(inst.amount ?? 0);
+      const backendStatus = String(inst.status || "").toLowerCase().trim();
+      const isInstBackendPaid = backendStatus === "paid";
+      const isInstBackendPartial = backendStatus === "partial";
+
+      const matchingPayments = allPayments.filter((p) => {
+        if (!p) return false;
+        if (Array.isArray(p.installment_numbers) && p.installment_numbers.map(Number).includes(instNum)) {
+          return true;
+        }
+        if (p.installment_number !== undefined && p.installment_number !== null) {
+          return Number(p.installment_number) === instNum;
+        }
+        if (instId && p.installment_id !== undefined && p.installment_id !== null) {
+          return String(p.installment_id) === String(instId);
+        }
+        if (
+          instNum === 1 &&
+          (
+            (selectedPurchase.razorpay_payment_id && (p.payment_reference === selectedPurchase.razorpay_payment_id || p.razorpay_payment_id === selectedPurchase.razorpay_payment_id)) ||
+            (String(p.payment_method).toLowerCase() === 'razorpay' && (p.installment_number === undefined || p.installment_number === null))
+          )
+        ) {
+          return true;
+        }
+        return false;
+      });
+
+      matchingPayments.sort((a, b) => {
+        const timeA = new Date(a.reviewed_at || a.payment_date || a.created_at || 0).getTime();
+        const timeB = new Date(b.reviewed_at || b.payment_date || b.created_at || 0).getTime();
+        if (timeB !== timeA) return timeB - timeA;
+        return Number(b.payment_id || b.id || 0) - Number(a.payment_id || a.id || 0);
+      });
+
+      const match = matchingPayments[0];
+
+      const rawMethod = String(
+        match?.payment_method ||
+        inst.payment_method ||
+        (isInstBackendPaid && instNum === 1 && (selectedPurchase.razorpay_payment_id || selectedPurchase.razorpay_order_id) ? 'razorpay' : '') ||
+        ''
+      ).toLowerCase().trim();
+
+      const rawCashAmount = match?.cash_amount !== undefined && match?.cash_amount !== null
+        ? Number(match.cash_amount)
+        : inst.cash_amount !== undefined && inst.cash_amount !== null
+        ? Number(inst.cash_amount)
+        : null;
+
+      const rawUpiAmount = match?.upi_amount !== undefined && match?.upi_amount !== null
+        ? Number(match.upi_amount)
+        : inst.upi_amount !== undefined && inst.upi_amount !== null
+        ? Number(inst.upi_amount)
+        : null;
+
+      const isSplit =
+        rawMethod === 'cash_upi' ||
+        rawMethod === 'split' ||
+        (rawCashAmount !== null && rawUpiAmount !== null && rawCashAmount > 0 && rawUpiAmount > 0);
+
+      const isUpi = !isSplit && (rawMethod === 'upi' || (rawUpiAmount !== null && rawUpiAmount > 0 && (!rawCashAmount || rawCashAmount === 0)));
+      const isCash = !isSplit && !isUpi && (rawMethod === 'cash' || (rawCashAmount !== null && rawCashAmount > 0 && (!rawUpiAmount || rawUpiAmount === 0)));
+      const isRazorpay =
+        rawMethod === 'razorpay' ||
+        rawMethod === 'online' ||
+        Boolean(
+          match?.razorpay_payment_id ||
+          inst.razorpay_payment_id ||
+          (instNum === 1 && (selectedPurchase.razorpay_payment_id || selectedPurchase.razorpay_order_id)) ||
+          (match?.payment_reference && String(match.payment_reference).startsWith('pay_'))
+        );
+
+      let paymentMethodDisplay = 'Pending';
+      if (isSplit) {
+        paymentMethodDisplay = 'Cash + UPI';
+      } else if (isUpi) {
+        paymentMethodDisplay = 'UPI';
+      } else if (isCash) {
+        paymentMethodDisplay = 'Cash';
+      } else if (isRazorpay) {
+        paymentMethodDisplay = 'Razorpay';
+      } else if (rawMethod) {
+        if (rawMethod === 'cash_upi') paymentMethodDisplay = 'Cash + UPI';
+        else paymentMethodDisplay = rawMethod.charAt(0).toUpperCase() + rawMethod.slice(1);
+      } else if (isInstBackendPaid || (match && (match.status === 'received' || match.status === 'paid'))) {
+        paymentMethodDisplay = 'Verified';
+      }
+
+      const upiTxnId =
+        match?.upi_transaction_id ||
+        inst.upi_transaction_id ||
+        match?.transaction_id ||
+        inst.transaction_id ||
+        '';
+
+      const paymentRef =
+        match?.payment_reference ||
+        inst.payment_reference ||
+        match?.reference ||
+        inst.reference ||
+        '';
+
+      const rzpPaymentId =
+        match?.razorpay_payment_id ||
+        inst.razorpay_payment_id ||
+        (isRazorpay ? (paymentRef || (instNum === 1 ? selectedPurchase.razorpay_payment_id : '')) : '');
+
+      const rzpOrderId =
+        match?.razorpay_order_id ||
+        inst.razorpay_order_id ||
+        (isRazorpay && instNum === 1 ? selectedPurchase.razorpay_order_id : '');
+
+      if (!match) {
+        const isInstRejected =
+          backendStatus === "rejected" ||
+          String(inst.approval_status || "").toLowerCase() === "rejected";
+        const isInstPaid =
+          backendStatus === "paid" ||
+          String(inst.approval_status || "").toLowerCase() === "approved";
+
+        const computedPaid = isInstRejected
+          ? 0
+          : inst.paid_amount !== undefined && inst.paid_amount !== null
+          ? Number(inst.paid_amount)
+          : isInstPaid
+          ? totalInstAmount
+          : 0;
+
+        const computedRemaining = isInstRejected
+          ? totalInstAmount
+          : isInstPaid
+          ? 0
+          : inst.remaining_amount !== undefined && inst.remaining_amount !== null
+          ? Number(inst.remaining_amount)
+          : Math.max(0, totalInstAmount - computedPaid);
+
+        const isActuallyPaid = isInstPaid || (computedRemaining <= 0 && computedPaid >= totalInstAmount && totalInstAmount > 0);
+        const isActuallyPartial = !isActuallyPaid && (isInstBackendPartial || (computedPaid > 0 && computedRemaining > 0));
+
+        return {
+          ...inst,
+          installment_number: instNum,
+          amount: totalInstAmount,
+          paid_amount: computedPaid,
+          remaining_amount: computedRemaining,
+          status: isInstRejected
+            ? "rejected"
+            : isActuallyPaid
+            ? "paid"
+            : isActuallyPartial
+            ? "partial"
+            : inst.status || "pending",
+          is_rejected: isInstRejected,
+          is_paid: isActuallyPaid,
+          is_partial: isActuallyPartial,
+          rejection_reason: inst.rejection_reason || inst.reason || "",
+          payment_method: rawMethod || inst.payment_method,
+          payment_method_display: paymentMethodDisplay,
+          cash_amount: rawCashAmount ?? (isCash ? computedPaid : null),
+          upi_amount: rawUpiAmount ?? (isUpi ? computedPaid : null),
+          upi_transaction_id: upiTxnId,
+          payment_reference: paymentRef,
+          razorpay_payment_id: rzpPaymentId,
+          razorpay_order_id: rzpOrderId,
+          is_split: isSplit,
+          is_upi: isUpi,
+          is_cash: isCash,
+          is_razorpay: isRazorpay,
+        };
+      }
+
+      const matchStatus = String(match.status || "").toLowerCase().trim();
+      const matchApprovalStatus = String(match.approval_status || "").toLowerCase().trim();
+      const matchMethodStatus = String(match.payment_status || "").toLowerCase().trim();
+
+      const isRejected = matchStatus === "rejected" || matchApprovalStatus === "rejected";
+
+      const isPendingReview =
+        !isRejected &&
+        (matchStatus === "pending_review" ||
+          matchApprovalStatus === "pending" ||
+          (match.credited_to_balance === false && matchMethodStatus === "paid"));
+
+      const rejectionReason =
+        match.rejection_reason ||
+        match.reason ||
+        inst.rejection_reason ||
+        (isRejected ? "Payment could not be verified in branch bank records" : "");
+
+      const isGroupedFullBalance = Array.isArray(match.installment_numbers) && match.installment_numbers.length > 1;
+
+      const computedPaidAmount = isRejected
+        ? 0
+        : inst.paid_amount !== undefined && inst.paid_amount !== null
+        ? Number(inst.paid_amount)
+        : isGroupedFullBalance
+        ? totalInstAmount
+        : Number(match.paid_amount ?? match.amount ?? 0);
+
+      const computedRemainingAmount = isRejected
+        ? totalInstAmount
+        : isInstBackendPaid || (isGroupedFullBalance && !isRejected && !isPendingReview)
+        ? 0
+        : inst.remaining_amount !== undefined && inst.remaining_amount !== null
+        ? Number(inst.remaining_amount)
+        : Math.max(0, totalInstAmount - computedPaidAmount);
+
+      const isPaid =
+        !isRejected &&
+        !isPendingReview &&
+        (isInstBackendPaid ||
+          (computedRemainingAmount <= 0 && computedPaidAmount >= totalInstAmount && totalInstAmount > 0));
+
+      const isPartial =
+        !isRejected &&
+        !isPendingReview &&
+        !isPaid &&
+        (isInstBackendPartial || (computedPaidAmount > 0 && computedRemainingAmount > 0));
+
+      const finalStatus = isRejected
+        ? "rejected"
+        : isPendingReview
+        ? "awaiting_review"
+        : isPaid
+        ? "paid"
+        : isPartial
+        ? "partial"
+        : inst.status || "pending";
+
+      return {
+        ...inst,
+        installment_number: instNum,
+        amount: totalInstAmount,
+        paid_amount: computedPaidAmount,
+        remaining_amount: computedRemainingAmount,
+        status: finalStatus,
+        approval_status: isRejected
+          ? "rejected"
+          : isPendingReview
+          ? "pending"
+          : isPaid
+          ? "approved"
+          : isPartial
+          ? "partial"
+          : inst.approval_status || "pending",
+        is_rejected: isRejected,
+        is_pending_review: isPendingReview,
+        is_paid: isPaid,
+        is_partial: isPartial,
+        rejection_reason: rejectionReason,
+        reviewed_at: match.reviewed_at || inst.reviewed_at,
+        payment_date: match.payment_date || match.paid_date || inst.payment_date || inst.paid_date,
+        paid_date: isPaid
+          ? (inst.paid_date || match.paid_date || match.payment_date)
+          : inst.paid_date,
+        payment_method: match.payment_method || inst.payment_method || rawMethod,
+        payment_method_display: paymentMethodDisplay,
+        cash_amount: rawCashAmount ?? (isCash ? computedPaidAmount : null),
+        upi_amount: rawUpiAmount ?? (isUpi ? computedPaidAmount : null),
+        upi_transaction_id: upiTxnId,
+        payment_reference: paymentRef,
+        razorpay_payment_id: rzpPaymentId,
+        razorpay_order_id: rzpOrderId,
+        is_split: isSplit,
+        is_upi: isUpi,
+        is_cash: isCash,
+        is_razorpay: isRazorpay,
+      };
+    });
+  }, [selectedPurchase, allPurchasePayments]);
 
   const handleApprove = async (purchase) => {
     const id = purchase.enrollment_id ?? purchase.id;
@@ -632,75 +1060,186 @@ const SuperAdminPurchases = () => {
                         </div>
                      </div>
 
-                     {/* Payment Gateway Details */}
-                     {(selectedPurchase.razorpay_order_id || selectedPurchase.razorpay_payment_id) && (
-                     <div className="bg-white rounded-2xl border border-[#e3ddd0] shadow-sm overflow-hidden">
-                        <div className="px-5 py-3.5 border-b border-[#e3ddd0] bg-slate-50 flex items-center gap-2">
-                          <CreditCard className="h-4 w-4 text-stone-500" />
-                          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Payment Gateway Details</h3>
-                        </div>
-                        <div className="p-5 grid grid-cols-1 gap-4">
-                           <div>
-                             <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Razorpay Order ID</p>
-                             <p className="text-xs font-mono text-slate-700 mt-1 break-all bg-slate-50 border border-slate-100 rounded-lg p-2">{selectedPurchase.razorpay_order_id || 'Not applicable'}</p>
-                           </div>
-                           <div>
-                             <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Razorpay Payment ID</p>
-                             <p className="text-xs font-mono text-slate-700 mt-1 break-all bg-slate-50 border border-slate-100 rounded-lg p-2">{selectedPurchase.razorpay_payment_id || 'Not applicable'}</p>
-                           </div>
-                        </div>
-                     </div>
-                     )}
+                    </div>
+                 </div>
 
+                 {/* Installments Breakdown (Matching Branch Admin View) */}
+                 <section className="mt-6">
+                   <div className="flex items-center justify-between pb-3 border-b border-[#e3ddd0]">
+                     <h3 className="flex items-center gap-2 text-sm font-semibold text-[#17140f]">
+                       <Clock className="h-4 w-4 text-[#9c6b2e]" />
+                       Installments Breakdown
+                     </h3>
                    </div>
-                </div>
 
-                {/* Installment Schedule (Full Width) */}
-                {selectedPurchase.installments && selectedPurchase.installments.length > 0 ? (
-                  <div className="bg-white rounded-2xl border border-[#e3ddd0] shadow-sm overflow-hidden mt-6">
-                     <div className="px-5 py-3.5 border-b border-[#e3ddd0] bg-slate-50 flex items-center gap-2">
-                       <Calendar className="h-4 w-4 text-stone-500" />
-                       <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Installment Schedule</h3>
+                   {enrichedInstallments.length === 0 ? (
+                     <p className="mt-4 text-sm text-stone-500">
+                       No installment schedule records found for this enrollment.
+                     </p>
+                   ) : (
+                     <div className="mt-4 space-y-3">
+                       {enrichedInstallments.map((inst, idx) => {
+                         const instStatus = String(inst.status || "pending").toLowerCase();
+                         const isDue = inst.is_due === true;
+                         const isRejected = Boolean(inst.is_rejected || instStatus === "rejected");
+                         const isPendingReview = Boolean(inst.is_pending_review || instStatus === "awaiting_review");
+
+                         return (
+                           <div
+                             key={inst.installment_id || idx}
+                             className={`rounded-xl p-4 transition-all ${
+                               isRejected
+                                 ? "bg-rose-50/40 border border-rose-300 ring-1 ring-rose-200/60 shadow-2xs"
+                                 : isDue
+                                 ? "bg-[#fef8f0] border border-[#f0d9b5]"
+                                 : "bg-white border border-[#e3ddd0]"
+                             }`}
+                           >
+                             <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                               <div className="flex items-center gap-2">
+                                 <p
+                                   className="text-xs font-semibold tracking-wide uppercase"
+                                   style={{ color: isRejected ? "#b91c1c" : "#9c6b2e" }}
+                                 >
+                                   Installment {inst.installment_number ?? idx + 1}
+                                 </p>
+                                 {isRejected && (
+                                   <span className="rounded-full bg-rose-100 border border-rose-200 px-2 py-0.5 text-[10px] font-bold text-rose-800">
+                                     Payment Rejected
+                                   </span>
+                                 )}
+                               </div>
+                               <div className="flex items-center gap-2">
+                                 {isDue && !isRejected && (
+                                   <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                                     Due
+                                   </span>
+                                 )}
+                                 <StatusPill status={isRejected ? "rejected" : isPendingReview ? "pending" : instStatus} />
+                               </div>
+                             </div>
+
+                             {/* Rejection Alert Box */}
+                             {isRejected && (
+                               <div className="mb-4 rounded-xl bg-rose-50 border border-rose-200 p-3.5 text-xs text-rose-900 shadow-2xs">
+                                 <div className="flex items-start gap-2.5">
+                                   <XCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                                   <div className="space-y-1 min-w-0">
+                                     <p className="font-bold text-rose-950 text-xs">
+                                       Online Payment Rejected by Branch Admin
+                                     </p>
+                                     <p className="text-rose-800">
+                                       <span className="font-semibold text-rose-950">Reason: </span>
+                                       {inst.rejection_reason || "Payment could not be verified in branch bank records"}
+                                     </p>
+                                     {inst.reviewed_at && (
+                                       <p className="text-[11px] text-rose-600">
+                                         Reviewed on: {formatDateTime(inst.reviewed_at)}
+                                       </p>
+                                     )}
+                                   </div>
+                                 </div>
+                               </div>
+                             )}
+
+                             <dl className="grid gap-3 sm:grid-cols-3">
+                               <DetailItem label="Total Amount" value={formatCurrency(inst.amount)} />
+                               <DetailItem
+                                 label="Paid Amount"
+                                 value={formatCurrency(
+                                   inst.paid_amount !== undefined && inst.paid_amount !== null
+                                     ? inst.paid_amount
+                                     : inst.is_paid || String(inst.status || "").toLowerCase() === "paid"
+                                     ? inst.amount
+                                     : 0
+                                 )}
+                               />
+                               <DetailItem
+                                 label="Remaining"
+                                 value={formatCurrency(
+                                   inst.remaining_amount !== undefined && inst.remaining_amount !== null
+                                     ? inst.remaining_amount
+                                     : inst.is_paid || String(inst.status || "").toLowerCase() === "paid"
+                                     ? 0
+                                     : Math.max(0, Number(inst.amount || 0) - Number(inst.paid_amount || 0))
+                                 )}
+                               />
+                               <DetailItem label="Due Date" value={formatDate(inst.due_date)} />
+                               <DetailItem
+                                 label={isRejected ? "Attempted Date" : "Paid Date"}
+                                 value={
+                                   inst.payment_date || inst.paid_date
+                                     ? `${formatDate(inst.payment_date || inst.paid_date)}${isRejected ? " (Rejected)" : ""}`
+                                     : "Not yet paid"
+                                 }
+                               />
+                               <DetailItem
+                                 label="Payment Method"
+                                 value={
+                                   isRejected
+                                     ? (inst.payment_method ? `${String(inst.payment_method).toUpperCase()} Online (Rejected)` : "Razorpay Online (Rejected)")
+                                     : inst.payment_method_display || (inst.status === "paid" ? "Online / Verified" : "Pending")
+                                 }
+                               />
+
+                               {/* Split (Cash + UPI): Show Cash Amount & UPI Amount as separate fields */}
+                               {inst.is_split && (
+                                 <>
+                                   <DetailItem
+                                     label="Cash Amount"
+                                     value={formatCurrency(inst.cash_amount ?? 0)}
+                                   />
+                                   <DetailItem
+                                     label="UPI Amount"
+                                     value={formatCurrency(inst.upi_amount ?? 0)}
+                                   />
+                                 </>
+                               )}
+
+                               {/* UPI Transaction ID for Split or UPI */}
+                               {(inst.is_split || inst.is_upi || Boolean(inst.upi_transaction_id)) && inst.upi_transaction_id ? (
+                                 <DetailItem
+                                   label="UPI Transaction ID"
+                                   value={inst.upi_transaction_id}
+                                 />
+                               ) : null}
+
+                               {/* Cash Amount for cash-only */}
+                               {inst.is_cash && !inst.is_split && inst.cash_amount !== null && inst.cash_amount > 0 && (
+                                 <DetailItem
+                                   label="Cash Amount"
+                                   value={formatCurrency(inst.cash_amount)}
+                                 />
+                               )}
+
+                               {/* UPI Amount for upi-only */}
+                               {inst.is_upi && !inst.is_split && inst.upi_amount !== null && inst.upi_amount > 0 && (
+                                 <DetailItem
+                                   label="UPI Amount"
+                                   value={formatCurrency(inst.upi_amount)}
+                                 />
+                               )}
+
+                               {/* Razorpay Gateway Details directly inside Razorpay installment */}
+                               {inst.is_razorpay && inst.razorpay_payment_id && (
+                                 <DetailItem
+                                   label="Razorpay Payment ID"
+                                   value={inst.razorpay_payment_id}
+                                 />
+                               )}
+                               {inst.is_razorpay && inst.razorpay_order_id && (
+                                 <DetailItem
+                                   label="Razorpay Order ID"
+                                   value={inst.razorpay_order_id}
+                                 />
+                               )}
+                             </dl>
+                           </div>
+                         );
+                       })}
                      </div>
-                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                           <thead className="bg-[#faf8f4] border-b border-[#e3ddd0] text-[10px] uppercase font-bold text-slate-500 tracking-wider">
-                              <tr>
-                                 <th className="px-5 py-3">Term</th>
-                                 <th className="px-5 py-3">Amount</th>
-                                 <th className="px-5 py-3">Paid</th>
-                                 <th className="px-5 py-3">Remaining</th>
-                                 <th className="px-5 py-3">Due Date</th>
-                                 <th className="px-5 py-3">Paid Date</th>
-                                 <th className="px-5 py-3">Status</th>
-                              </tr>
-                           </thead>
-                           <tbody className="divide-y divide-[#f1ede4]">
-                              {selectedPurchase.installments.map((inst, idx) => (
-                                <tr key={idx} className="hover:bg-slate-50 transition">
-                                   <td className="px-5 py-3 font-medium text-slate-800">#{inst.installment_number}</td>
-                                   <td className="px-5 py-3 font-bold text-slate-700">{fmt(inst.amount)}</td>
-                                   <td className="px-5 py-3 font-semibold text-emerald-600">{fmt(inst.paid_amount)}</td>
-                                   <td className="px-5 py-3 font-semibold text-rose-600">{fmt(inst.remaining_amount)}</td>
-                                   <td className="px-5 py-3 text-xs font-medium text-slate-600">{inst.due_date ? new Date(inst.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
-                                   <td className="px-5 py-3 text-xs font-medium text-slate-600">{inst.paid_date ? new Date(inst.paid_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
-                                   <td className="px-5 py-3">
-                                     <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase border ${inst.status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : inst.status === 'partial' ? 'bg-amber-50 text-amber-700 border-amber-200' : inst.is_due ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-                                        {inst.status}
-                                     </span>
-                                   </td>
-                                </tr>
-                              ))}
-                           </tbody>
-                        </table>
-                     </div>
-                  </div>
-                ) : (
-                  <div className="bg-white rounded-2xl border border-[#e3ddd0] shadow-sm p-8 flex flex-col items-center justify-center text-center mt-6">
-                     <AlertCircle className="h-8 w-8 text-slate-300 mb-3" />
-                     <p className="text-sm font-semibold text-slate-600">No installment schedule for this enrollment.</p>
-                  </div>
-                )}
+                   )}
+                 </section>
              </div>
 
              {/* Footer Actions */}

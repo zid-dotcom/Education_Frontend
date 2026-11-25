@@ -17,6 +17,7 @@ import {
   AlertCircle,
   Receipt,
   Sparkles,
+  XCircle,
 } from 'lucide-react';
 import { useStaffModalBlur } from '../../../utils/useStaffModalBlur';
 
@@ -436,71 +437,262 @@ const StaffStudentModal = ({
                   </div>
                 </div>
 
-                {/* Table 5: Installments Schedule */}
-                {rawInstallments.length > 0 && (
-                  <div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2.5 flex items-center gap-1.5">
-                      <div className="h-5 w-5 rounded-md bg-[#F1EDE4] text-[#9C6B2E] flex items-center justify-center">
-                        <Calendar className="h-3 w-3" />
-                      </div>
-                      Installment Breakdown
-                    </h4>
-                    <div className="rounded-2xl border border-[#E3DDD0] overflow-hidden shadow-xs">
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs min-w-[500px]">
-                          <thead className="border-b border-[#E3DDD0] bg-[#FAF8F4] text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                            <tr>
-                              <th className="px-3 sm:px-4 py-2.5 whitespace-nowrap">Term</th>
-                              <th className="px-3 sm:px-4 py-2.5 text-right whitespace-nowrap">Amount</th>
-                              <th className="px-3 sm:px-4 py-2.5 text-right whitespace-nowrap">Paid</th>
-                              <th className="px-3 sm:px-4 py-2.5 whitespace-nowrap">Due Date</th>
-                              <th className="px-3 sm:px-4 py-2.5 text-right whitespace-nowrap">Status</th>
-                            </tr>
-                          </thead>
-                        <tbody className="divide-y divide-[#E3DDD0]">
-                          {rawInstallments.map((inst, idx) => {
-                            const isPaid = String(inst.status || '').toLowerCase() === 'paid';
-                            const isPartial = String(inst.status || '').toLowerCase() === 'partial';
-                            const isReview = String(inst.status || '').toLowerCase().includes('review') || String(inst.approval_status || '').toLowerCase() === 'pending';
+                {/* Installment Breakdown Cards */}
+                {(() => {
+                  const enrichedInstallments = rawInstallments.map((inst, idx) => {
+                    const instNum = Number(inst.installment_number ?? idx + 1);
+                    const matchingPayment = rawPayments.find((p) => {
+                      if (p.installment_id && inst.installment_id) {
+                        return String(p.installment_id) === String(inst.installment_id);
+                      }
+                      if (p.installment_number !== undefined && p.installment_number !== null) {
+                        return Number(p.installment_number) === instNum;
+                      }
+                      return false;
+                    });
 
-                            return (
-                              <tr key={inst.id || inst.installment_id || idx} className="hover:bg-[#FAF8F4]/50">
-                                <td className="px-3 sm:px-4 py-2.5 font-bold text-slate-800">
-                                  Term #{inst.installment_number ?? idx + 1}
-                                </td>
-                                <td className="px-3 sm:px-4 py-2.5 text-right font-medium text-slate-700">
-                                  {formatCurrency(inst.amount)}
-                                </td>
-                                <td className="px-3 sm:px-4 py-2.5 text-right font-bold text-emerald-700">
-                                  {formatCurrency(inst.paid_amount !== undefined ? inst.paid_amount : isPaid ? inst.amount : 0)}
-                                </td>
-                                <td className="px-3 sm:px-4 py-2.5 text-slate-600 text-[11px]">
-                                  {formatDate(inst.due_date)}
-                                </td>
-                                <td className="px-3 sm:px-4 py-2.5 text-right">
+                    const isPaid = String(inst.status || '').toLowerCase() === 'paid';
+                    const isDue = inst.is_due === true;
+                    const isRejected = Boolean(inst.is_rejected || String(inst.status || '').toLowerCase() === 'rejected');
+                    const isPendingReview = Boolean(
+                      inst.is_pending_review ||
+                      String(inst.status || '').toLowerCase() === 'awaiting_review' ||
+                      String(inst.status || '').toLowerCase() === 'pending_review'
+                    );
+
+                    const method = (matchingPayment?.payment_method || inst.payment_method || (isPaid ? 'Razorpay' : 'Pending')).toLowerCase();
+                    const isSplit = method === 'cash_upi' || method === 'split' || method.includes('cash+upi') || method.includes('cash + upi');
+                    const isCash = !isSplit && method === 'cash';
+                    const isUpi = !isSplit && !isCash && method === 'upi';
+                    const isRazorpay = !isSplit && !isCash && !isUpi && (method.includes('razorpay') || isPaid);
+
+                    return {
+                      ...inst,
+                      installment_number: instNum,
+                      is_due: isDue,
+                      is_rejected: isRejected,
+                      is_pending_review: isPendingReview,
+                      rejection_reason: matchingPayment?.rejection_reason || inst.rejection_reason || '',
+                      reviewed_at: matchingPayment?.reviewed_at || inst.reviewed_at || null,
+                      payment_date: matchingPayment?.payment_date || inst.payment_date || inst.paid_date,
+                      is_split: isSplit,
+                      is_cash: isCash,
+                      is_upi: isUpi,
+                      is_razorpay: isRazorpay,
+                      payment_method_display: isSplit ? 'Cash + UPI' : isCash ? 'Cash' : isUpi ? 'UPI' : isRazorpay ? 'Razorpay' : method.toUpperCase(),
+                      cash_amount: matchingPayment?.cash_amount ?? inst.cash_amount ?? null,
+                      upi_amount: matchingPayment?.upi_amount ?? inst.upi_amount ?? null,
+                      upi_transaction_id: matchingPayment?.upi_transaction_id || inst.upi_transaction_id || '',
+                      razorpay_payment_id:
+                        matchingPayment?.razorpay_payment_id ||
+                        inst.razorpay_payment_id ||
+                        matchingPayment?.payment_reference ||
+                        inst.payment_reference ||
+                        (isRazorpay ? (selectedStudent.razorpay_payment_id || selectedStudent.enrollment?.razorpay_payment_id) : ''),
+                      razorpay_order_id:
+                        matchingPayment?.razorpay_order_id ||
+                        inst.razorpay_order_id ||
+                        (isRazorpay ? (selectedStudent.razorpay_order_id || selectedStudent.enrollment?.razorpay_order_id) : ''),
+                    };
+                  });
+
+                  if (enrichedInstallments.length === 0) return null;
+
+                  return (
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2.5 flex items-center gap-1.5">
+                        <div className="h-5 w-5 rounded-md bg-[#F1EDE4] text-[#9C6B2E] flex items-center justify-center">
+                          <Clock className="h-3 w-3" />
+                        </div>
+                        Installments Breakdown
+                      </h4>
+
+                      <div className="space-y-3">
+                        {enrichedInstallments.map((inst, idx) => {
+                          const instStatus = String(inst.status || "pending").toLowerCase();
+                          const isDue = inst.is_due === true;
+                          const isRejected = Boolean(inst.is_rejected || instStatus === "rejected");
+                          const isPendingReview = Boolean(
+                            inst.is_pending_review ||
+                            instStatus === "awaiting_review" ||
+                            instStatus === "pending_review"
+                          );
+                          const isPaid = instStatus === "paid";
+
+                          return (
+                            <div
+                              key={inst.installment_id || idx}
+                              className={`rounded-2xl p-4 transition-all ${
+                                isRejected
+                                  ? "bg-rose-50/40 border border-rose-300 ring-1 ring-rose-200/60 shadow-2xs"
+                                  : isDue
+                                  ? "bg-[#fef8f0] border border-[#f0d9b5]"
+                                  : "bg-white border border-[#e3ddd0]"
+                              }`}
+                            >
+                              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                <div className="flex items-center gap-2">
+                                  <p
+                                    className="text-xs font-semibold tracking-wide uppercase"
+                                    style={{ color: isRejected ? "#b91c1c" : "#9c6b2e" }}
+                                  >
+                                    Installment {inst.installment_number ?? idx + 1}
+                                  </p>
+                                  {isRejected && (
+                                    <span className="rounded-full bg-rose-100 border border-rose-200 px-2 py-0.5 text-[10px] font-bold text-rose-800">
+                                      Payment Rejected
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {isDue && !isRejected && (
+                                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                                      Due
+                                    </span>
+                                  )}
                                   <span
-                                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                                    className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase border ${
                                       isPaid
-                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                        : isReview
-                                        ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                                        : isPartial
-                                        ? 'bg-sky-50 text-sky-700 border border-sky-200'
-                                        : 'bg-slate-100 text-slate-600'
+                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                        : isPendingReview
+                                        ? "bg-amber-50 text-amber-700 border-amber-200"
+                                        : isRejected
+                                        ? "bg-rose-50 text-rose-700 border-rose-200"
+                                        : "bg-slate-50 text-slate-600 border-slate-200"
                                     }`}
                                   >
-                                    {isReview ? 'Review Pending' : inst.status || 'Pending'}
+                                    {isPaid ? "● Paid" : isPendingReview ? "Pending Review" : isRejected ? "Rejected" : inst.status || "Pending"}
                                   </span>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                        </table>
+                                </div>
+                              </div>
+
+                              {/* Rejection Alert Box */}
+                              {isRejected && (
+                                <div className="mb-4 rounded-xl bg-rose-50 border border-rose-200 p-3.5 text-xs text-rose-900 shadow-2xs">
+                                  <div className="flex items-start gap-2.5">
+                                    <XCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                                    <div className="space-y-1 min-w-0">
+                                      <p className="font-bold text-rose-950 text-xs">
+                                        Online Payment Rejected by Branch Admin
+                                      </p>
+                                      <p className="text-rose-800">
+                                        <span className="font-semibold text-rose-950">Reason: </span>
+                                        {inst.rejection_reason || "Payment could not be verified in branch bank records"}
+                                      </p>
+                                      {inst.reviewed_at && (
+                                        <p className="text-[11px] text-rose-600">
+                                          Reviewed on: {formatDate(inst.reviewed_at)}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              <dl className="grid gap-3 sm:grid-cols-3 text-xs">
+                                <div className="space-y-1">
+                                  <dt className="text-slate-400 font-medium">Total Amount</dt>
+                                  <dd className="font-bold text-slate-800">{formatCurrency(inst.amount)}</dd>
+                                </div>
+                                <div className="space-y-1">
+                                  <dt className="text-slate-400 font-medium">Paid Amount</dt>
+                                  <dd className="font-bold text-emerald-700">
+                                    {formatCurrency(
+                                      inst.paid_amount !== undefined && inst.paid_amount !== null
+                                        ? inst.paid_amount
+                                        : isPaid
+                                        ? inst.amount
+                                        : 0
+                                    )}
+                                  </dd>
+                                </div>
+                                <div className="space-y-1">
+                                  <dt className="text-slate-400 font-medium">Remaining</dt>
+                                  <dd className="font-bold text-rose-700">
+                                    {formatCurrency(
+                                      inst.remaining_amount !== undefined && inst.remaining_amount !== null
+                                        ? inst.remaining_amount
+                                        : isPaid
+                                        ? 0
+                                        : Math.max(0, Number(inst.amount || 0) - Number(inst.paid_amount || 0))
+                                    )}
+                                  </dd>
+                                </div>
+                                <div className="space-y-1">
+                                  <dt className="text-slate-400 font-medium">Due Date</dt>
+                                  <dd className="font-semibold text-slate-700">{formatDate(inst.due_date)}</dd>
+                                </div>
+                                <div className="space-y-1">
+                                  <dt className="text-slate-400 font-medium">{isRejected ? "Attempted Date" : "Paid Date"}</dt>
+                                  <dd className="font-semibold text-slate-700">
+                                    {inst.payment_date || inst.paid_date
+                                      ? `${formatDate(inst.payment_date || inst.paid_date)}${isRejected ? " (Rejected)" : ""}`
+                                      : "Not yet paid"}
+                                  </dd>
+                                </div>
+                                <div className="space-y-1">
+                                  <dt className="text-slate-400 font-medium">Payment Method</dt>
+                                  <dd className="font-semibold text-slate-700">
+                                    {isRejected
+                                      ? (inst.payment_method ? `${String(inst.payment_method).toUpperCase()} Online (Rejected)` : "Razorpay Online (Rejected)")
+                                      : inst.payment_method_display || (isPaid ? "Online / Verified" : "Pending")}
+                                  </dd>
+                                </div>
+
+                                {inst.is_split && (
+                                  <>
+                                    <div className="space-y-1">
+                                      <dt className="text-slate-400 font-medium">Cash Amount</dt>
+                                      <dd className="font-bold text-slate-800">{formatCurrency(inst.cash_amount ?? 0)}</dd>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <dt className="text-slate-400 font-medium">UPI Amount</dt>
+                                      <dd className="font-bold text-slate-800">{formatCurrency(inst.upi_amount ?? 0)}</dd>
+                                    </div>
+                                  </>
+                                )}
+
+                                {(inst.is_split || inst.is_upi || Boolean(inst.upi_transaction_id)) && inst.upi_transaction_id ? (
+                                  <div className="space-y-1 sm:col-span-2">
+                                    <dt className="text-slate-400 font-medium">UPI Transaction ID</dt>
+                                    <dd className="font-mono text-xs font-bold text-slate-800 break-all">{inst.upi_transaction_id}</dd>
+                                  </div>
+                                ) : null}
+
+                                {inst.is_cash && !inst.is_split && inst.cash_amount !== null && inst.cash_amount > 0 && (
+                                  <div className="space-y-1">
+                                    <dt className="text-slate-400 font-medium">Cash Amount</dt>
+                                    <dd className="font-bold text-slate-800">{formatCurrency(inst.cash_amount)}</dd>
+                                  </div>
+                                )}
+
+                                {inst.is_upi && !inst.is_split && inst.upi_amount !== null && inst.upi_amount > 0 && (
+                                  <div className="space-y-1">
+                                    <dt className="text-slate-400 font-medium">UPI Amount</dt>
+                                    <dd className="font-bold text-slate-800">{formatCurrency(inst.upi_amount)}</dd>
+                                  </div>
+                                )}
+
+                                {inst.is_razorpay && inst.razorpay_payment_id && (
+                                  <div className="space-y-1 sm:col-span-2">
+                                    <dt className="text-slate-400 font-medium">Razorpay Payment ID</dt>
+                                    <dd className="font-mono text-xs font-bold text-slate-800 break-all">{inst.razorpay_payment_id}</dd>
+                                  </div>
+                                )}
+                                {inst.is_razorpay && inst.razorpay_order_id && (
+                                  <div className="space-y-1 sm:col-span-2">
+                                    <dt className="text-slate-400 font-medium">Razorpay Order ID</dt>
+                                    <dd className="font-mono text-xs font-bold text-slate-800 break-all">{inst.razorpay_order_id}</dd>
+                                  </div>
+                                )}
+                              </dl>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Table 6: Payment History & Records */}
                 {rawPayments.length > 0 && (

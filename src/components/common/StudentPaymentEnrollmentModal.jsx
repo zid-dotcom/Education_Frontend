@@ -907,23 +907,32 @@ const StudentPaymentEnrollmentModal = ({
 
                       const razorpayId = (() => {
                         if (inst.razorpay_payment_id) return inst.razorpay_payment_id;
+                        if (statusInfo.razorpayPaymentId) return statusInfo.razorpayPaymentId;
                         if (inst.payment_reference && String(inst.payment_reference).startsWith('pay_')) {
                           return inst.payment_reference;
                         }
                         if (statusInfo.paymentReference && String(statusInfo.paymentReference).startsWith('pay_')) {
                           return statusInfo.paymentReference;
                         }
-                        if (statusInfo.razorpayPaymentId) {
-                          return statusInfo.razorpayPaymentId;
-                        }
                         if (inst.transaction_id && String(inst.transaction_id).startsWith('pay_')) {
                           return inst.transaction_id;
                         }
-                        if (selectedEnrollment?.razorpay_payment_id && (installmentsList.length === 1 || instNum === 1)) {
+                        if (selectedEnrollment?.razorpay_payment_id) {
                           return selectedEnrollment.razorpay_payment_id;
                         }
-                        if (selectedEnrollment?.payment_reference && String(selectedEnrollment.payment_reference).startsWith('pay_') && (installmentsList.length === 1 || instNum === 1)) {
+                        if (selectedEnrollment?.payment_reference && String(selectedEnrollment.payment_reference).startsWith('pay_')) {
                           return selectedEnrollment.payment_reference;
+                        }
+                        return '';
+                      })();
+
+                      const razorpayOrderId = (() => {
+                        if (inst.razorpay_order_id) return inst.razorpay_order_id;
+                        if (inst.order_id) return inst.order_id;
+                        if (statusInfo.razorpayOrderId) return statusInfo.razorpayOrderId;
+                        if (statusInfo.orderId) return statusInfo.orderId;
+                        if (selectedEnrollment?.razorpay_order_id) {
+                          return selectedEnrollment.razorpay_order_id;
                         }
                         return '';
                       })();
@@ -1155,11 +1164,22 @@ const StudentPaymentEnrollmentModal = ({
                                 </div>
                               )}
 
+                              {/* Razorpay Payment ID */}
                               {isRazorpay && razorpayId && (
                                 <div className="flex items-center justify-between text-[11px] bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200">
-                                  <span className="text-slate-500 font-medium">Razorpay ID:</span>
+                                  <span className="text-slate-500 font-medium">Razorpay Payment ID:</span>
                                   <span className="font-mono font-bold text-slate-800 select-all truncate max-w-[160px]" title={razorpayId}>
                                     {razorpayId}
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Razorpay Order ID */}
+                              {isRazorpay && razorpayOrderId && (
+                                <div className="flex items-center justify-between text-[11px] bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200">
+                                  <span className="text-slate-500 font-medium">Razorpay Order ID:</span>
+                                  <span className="font-mono font-bold text-slate-800 select-all truncate max-w-[160px]" title={razorpayOrderId}>
+                                    {razorpayOrderId}
                                   </span>
                                 </div>
                               )}
