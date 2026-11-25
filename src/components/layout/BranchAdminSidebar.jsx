@@ -106,9 +106,9 @@ const NAV_GROUPS = [
   {
     label: "Finance",
     items: [
-      { id: "fees", backendKey: "student_fees", label: "Branch Revenue", icon: IndianRupee, path: "/branch-admin/profit" },
-      { id: "receipts", backendKey: "receipts", label: "Student Receipts", icon: Receipt, path: "/branch-admin/receipts" },
-      { id: "expenses", backendKey: "expenses", label: "Branch expenses", icon: IndianRupee, path: "/branch-admin/expenses" },
+      { id: "fees", backendKey: "branch_revenue", label: "Branch Revenue", icon: IndianRupee, path: "/branch-admin/profit" },
+      { id: "receipts", backendKey: "student_receipts", label: "Student Receipts", icon: Receipt, path: "/branch-admin/receipts" },
+      { id: "expenses", backendKey: "branch_expenses", label: "Branch expenses", icon: IndianRupee, path: "/branch-admin/expenses" },
     ],
   },
   {

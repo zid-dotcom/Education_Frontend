@@ -39,9 +39,9 @@ export const CANONICAL_BACKEND_KEYS = [
   'staff_verification',
   'staff_monitoring',
   'my_attendance',
-  'student_fees',
-  'receipts',
-  'expenses',
+  'branch_revenue',
+  'student_receipts',
+  'branch_expenses',
   'announcements',
   'messages',
 ];
@@ -64,9 +64,9 @@ export const FRONTEND_ID_TO_BACKEND_KEY = {
   'staff-verification': 'staff_verification',
   'staff-monitoring': 'staff_monitoring',
   attendance: 'my_attendance',
-  fees: 'student_fees',
-  receipts: 'receipts',
-  expenses: 'expenses',
+  fees: 'branch_revenue',
+  receipts: 'student_receipts',
+  expenses: 'branch_expenses',
   announcements: 'announcements',
   messages: 'messages',
 };
@@ -82,8 +82,9 @@ export const BACKEND_ALIASES = {
   course_reviews: ['reviews', 'course_review', 'course_reviews', 'review'],
   all_staff: ['all-staff', 'all_staff', 'all_staffs', 'allstaff'],
   staff_monitoring: ['staff-monitoring', 'staff_monitoring', 'staffmonitoring', 'monitoring'],
-  expenses: ['expenses', 'branch_expenses', 'branch_expense', 'expense'],
-  receipts: ['receipts', 'student_receipts', 'receipt'],
+  branch_expenses: ['expenses', 'branch_expenses', 'branch_expense', 'expense'],
+  student_receipts: ['receipts', 'student_receipts', 'receipt'],
+  branch_revenue: ['fees', 'student_fees', 'profit', 'branch_revenue', 'revenue'],
   student_fees: ['fees', 'student_fees', 'profit', 'branch_revenue', 'revenue'],
   course_enrolments: ['course-enrollments', 'course_enrolments', 'course_enrollments'],
   course_approvals: ['purchases', 'course_approvals', 'course_approval', 'approvals'],
@@ -237,7 +238,7 @@ export const BRANCH_NAV_CONFIG = [
     items: [
       {
         id: 'fees',
-        backendKey: 'student_fees',
+        backendKey: 'branch_revenue',
         label: 'Branch Revenue',
         description: 'Fee payment records, receipts, and branch profit summaries',
         icon: IndianRupee,
@@ -245,7 +246,7 @@ export const BRANCH_NAV_CONFIG = [
       },
       {
         id: 'receipts',
-        backendKey: 'receipts',
+        backendKey: 'student_receipts',
         label: 'Student Receipts',
         description: 'Official fee payment receipts and tuition vouchers',
         icon: Receipt,
@@ -253,7 +254,7 @@ export const BRANCH_NAV_CONFIG = [
       },
       {
         id: 'expenses',
-        backendKey: 'expenses',
+        backendKey: 'branch_expenses',
         label: 'Branch expenses',
         description: 'Branch daily expenditures, operational costs, and utility bills',
         icon: IndianRupee,
@@ -473,8 +474,8 @@ function _normalizeFromKeyVisibleArray(arr) {
 
 /**
  * Prepares the payload for PUT request.
- * Contains all 19 canonical backend keys with strict boolean true/false values,
- * plus mirrored alias keys so any backend API schema accepts and saves them.
+ * Contains only valid canonical backend keys with strict boolean true/false values,
+ * and strips any legacy or unknown aliases that the backend rejects.
  */
 export const sanitizeNavLinksForBackend = (rawSettings = {}) => {
   const sanitized = {};
@@ -503,28 +504,18 @@ export const sanitizeNavLinksForBackend = (rawSettings = {}) => {
     }
   });
 
-  // Mirror common backend alias keys in the payload to ensure 100% backend compatibility
-  if (sanitized.course_reviews !== undefined) {
-    sanitized.reviews = sanitized.course_reviews;
-    sanitized.course_review = sanitized.course_reviews;
-  }
-  if (sanitized.all_staff !== undefined) {
-    sanitized['all-staff'] = sanitized.all_staff;
-    sanitized.all_staffs = sanitized.all_staff;
-  }
-  if (sanitized.staff_monitoring !== undefined) {
-    sanitized['staff-monitoring'] = sanitized.staff_monitoring;
-  }
-  if (sanitized.expenses !== undefined) {
-    sanitized.branch_expenses = sanitized.expenses;
-  }
-  if (sanitized.receipts !== undefined) {
-    sanitized.student_receipts = sanitized.receipts;
-  }
-  if (sanitized.student_fees !== undefined) {
-    sanitized.branch_revenue = sanitized.student_fees;
-    sanitized.profit = sanitized.student_fees;
-  }
+  // Keep student_fees in sync with branch_revenue since backend accepts/requires it as well
+  sanitized.student_fees = sanitized.branch_revenue !== false;
+
+  // STRICTLY REMOVE any unknown/legacy alias keys that the backend rejects!
+  delete sanitized['all-staff'];
+  delete sanitized.all_staffs;
+  delete sanitized.course_review;
+  delete sanitized.expenses;
+  delete sanitized.profit;
+  delete sanitized.receipts;
+  delete sanitized.reviews;
+  delete sanitized['staff-monitoring'];
 
   return sanitized;
 };

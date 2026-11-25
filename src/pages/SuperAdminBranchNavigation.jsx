@@ -139,6 +139,11 @@ const SuperAdminBranchNavigation = () => {
       if (itemId) {
         updated[itemId] = nextVal;
       }
+      if (backendKey === 'branch_revenue' || backendKey === 'student_fees') {
+        updated.branch_revenue = nextVal;
+        updated.student_fees = nextVal;
+        updated.fees = nextVal;
+      }
       return updated;
     });
   };
@@ -148,6 +153,8 @@ const SuperAdminBranchNavigation = () => {
     CANONICAL_BACKEND_KEYS.forEach((key) => {
       allEnabled[key] = true;
     });
+    allEnabled.branch_revenue = true;
+    allEnabled.student_fees = true;
     Object.keys(FRONTEND_ID_TO_BACKEND_KEY).forEach((frontId) => {
       allEnabled[frontId] = true;
     });
@@ -159,6 +166,8 @@ const SuperAdminBranchNavigation = () => {
     CANONICAL_BACKEND_KEYS.forEach((key) => {
       allDisabled[key] = false;
     });
+    allDisabled.branch_revenue = false;
+    allDisabled.student_fees = false;
     Object.keys(FRONTEND_ID_TO_BACKEND_KEY).forEach((frontId) => {
       allDisabled[frontId] = false;
     });

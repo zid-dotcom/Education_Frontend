@@ -17,11 +17,18 @@ const parseResponse = async (response, fallbackMessage) => {
 
   if (!response.ok) {
     const detail = resData?.detail;
-    const message = Array.isArray(detail)
-      ? detail.map((item) => item.msg || JSON.stringify(item)).join(', ')
-      : typeof detail === 'string'
-      ? detail
-      : fallbackMessage;
+    let message = fallbackMessage;
+    if (typeof detail === 'string') {
+      message = detail;
+    } else if (Array.isArray(detail)) {
+      message = detail.map((item) => item.msg || JSON.stringify(item)).join(', ');
+    } else if (detail && typeof detail === 'object') {
+      message =
+        detail.message ||
+        (Array.isArray(detail.unknown_nav_links) && detail.unknown_nav_links.length > 0
+          ? `Unknown navigation links: ${detail.unknown_nav_links.join(', ')}`
+          : fallbackMessage);
+    }
     throw new Error(message || fallbackMessage);
   }
 
