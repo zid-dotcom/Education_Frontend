@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   AlertCircle,
   CalendarDays,
@@ -22,7 +23,7 @@ import {
   X,
   XCircle,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import BranchAdminSidebar from "../components/layout/BranchAdminSidebar";
 import NavLogoutButton from "../components/common/NavLogoutButton";
@@ -33,6 +34,7 @@ import {
   recordBranchAdminInstallmentPaymentApi,
   getBranchAdminPendingInstallmentPaymentsApi,
   getBranchAdminTodayInstallmentPaymentsApi,
+  getBranchAdminOnlineInstallmentHistoryApi,
   approveBranchAdminInstallmentPaymentApi,
   rejectBranchAdminInstallmentPaymentApi,
   getBranchAdminInstallmentPaymentHistoryApi,
@@ -293,6 +295,34 @@ const RecordPaymentModal = ({
     });
   }, [installments]);
 
+  // List of all unpaid installments
+  const unpaidInstallments = useMemo(() => {
+    return installments.filter((inst) => {
+      const isPaid = String(inst.status || "").toLowerCase() === "paid";
+      if (isPaid) return false;
+      const rem =
+        inst.remaining_amount !== undefined && inst.remaining_amount !== null
+          ? Number(inst.remaining_amount)
+          : Math.max(0, Number(inst.amount || 0) - Number(inst.paid_amount || 0));
+      return rem > 0;
+    });
+  }, [installments]);
+
+  // Next installment remaining amount
+  const nextInstRemaining = useMemo(() => {
+    if (!nextUnpaidInstallment) return 0;
+    return nextUnpaidInstallment.remaining_amount !== undefined && nextUnpaidInstallment.remaining_amount !== null
+      ? Number(nextUnpaidInstallment.remaining_amount)
+      : Math.max(0, Number(nextUnpaidInstallment.amount || 0) - Number(nextUnpaidInstallment.paid_amount || 0));
+  }, [nextUnpaidInstallment]);
+
+  // Only show "Full Course Balance / One Time Pay" choice if there are 2 or more installments pending
+  const hasMultiplePendingInstallments = useMemo(() => {
+    if (unpaidInstallments.length > 1) return true;
+    if (balance > nextInstRemaining && nextInstRemaining > 0) return true;
+    return false;
+  }, [unpaidInstallments, balance, nextInstRemaining]);
+
   useEffect(() => {
     if (!isOpen || !enrollment) return;
     setValidationError("");
@@ -517,7 +547,7 @@ const RecordPaymentModal = ({
           </div>
 
           {/* Payment Scope Selector (Next Installment vs Full Course Balance) */}
-          {balance > 0 && nextUnpaidInstallment && (
+          {balance > 0 && nextUnpaidInstallment && hasMultiplePendingInstallments && (
             <div>
               <label className="text-xs font-semibold text-slate-800 block mb-2">
                 Payment Scope
@@ -593,7 +623,7 @@ const RecordPaymentModal = ({
           )}
 
           {/* Target Installment Banner */}
-          {paymentScope === "full_balance" ? (
+          {paymentScope === "full_balance" && hasMultiplePendingInstallments ? (
             <div className="rounded-xl border border-[#9c6b2e]/40 bg-[#faf4ea]/60 p-3.5 flex items-center justify-between gap-3 shadow-2xs">
               <div className="flex items-center gap-3 min-w-0">
                 <div
@@ -839,7 +869,162 @@ const RecordPaymentModal = ({
 };
 
 /* ─────────────────────────────────────────────────────────
-   REJECT PAYMENT MODAL
+   CONFIRM APPROVE ONLINE PAYMENT MODAL
+   ───────────────────────────────────────────────────────── */
+const ConfirmApprovePaymentModal = ({
+  isOpen,
+  onClose,
+  payment,
+  onConfirm,
+  isSubmitting,
+}) => {
+  if (!isOpen || !payment) return null;
+
+  const paymentId = payment.payment_id ?? payment.id;
+  const studentName =
+    payment.student_name || payment.name || payment.student?.name || "Student";
+  const studentEmail = payment.student_email || payment.email || payment.student?.email;
+  const studentPhone = payment.student_phone || payment.phone || payment.student?.phone;
+  const courseTitle =
+    payment.course_title || payment.course_name || payment.course?.title || "Course";
+  const amount = payment.amount ?? payment.payment_amount ?? 0;
+  const instNum = payment.installment_number ?? payment.installment?.installment_number;
+  const rzpPaymentId = payment.razorpay_payment_id || payment.payment_reference;
+  const rzpOrderId = payment.razorpay_order_id || payment.order_reference;
+  const paymentDate = payment.created_at || payment.payment_date;
+
+  return createPortal(
+    <div
+      className="ba-fade fixed inset-0 z-[99999] flex items-center justify-center p-4 backdrop-blur-sm"
+      style={{ background: "rgba(23,20,15,.65)" }}
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+    >
+      <div
+        className="ba-pop relative w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl"
+        style={{ border: "1px solid #e3ddd0" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="p-6 border-b border-[#e3ddd0] flex items-start justify-between gap-3 bg-[#faf8f4]">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-800 border border-emerald-200">
+              <CheckCircle2 className="h-6 w-6" />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5 inline-block mb-1">
+                Razorpay Online Payment
+              </span>
+              <h3 className="text-lg font-bold text-slate-900" style={{ ...serif }}>
+                Approve Online Payment
+              </h3>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="p-1 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition cursor-pointer"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-4">
+          {/* Summary Box */}
+          <div className="rounded-xl border border-[#e3ddd0] bg-stone-50/70 p-4 space-y-3">
+            <div className="flex items-center justify-between pb-3 border-b border-stone-200">
+              <div>
+                <p className="text-xs text-stone-500">Student</p>
+                <p className="text-sm font-bold text-slate-900">{studentName}</p>
+                {(studentEmail || studentPhone) && (
+                  <p className="text-xs text-stone-400 mt-0.5">
+                    {studentEmail} {studentPhone ? `• ${studentPhone}` : ""}
+                  </p>
+                )}
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-stone-500">Payment Amount</p>
+                <p className="text-xl font-bold text-emerald-700" style={{ ...serif }}>
+                  {formatCurrency(amount)}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <span className="text-stone-500 block">Course</span>
+                <span className="font-semibold text-slate-800">{courseTitle}</span>
+              </div>
+              <div>
+                <span className="text-stone-500 block">Installment</span>
+                <span className="font-semibold text-slate-800">
+                  {instNum ? `Installment #${instNum}` : "Full / Installment"}
+                </span>
+              </div>
+              {rzpPaymentId && (
+                <div className="col-span-2">
+                  <span className="text-stone-500 block">Razorpay Payment ID</span>
+                  <span className="font-mono text-stone-700 select-all bg-white px-2 py-1 rounded border border-stone-200 inline-block mt-0.5">
+                    {rzpPaymentId}
+                  </span>
+                </div>
+              )}
+              {paymentDate && (
+                <div className="col-span-2 text-stone-400">
+                  Paid on: {formatDateTime(paymentDate)}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900">
+            <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+            <p>
+              Approving will verify this transaction, mark the installment as <strong>PAID</strong>, credit the student's account balance, and generate an official receipt.
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 sm:p-6 border-t border-[#e3ddd0] flex items-center justify-end gap-3 bg-[#faf8f4]">
+          <button
+            type="button"
+            disabled={isSubmitting}
+            onClick={onClose}
+            className="px-4 py-2.5 rounded-xl border border-[#e3ddd0] text-xs font-semibold text-stone-600 hover:bg-stone-100 transition cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={isSubmitting}
+            onClick={() => onConfirm(payment)}
+            className="ba-press flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 transition cursor-pointer shadow-sm disabled:opacity-60"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Approving...
+              </>
+            ) : (
+              <>
+                <Check className="h-4 w-4" />
+                Confirm & Approve
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+/* ─────────────────────────────────────────────────────────
+   REJECT ONLINE PAYMENT MODAL
    PUT /enrollments/branch-admin/installment-payments/{payment_id}/reject
    ───────────────────────────────────────────────────────── */
 const RejectPaymentModal = ({
@@ -869,10 +1054,10 @@ const RejectPaymentModal = ({
     onConfirm(paymentId, reason.trim() || "Payment rejected by Branch Admin");
   };
 
-  return (
+  return createPortal(
     <div
-      className="ba-fade fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-      style={{ background: "rgba(23,20,15,.6)" }}
+      className="ba-fade fixed inset-0 z-[99999] flex items-center justify-center p-4 backdrop-blur-sm"
+      style={{ background: "rgba(23,20,15,.65)" }}
       role="dialog"
       aria-modal="true"
       onClick={onClose}
@@ -920,14 +1105,14 @@ const RejectPaymentModal = ({
               type="button"
               disabled={isSubmitting}
               onClick={onClose}
-              className="px-4 py-2 rounded-xl border border-[#e3ddd0] text-xs font-semibold text-stone-600 hover:bg-stone-50 transition"
+              className="px-4 py-2 rounded-xl border border-[#e3ddd0] text-xs font-semibold text-stone-600 hover:bg-stone-50 transition cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="ba-press flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 transition"
+              className="ba-press flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 transition cursor-pointer"
             >
               {isSubmitting ? (
                 <>
@@ -941,7 +1126,149 @@ const RejectPaymentModal = ({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
+  );
+};
+
+/* ─────────────────────────────────────────────────────────
+   ACTION RESULT / CONFIRMATION POPUP MODAL
+   Prominent popup message that shows clearly when approve or
+   reject is executed so branch admin understands what happened.
+   ───────────────────────────────────────────────────────── */
+const ActionResultModal = ({ result, onClose }) => {
+  if (!result) return null;
+
+  const isApprove = result.type === "approve";
+  const isReject = result.type === "reject";
+  const isError = result.type === "error";
+
+  return createPortal(
+    <div
+      className="ba-fade fixed inset-0 z-[99999] flex items-center justify-center p-4 backdrop-blur-sm"
+      style={{ background: "rgba(23,20,15,.65)" }}
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+    >
+      <div
+        className="ba-pop relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl"
+        style={{ border: "1px solid #e3ddd0" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-6 text-center">
+          {/* Icon */}
+          <div
+            className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl ${
+              isApprove
+                ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                : isReject
+                ? "bg-amber-100 text-amber-700 border border-amber-200"
+                : "bg-rose-100 text-rose-700 border border-rose-200"
+            }`}
+          >
+            {isApprove && <CheckCircle2 className="h-9 w-9" />}
+            {isReject && <XCircle className="h-9 w-9" />}
+            {isError && <AlertCircle className="h-9 w-9" />}
+          </div>
+
+          {/* Title */}
+          <h3
+            className={`text-xl font-bold ${
+              isApprove
+                ? "text-emerald-950"
+                : isReject
+                ? "text-amber-950"
+                : "text-rose-950"
+            }`}
+            style={{ ...serif }}
+          >
+            {result.title}
+          </h3>
+
+          {/* Message */}
+          <p className="mt-2 text-xs sm:text-sm text-stone-600 leading-relaxed px-2">
+            {result.message}
+          </p>
+
+          {/* Details Card */}
+          {(result.studentName || result.amount || result.paymentId) && (
+            <div className="mt-5 rounded-xl border border-[#e3ddd0] bg-[#faf8f4] p-4 text-left space-y-2">
+              {result.studentName && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-stone-500 font-medium">Student</span>
+                  <span className="font-bold text-slate-900">{result.studentName}</span>
+                </div>
+              )}
+              {result.courseTitle && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-stone-500 font-medium">Course</span>
+                  <span className="font-medium text-slate-800 truncate max-w-[200px]">
+                    {result.courseTitle}
+                  </span>
+                </div>
+              )}
+              {result.amount && (
+                <div className="flex items-center justify-between text-xs pt-1 border-t border-[#e3ddd0]">
+                  <span className="text-stone-500 font-medium">Amount</span>
+                  <span
+                    className={`font-bold ${
+                      isApprove ? "text-emerald-700" : "text-slate-900"
+                    }`}
+                  >
+                    {result.amount}
+                  </span>
+                </div>
+              )}
+              {result.paymentId && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-stone-500 font-medium">Payment ID</span>
+                  <span className="font-mono text-[11px] text-stone-600">
+                    {result.paymentId}
+                  </span>
+                </div>
+              )}
+              {result.reason && (
+                <div className="pt-2 text-xs">
+                  <span className="text-rose-700 font-semibold block mb-0.5">
+                    Reason for rejection:
+                  </span>
+                  <p className="text-stone-600 italic bg-white p-2 rounded border border-rose-100">
+                    "{result.reason}"
+                  </p>
+                </div>
+              )}
+              <div className="pt-2 flex items-center justify-between text-xs border-t border-[#e3ddd0]">
+                <span className="text-stone-500 font-medium">Status</span>
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                    isApprove
+                      ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                      : isReject
+                      ? "bg-amber-100 text-amber-800 border border-amber-200"
+                      : "bg-rose-100 text-rose-800 border border-rose-200"
+                  }`}
+                >
+                  {isApprove ? "APPROVED" : isReject ? "REJECTED" : "FAILED"}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Action button */}
+          <div className="mt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-[#17140f] hover:bg-stone-900 transition cursor-pointer shadow-sm"
+            >
+              Done / Continue
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 };
 
@@ -1557,7 +1884,11 @@ const EnrollmentDetailsModal = ({
               <div className="mt-4 space-y-3">
                 {installments.map((inst, idx) => {
                   const instStatus = String(inst.status || "pending").toLowerCase();
-                  const isDue = inst.is_due === true;
+                  const isDue = instStatus !== "paid" && (
+                    inst.due_date
+                      ? new Date(inst.due_date) <= new Date(new Date().setHours(23, 59, 59, 999))
+                      : inst.is_due === true
+                  );
                   const isRejected = Boolean(inst.is_rejected || instStatus === "rejected");
                   const isPendingReview = Boolean(inst.is_pending_review || instStatus === "awaiting_review");
 
@@ -1804,15 +2135,60 @@ const EmptyState = ({ icon: Icon, title, text, actionText, onAction }) => (
 /* ─────────────────────────────────────────────────────────
    MAIN COMPONENT: BranchAdminEnrollments
    ───────────────────────────────────────────────────────── */
-const BranchAdminEnrollments = () => {
+const BranchAdminEnrollments = ({ defaultTab = "all" }) => {
   useDisplayFonts();
   const { user, token, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const getTabFromLocation = (pathname, fallback) => {
+    if (pathname.includes("installments-balance")) return "installment";
+    if (pathname.includes("fully-paid")) return "fully_paid";
+    if (pathname.includes("online-approvals")) return "approvals";
+    return fallback || "all";
+  };
 
   // Active Tab: 'all' | 'installment' | 'fully_paid' | 'approvals' | 'history'
-  const [activeTab, setActiveTab] = useState("all");
-  const [approvalsSubTab, setApprovalsSubTab] = useState("pending"); // 'pending' | 'today'
+  const [activeTab, setActiveTab] = useState(() =>
+    getTabFromLocation(location.pathname, defaultTab)
+  );
+  const [approvalsSubTab, setApprovalsSubTab] = useState("pending"); // 'pending' | 'history'
   const [historyStatusFilter, setHistoryStatusFilter] = useState(""); // '' | 'received' | 'rejected'
+
+  // Online history date range and status filters (default to today's date in local time)
+  const todayDateStr = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const [onlineFromDate, setOnlineFromDate] = useState("");
+  const [onlineToDate, setOnlineToDate] = useState("");
+  const [onlineIsToday, setOnlineIsToday] = useState(true);
+  const [onlineStatusFilter, setOnlineStatusFilter] = useState("all"); // 'all' | 'approved' | 'rejected'
+  const [onlineHistoryPayments, setOnlineHistoryPayments] = useState([]);
+  const [onlineHistoryLoading, setOnlineHistoryLoading] = useState(false);
+
+  useEffect(() => {
+    const target = getTabFromLocation(location.pathname, defaultTab);
+    setActiveTab(target);
+  }, [location.pathname, defaultTab]);
+
+  const handleTabChange = (newTab) => {
+    setActiveTab(newTab);
+    const pathMap = {
+      all: "/branch-admin/enrollments",
+      installment: "/branch-admin/enrollments/installments-balance",
+      fully_paid: "/branch-admin/enrollments/fully-paid",
+      approvals: "/branch-admin/enrollments/online-approvals",
+      history: "/branch-admin/enrollments",
+    };
+    const target = pathMap[newTab] || "/branch-admin/enrollments";
+    if (location.pathname !== target) {
+      navigate(target, { replace: true });
+    }
+  };
 
   // Data sets
   const [enrollments, setEnrollments] = useState([]);
@@ -1836,7 +2212,9 @@ const BranchAdminEnrollments = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedEnrollment, setSelectedEnrollment] = useState(null);
   const [recordingEnrollment, setRecordingEnrollment] = useState(null);
+  const [approvingPayment, setApprovingPayment] = useState(null);
   const [rejectingPayment, setRejectingPayment] = useState(null);
+  const [actionResult, setActionResult] = useState(null);
   const [installmentReceipt, setInstallmentReceipt] = useState(null);
   const [toast, setToast] = useState(null);
   const [isDownloadingReceipt, setIsDownloadingReceipt] = useState(false);
@@ -1918,12 +2296,47 @@ const BranchAdminEnrollments = () => {
         const raw = normalizeArray(historyRes.value);
         setPaymentHistory(raw);
       }
+
+      // 7. Online installment payment history
+      fetchOnlineHistory(onlineFromDate, onlineToDate, onlineStatusFilter, onlineIsToday);
     } catch (err) {
       setError(err?.message || "Failed to load branch student records.");
     } finally {
       if (!silent) setLoading(false);
     }
   };
+
+  const fetchOnlineHistory = async (
+    fromDate = onlineFromDate,
+    toDate = onlineToDate,
+    status = onlineStatusFilter,
+    isToday = onlineIsToday
+  ) => {
+    if (!token) return;
+    try {
+      setOnlineHistoryLoading(true);
+      const res = await getBranchAdminOnlineInstallmentHistoryApi(token, {
+        date_from: !isToday && fromDate ? fromDate : undefined,
+        date_to: !isToday && toDate ? toDate : undefined,
+        status: status,
+        today: isToday ? true : undefined,
+      });
+      const list = normalizeArray(res);
+      setOnlineHistoryPayments(list);
+    } catch (err) {
+      console.warn("Failed to fetch online installment history:", err);
+      setOnlineHistoryPayments([]);
+    } finally {
+      setOnlineHistoryLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!token) return;
+    if (activeTab === "approvals") {
+      fetchOnlineHistory(onlineFromDate, onlineToDate, onlineStatusFilter, onlineIsToday);
+    }
+  }, [token, activeTab, approvalsSubTab, onlineFromDate, onlineToDate, onlineStatusFilter, onlineIsToday]);
 
   // Dedicated history reload when status filter changes
   useEffect(() => {
@@ -2180,7 +2593,7 @@ const BranchAdminEnrollments = () => {
 
   // Approve online Razorpay payment
   const handleApprovePayment = async (payment) => {
-    const paymentId = payment.payment_id ?? payment.id;
+    const paymentId = payment?.payment_id ?? payment?.id;
     if (!paymentId || !token) return;
     try {
       setProcessingPaymentId(paymentId);
@@ -2192,6 +2605,11 @@ const BranchAdminEnrollments = () => {
       const amountStr = formatCurrency(payment.amount ?? payment.payment_amount ?? 0);
       const studentName =
         payment.student_name || payment.name || payment.student?.name || "Student";
+      const courseTitle =
+        payment.course_title || payment.course_name || payment.course?.title || "Course";
+      const rzpPaymentId = payment.razorpay_payment_id || payment.payment_reference || paymentId;
+
+      setApprovingPayment(null);
       setSuccess(`Payment of ${amountStr} for ${studentName} approved successfully.`);
       setTimeout(() => setSuccess(""), 5000);
       setToast({
@@ -2200,8 +2618,21 @@ const BranchAdminEnrollments = () => {
         message: `Online payment of ${amountStr} for ${studentName} was approved and credited successfully.`,
       });
 
+      // Show prominent status popup modal
+      setActionResult({
+        type: "approve",
+        title: "Payment Approved Successfully",
+        message: `Online payment of ${amountStr} for ${studentName} has been verified and approved. The student's fee balance has been credited.`,
+        studentName,
+        courseTitle,
+        amount: amountStr,
+        paymentId: rzpPaymentId,
+      });
+
       // Re-fetch approvals and students data silently
       loadAllData(true);
+      fetchOnlineHistory();
+      fetchOnlineHistory();
     } catch (err) {
       setError(err?.message || "Failed to approve payment.");
       setTimeout(() => setError(""), 6000);
@@ -2209,6 +2640,11 @@ const BranchAdminEnrollments = () => {
         type: "error",
         title: "Approval Failed",
         message: err?.message || "Failed to approve payment.",
+      });
+      setActionResult({
+        type: "error",
+        title: "Approval Failed",
+        message: err?.message || "Failed to approve payment. Please check your network and try again.",
       });
     } finally {
       setProcessingPaymentId(null);
@@ -2218,12 +2654,20 @@ const BranchAdminEnrollments = () => {
   // Reject online Razorpay payment
   const handleRejectPayment = async (paymentId, reason) => {
     if (!paymentId || !token) return;
+    const payment = rejectingPayment;
     try {
       setProcessingPaymentId(paymentId);
       setError("");
       setSuccess("");
 
       await rejectBranchAdminInstallmentPaymentApi(paymentId, reason, token);
+
+      const amountStr = formatCurrency(payment?.amount ?? payment?.payment_amount ?? 0);
+      const studentName =
+        payment?.student_name || payment?.name || payment?.student?.name || "Student";
+      const courseTitle =
+        payment?.course_title || payment?.course_name || payment?.course?.title || "Course";
+      const rzpPaymentId = payment?.razorpay_payment_id || payment?.payment_reference || paymentId;
 
       setSuccess("Payment has been rejected.");
       setTimeout(() => setSuccess(""), 5000);
@@ -2234,7 +2678,20 @@ const BranchAdminEnrollments = () => {
         message: `Online payment was rejected.${reason ? ` Reason: ${reason}` : ""}`,
       });
 
+      // Show prominent status popup modal
+      setActionResult({
+        type: "reject",
+        title: "Payment Rejected",
+        message: `Online payment for ${studentName} has been rejected.${reason ? ` Reason: "${reason}"` : ""}`,
+        studentName,
+        courseTitle,
+        amount: amountStr,
+        paymentId: rzpPaymentId,
+        reason: reason || "Rejected by Branch Admin",
+      });
+
       loadAllData(true);
+      fetchOnlineHistory();
     } catch (err) {
       setError(err?.message || "Failed to reject payment.");
       setTimeout(() => setError(""), 6000);
@@ -2242,6 +2699,11 @@ const BranchAdminEnrollments = () => {
         type: "error",
         title: "Rejection Failed",
         message: err?.message || "Failed to reject payment.",
+      });
+      setActionResult({
+        type: "error",
+        title: "Rejection Failed",
+        message: err?.message || "Failed to reject payment. Please check your network and try again.",
       });
     } finally {
       setProcessingPaymentId(null);
@@ -2257,7 +2719,26 @@ const BranchAdminEnrollments = () => {
     else if (activeTab === "installment") list = effectiveInstallmentStudents;
     else if (activeTab === "fully_paid") list = effectiveFullyPaidStudents;
     else if (activeTab === "approvals") {
-      list = approvalsSubTab === "pending" ? pendingPayments : todayPayments;
+      if (approvalsSubTab === "pending") {
+        list = pendingPayments;
+      } else {
+        list = onlineHistoryPayments.filter((item) => {
+          // If custom date range is used (not today):
+          if (!onlineIsToday) {
+            const rawDate = item.payment_date || item.reviewed_at || item.created_at || "";
+            const itemDate = rawDate ? String(rawDate).slice(0, 10) : "";
+            if (onlineFromDate && itemDate && itemDate < onlineFromDate) return false;
+            if (onlineToDate && itemDate && itemDate > onlineToDate) return false;
+          }
+          // Status filter
+          if (onlineStatusFilter && onlineStatusFilter !== "all") {
+            const itemStatus = String(item.approval_status || item.status || "").toLowerCase();
+            if (onlineStatusFilter === "approved" && itemStatus !== "approved") return false;
+            if (onlineStatusFilter === "rejected" && itemStatus !== "rejected") return false;
+          }
+          return true;
+        });
+      }
     } else if (activeTab === "history") {
       list = paymentHistory;
     }
@@ -2293,8 +2774,13 @@ const BranchAdminEnrollments = () => {
     effectiveFullyPaidStudents,
     pendingPayments,
     todayPayments,
+    onlineHistoryPayments,
     paymentHistory,
     nameFilter,
+    onlineFromDate,
+    onlineToDate,
+    onlineIsToday,
+    onlineStatusFilter,
   ]);
 
   const totalOutstanding = useMemo(() => {
@@ -2302,6 +2788,24 @@ const BranchAdminEnrollments = () => {
       return sum + Number(s.balance_amount ?? s.remaining_amount ?? 0);
     }, 0);
   }, [effectiveInstallmentStudents]);
+
+  const currentSidebarActivePage =
+    activeTab === "installment"
+      ? "installments-balance"
+      : activeTab === "fully_paid"
+      ? "fully-paid"
+      : activeTab === "approvals"
+      ? "online-approvals"
+      : "enrollments";
+
+  const pageTitle =
+    activeTab === "installment"
+      ? "Pending Installments"
+      : activeTab === "fully_paid"
+      ? "Fully Paid"
+      : activeTab === "approvals"
+      ? "Online Payment Approvals"
+      : "All Students";
 
   return (
     <div
@@ -2316,7 +2820,7 @@ const BranchAdminEnrollments = () => {
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
         openCreate={() => navigate("/branch-admin/courses")}
-        activePage="enrollments"
+        activePage={currentSidebarActivePage}
       />
 
       <main className="min-w-0 flex-1 pb-16">
@@ -2336,7 +2840,7 @@ const BranchAdminEnrollments = () => {
                 Branch Portal
               </span>
               <h2 className="text-base sm:text-xl font-extrabold text-slate-900 tracking-tight truncate">
-                Students & Payments
+                {pageTitle}
               </h2>
             </div>
           </div>
@@ -2419,7 +2923,7 @@ const BranchAdminEnrollments = () => {
                   ? "border-[#9c6b2e] ring-2 ring-[#9c6b2e]/30 shadow-sm"
                   : "border-[#e3ddd0] hover:border-[#9c6b2e]/50"
               }`}
-              onClick={() => setActiveTab("all")}
+              onClick={() => handleTabChange("all")}
             >
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider">
@@ -2447,11 +2951,11 @@ const BranchAdminEnrollments = () => {
                   ? "border-amber-400 ring-2 ring-amber-300/40 shadow-sm"
                   : "border-[#e3ddd0] hover:border-amber-400/50"
               }`}
-              onClick={() => setActiveTab("installment")}
+              onClick={() => handleTabChange("installment")}
             >
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider">
-                  Installments Balance
+                  Pending Installments
                 </p>
                 <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-[#9c6b2e]">
                   <Clock className="h-4 w-4" />
@@ -2477,7 +2981,7 @@ const BranchAdminEnrollments = () => {
                   ? "border-emerald-500 ring-2 ring-emerald-300/40 shadow-sm"
                   : "border-[#e3ddd0] hover:border-emerald-400/50"
               }`}
-              onClick={() => setActiveTab("fully_paid")}
+              onClick={() => handleTabChange("fully_paid")}
             >
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">
@@ -2507,11 +3011,11 @@ const BranchAdminEnrollments = () => {
                   ? "border-rose-300 ring-1 ring-rose-200/70 hover:border-rose-400"
                   : "border-[#e3ddd0] hover:border-rose-300"
               }`}
-              onClick={() => setActiveTab("approvals")}
+              onClick={() => handleTabChange("approvals")}
             >
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold text-rose-600 uppercase tracking-wider">
-                  Online Approvals Pending
+                  Online Payment Approvals
                 </p>
                 <div
                   className={`flex h-8 w-8 items-center justify-center rounded-xl ${
@@ -2548,7 +3052,7 @@ const BranchAdminEnrollments = () => {
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
               <button
                 type="button"
-                onClick={() => setActiveTab("all")}
+                onClick={() => handleTabChange("all")}
                 className={`rounded-full px-4 py-2 text-xs font-semibold transition cursor-pointer whitespace-nowrap shrink-0 ${
                   activeTab === "all"
                     ? "bg-[#17140f] text-white shadow-xs"
@@ -2560,19 +3064,19 @@ const BranchAdminEnrollments = () => {
 
               <button
                 type="button"
-                onClick={() => setActiveTab("installment")}
+                onClick={() => handleTabChange("installment")}
                 className={`rounded-full px-4 py-2 text-xs font-semibold transition cursor-pointer whitespace-nowrap shrink-0 ${
                   activeTab === "installment"
                     ? "bg-[#17140f] text-white shadow-xs"
                     : "bg-white text-[#5b5346] border border-[#e3ddd0] hover:bg-[#f1ede4]"
                 }`}
               >
-                Installments Balance ({effectiveInstallmentStudents.length})
+                Pending Installments ({effectiveInstallmentStudents.length})
               </button>
 
               <button
                 type="button"
-                onClick={() => setActiveTab("fully_paid")}
+                onClick={() => handleTabChange("fully_paid")}
                 className={`rounded-full px-4 py-2 text-xs font-semibold transition cursor-pointer whitespace-nowrap shrink-0 ${
                   activeTab === "fully_paid"
                     ? "bg-[#17140f] text-white shadow-xs"
@@ -2584,14 +3088,14 @@ const BranchAdminEnrollments = () => {
 
               <button
                 type="button"
-                onClick={() => setActiveTab("approvals")}
+                onClick={() => handleTabChange("approvals")}
                 className={`rounded-full px-4 py-2 text-xs font-semibold transition cursor-pointer whitespace-nowrap shrink-0 ${
                   activeTab === "approvals"
                     ? "bg-[#17140f] text-white shadow-xs"
                     : "bg-white text-[#5b5346] border border-[#e3ddd0] hover:bg-[#f1ede4]"
                 }`}
               >
-                Online Approvals ({pendingPayments.length})
+                Online Payment Approvals ({pendingPayments.length})
               </button>
             </div>
 
@@ -2619,35 +3123,100 @@ const BranchAdminEnrollments = () => {
 
           {/* Sub-filters for Online Approvals tab */}
           {activeTab === "approvals" && (
-            <div className="flex items-center justify-between gap-4 bg-white p-3 rounded-2xl border border-[#e3ddd0]">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setApprovalsSubTab("pending")}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                    approvalsSubTab === "pending"
-                      ? "bg-[#9c6b2e] text-white"
-                      : "text-stone-600 hover:bg-stone-100"
-                  }`}
-                >
-                  Pending Approvals ({pendingPayments.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setApprovalsSubTab("today")}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                    approvalsSubTab === "today"
-                      ? "bg-[#9c6b2e] text-white"
-                      : "text-stone-600 hover:bg-stone-100"
-                  }`}
-                >
-                  Today's Payments ({todayPayments.length})
-                </button>
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-[#e3ddd0]">
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                  <button
+                    type="button"
+                    onClick={() => setApprovalsSubTab("pending")}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+                      approvalsSubTab === "pending"
+                        ? "bg-[#9c6b2e] text-white"
+                        : "text-stone-600 hover:bg-stone-100"
+                    }`}
+                  >
+                    Pending Approvals ({pendingPayments.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setApprovalsSubTab("history")}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+                      approvalsSubTab !== "pending"
+                        ? "bg-[#9c6b2e] text-white"
+                        : "text-stone-600 hover:bg-stone-100"
+                    }`}
+                  >
+                    Online Payment History ({onlineHistoryPayments.length})
+                  </button>
+                </div>
+
+                <p className="text-[11px] text-stone-500 hidden lg:block">
+                  Online Razorpay payments verified by gateway
+                </p>
               </div>
 
-              <p className="text-[11px] text-stone-500 hidden sm:block">
-                Online Razorpay payments verified by gateway awaiting branch confirmation
-              </p>
+              {/* Date Range & Status Filter Bar for Online Payment History */}
+              {approvalsSubTab !== "pending" && (
+                <div className="flex flex-wrap items-center justify-between gap-3 bg-[#faf8f4] p-3 sm:p-4 rounded-2xl border border-[#e3ddd0]">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="font-semibold text-stone-600">From Date:</span>
+                      <input
+                        type="date"
+                        value={onlineFromDate}
+                        onChange={(e) => {
+                          setOnlineFromDate(e.target.value);
+                          setOnlineIsToday(false);
+                        }}
+                        className="rounded-xl border border-[#e3ddd0] bg-white px-3 py-1.5 text-xs font-medium text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-[#9c6b2e]"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="font-semibold text-stone-600">To Date:</span>
+                      <input
+                        type="date"
+                        value={onlineToDate}
+                        onChange={(e) => {
+                          setOnlineToDate(e.target.value);
+                          setOnlineIsToday(false);
+                        }}
+                        className="rounded-xl border border-[#e3ddd0] bg-white px-3 py-1.5 text-xs font-medium text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-[#9c6b2e]"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOnlineFromDate("");
+                        setOnlineToDate("");
+                        setOnlineIsToday(true);
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                        onlineIsToday
+                          ? "bg-[#9c6b2e] text-white shadow-xs"
+                          : "bg-white text-stone-700 border border-[#e3ddd0] hover:bg-stone-100"
+                      }`}
+                    >
+                      Today
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-stone-600">Status:</span>
+                    <select
+                      value={onlineStatusFilter}
+                      onChange={(e) => setOnlineStatusFilter(e.target.value)}
+                      className="rounded-xl border border-[#e3ddd0] bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-[#9c6b2e] cursor-pointer"
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="approved">Approved</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                    {onlineHistoryLoading && (
+                      <Loader2 className="h-4 w-4 animate-spin text-[#9c6b2e]" />
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -2804,7 +3373,7 @@ const BranchAdminEnrollments = () => {
                                 <button
                                   type="button"
                                   disabled={isProcessing}
-                                  onClick={() => handleApprovePayment(item)}
+                                  onClick={() => setApprovingPayment(item)}
                                   className="ba-press flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 transition cursor-pointer shadow-xs disabled:opacity-60"
                                 >
                                   {isProcessing ? (
@@ -2825,7 +3394,14 @@ const BranchAdminEnrollments = () => {
                                 </button>
                               </div>
                             ) : (
-                              <StatusPill status={item.status || "completed"} />
+                              <div className="flex flex-col items-end gap-1 shrink-0">
+                                <StatusPill status={item.status || "approved"} />
+                                {(item.rejection_reason || item.reason) && (
+                                  <span className="text-[11px] text-rose-600 max-w-[200px] truncate" title={item.rejection_reason || item.reason}>
+                                    Reason: {item.rejection_reason || item.reason}
+                                  </span>
+                                )}
+                              </div>
                             )}
                           </div>
                         </div>
@@ -3010,7 +3586,7 @@ const BranchAdminEnrollments = () => {
 
                             <div>
                               <span className="text-[10px] uppercase font-bold text-rose-500 block tracking-wider">
-                                Installment Balance
+                                Pending Installments
                               </span>
                               <span
                                 className="text-lg font-extrabold text-rose-600"
@@ -3395,13 +3971,28 @@ const BranchAdminEnrollments = () => {
         token={token}
       />
 
+      {/* Confirm Approve Online Payment Modal */}
+      <ConfirmApprovePaymentModal
+        isOpen={Boolean(approvingPayment)}
+        onClose={() => setApprovingPayment(null)}
+        payment={approvingPayment}
+        onConfirm={handleApprovePayment}
+        isSubmitting={Boolean(processingPaymentId)}
+      />
+
       {/* Reject Online Payment Modal */}
       <RejectPaymentModal
         isOpen={Boolean(rejectingPayment)}
         onClose={() => setRejectingPayment(null)}
         payment={rejectingPayment}
         onConfirm={handleRejectPayment}
-        isSubmitting={processingPaymentId === (rejectingPayment?.payment_id ?? rejectingPayment?.id)}
+        isSubmitting={Boolean(processingPaymentId)}
+      />
+
+      {/* Online Approvals Action Result Modal */}
+      <ActionResultModal
+        result={actionResult}
+        onClose={() => setActionResult(null)}
       />
 
       {/* Enrollment Full Details Modal */}

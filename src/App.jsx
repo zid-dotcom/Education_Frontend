@@ -256,7 +256,61 @@ function App() {
             path="/branch-admin/enrollments"
             element={
               <ProtectedRoute branchAdminOnly>
-                <BranchAdminEnrollments />
+                <BranchAdminEnrollments defaultTab="all" />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/branch-admin/enrollments/installments-balance"
+            element={
+              <ProtectedRoute branchAdminOnly>
+                <BranchAdminEnrollments defaultTab="installment" />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/branch-admin/enrollments/fully-paid"
+            element={
+              <ProtectedRoute branchAdminOnly>
+                <BranchAdminEnrollments defaultTab="fully_paid" />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/branch-admin/enrollments/online-approvals"
+            element={
+              <ProtectedRoute branchAdminOnly>
+                <BranchAdminEnrollments defaultTab="approvals" />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/branch-admin/installments-balance"
+            element={
+              <ProtectedRoute branchAdminOnly>
+                <BranchAdminEnrollments defaultTab="installment" />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/branch-admin/fully-paid"
+            element={
+              <ProtectedRoute branchAdminOnly>
+                <BranchAdminEnrollments defaultTab="fully_paid" />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/branch-admin/online-approvals"
+            element={
+              <ProtectedRoute branchAdminOnly>
+                <BranchAdminEnrollments defaultTab="approvals" />
               </ProtectedRoute>
             }
           />

@@ -34,7 +34,8 @@ import {
   getBranchAdminApprovedPurchasesApi,
   getBranchAdminPendingPurchasesApi,
   getBranchAdminPurchasesApi,
-  getBranchAdminRejectedPurchasesApi
+  getBranchAdminRejectedPurchasesApi,
+  rejectBranchAdminPurchaseApi,
 } from "../services/branchadminpurchases";
 import { getEnrollmentInstallmentsApi } from "../services/enrollments";
 
@@ -106,6 +107,9 @@ const STATUS_META = {
   approved: { dot: "#5c7a5a", text: "#39533a", bg: "#eef2ea", label: "Approved" },
   "partially approved": { dot: "#4b6b8a", text: "#334c66", bg: "#e6f0f9", label: "Partially Approved" },
   "super admin approved": { dot: "#5c7a5a", text: "#39533a", bg: "#eef2ea", label: "Super Admin Approved" },
+  "branch admin approved": { dot: "#4b6b8a", text: "#334c66", bg: "#e6f0f9", label: "Branch Admin Approved" },
+  "branch admin rejected": { dot: "#a24a3a", text: "#7c3324", bg: "#f8eae5", label: "Branch Admin Rejected" },
+  "super admin rejected": { dot: "#a24a3a", text: "#7c3324", bg: "#f8eae5", label: "Super Admin Rejected" },
   pending: { dot: "#b0803a", text: "#7a531f", bg: "#f7efe0", label: "Pending" },
   rejected: { dot: "#a24a3a", text: "#7c3324", bg: "#f8eae5", label: "Rejected" },
 };
@@ -179,9 +183,12 @@ const formatDateTime = (date) => {
   }
 };
 
-const PurchaseCard = ({ purchase, pending, approvingId, onApprove, index, onSelectPurchase }) => {
+const PurchaseCard = ({ purchase, pending, approvingId, onApprove, onReject, index, onSelectPurchase }) => {
   const isApproving = approvingId === purchase.enrollment_id;
   const initial = purchase.name?.charAt(0).toUpperCase() || "S";
+  const rejectionReason = purchase.branch_rejection_reason || purchase.super_admin_rejection_reason || purchase.rejection_reason || purchase.reason;
+  const isBranchRejected = purchase.rejection_stage === "branch_admin" || purchase.branch_approval_status === "rejected" || Boolean(purchase.branch_rejection_reason);
+  const isSuperAdminRejected = purchase.rejection_stage === "super_admin" || purchase.super_admin_approval_status === "rejected" || Boolean(purchase.super_admin_rejection_reason);
 
   return (
     <article
@@ -220,25 +227,40 @@ const PurchaseCard = ({ purchase, pending, approvingId, onApprove, index, onSele
         </div>
 
         {pending ? (
-          <button
-            type="button"
-            onClick={() => onApprove(purchase.enrollment_id)}
-            disabled={isApproving}
-            className={`ba-press flex shrink-0 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-xs font-medium text-white disabled:cursor-wait disabled:opacity-60 ${FOCUS_RING}`}
-            style={{ background: "#17140f" }}
-          >
-            {isApproving ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <CheckCircle2 className="h-3.5 w-3.5" style={{ color: "#f4b942" }} />
-            )}
-            {isApproving ? "Approving…" : "Approve purchase"}
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onReject?.(purchase)}
+              disabled={isApproving}
+              className={`ba-press flex shrink-0 items-center justify-center gap-1.5 rounded-lg px-3.5 py-2.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 disabled:opacity-60 ${FOCUS_RING}`}
+            >
+              <X className="h-3.5 w-3.5" />
+              Reject
+            </button>
+            <button
+              type="button"
+              onClick={() => onApprove(purchase.enrollment_id)}
+              disabled={isApproving}
+              className={`ba-press flex shrink-0 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-xs font-medium text-white disabled:cursor-wait disabled:opacity-60 ${FOCUS_RING}`}
+              style={{ background: "#17140f" }}
+            >
+              {isApproving ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-3.5 w-3.5" style={{ color: "#f4b942" }} />
+              )}
+              {isApproving ? "Approving…" : "Approve purchase"}
+            </button>
+          </div>
         ) : (
           <div className="flex shrink-0 items-center gap-3">
             <StatusPill 
               status={
-                String(purchase.super_admin_approval_status).toLowerCase() === "approved" 
+                isBranchRejected
+                  ? "branch admin rejected"
+                  : isSuperAdminRejected
+                  ? "super admin rejected"
+                  : String(purchase.super_admin_approval_status).toLowerCase() === "approved" 
                   ? "super admin approved" 
                   : (String(purchase.course_status).toLowerCase() === "approved" || String(purchase.course_status).toLowerCase() === "partially approved" 
                     ? "branch admin approved" 
@@ -248,6 +270,18 @@ const PurchaseCard = ({ purchase, pending, approvingId, onApprove, index, onSele
           </div>
         )}
       </div>
+
+      {rejectionReason && (
+        <div className="px-5 py-2.5 sm:px-6 bg-rose-50/70 border-b border-rose-100 flex items-start gap-2 text-xs text-rose-800">
+          <XCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+          <div>
+            <span className="font-bold">
+              {isBranchRejected ? "Branch Admin Rejection Reason:" : "Rejection Reason:"}
+            </span>{" "}
+            <span>{rejectionReason}</span>
+          </div>
+        </div>
+      )}
 
       <div className="px-5 py-3 sm:px-6 bg-white border-b border-[#efe9dd] flex justify-end">
         <button
@@ -353,6 +387,9 @@ export default function BranchAdminPurchases() {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [approvingId, setApprovingId] = useState(null);
+  const [rejectingPurchaseId, setRejectingPurchaseId] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [isRejecting, setIsRejecting] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -810,6 +847,34 @@ export default function BranchAdminPurchases() {
     });
   }, [selectedPurchase, allPurchasePayments]);
 
+  const branchRejected = useMemo(() => {
+    return rejected.filter((p) => {
+      const stage = String(p.rejection_stage || "").toLowerCase();
+      const baStatus = String(p.branch_approval_status || "").toLowerCase();
+      const saStatus = String(p.super_admin_approval_status || "").toLowerCase();
+      return (
+        stage === "branch_admin" ||
+        stage === "branch" ||
+        baStatus === "rejected" ||
+        Boolean(p.branch_rejection_reason) ||
+        (!stage && saStatus !== "rejected" && !p.super_admin_rejection_reason)
+      );
+    });
+  }, [rejected]);
+
+  const superAdminRejected = useMemo(() => {
+    return rejected.filter((p) => {
+      const stage = String(p.rejection_stage || "").toLowerCase();
+      const saStatus = String(p.super_admin_approval_status || "").toLowerCase();
+      return (
+        stage === "super_admin" ||
+        stage === "superadmin" ||
+        saStatus === "rejected" ||
+        Boolean(p.super_admin_rejection_reason)
+      );
+    });
+  }, [rejected]);
+
   const approvePurchase = async (enrollmentId) => {
     setApprovingId(enrollmentId);
     setError("");
@@ -825,20 +890,71 @@ export default function BranchAdminPurchases() {
     }
   };
 
+  const handleReject = async (enrollmentId, reason) => {
+    if (!reason || !reason.trim()) {
+      setError("Please provide a rejection reason.");
+      return;
+    }
+    setIsRejecting(true);
+    setError("");
+    setSuccess("");
+    try {
+      await rejectBranchAdminPurchaseApi(enrollmentId, reason.trim(), token);
+      setSuccess(`Enrollment #${enrollmentId} rejected.`);
+      setRejectingPurchaseId(null);
+      setRejectReason("");
+      setSelectedPurchase(null);
+      await loadPurchases();
+    } catch (err) {
+      setError(err.message || "Failed to reject purchase.");
+    } finally {
+      setIsRejecting(false);
+    }
+  };
+
+  const handleStartReject = (purchase) => {
+    setSelectedPurchase(purchase);
+    setRejectingPurchaseId(purchase.enrollment_id ?? purchase.id);
+    setRejectReason("");
+  };
+
   const tabs = [
     { id: "pending", label: "Pending", icon: Clock3, items: pending },
     { id: "approved", label: "Approved", icon: CheckCircle2, items: approved },
-    { id: "rejected", label: "Super admin rejected", icon: X, items: rejected },
+    { id: "branch_rejected", label: "Branch admin rejected", icon: XCircle, items: branchRejected },
+    { id: "super_admin_rejected", label: "Super admin rejected", icon: X, items: superAdminRejected },
     { id: "history", label: "Purchase history", icon: History, items: history },
   ];
-  const currentTab = tabs.find((tab) => tab.id === activeTab);
+  const currentTab =
+    tabs.find((tab) => tab.id === activeTab) ||
+    (activeTab === "rejected" ? tabs.find((t) => t.id === "branch_rejected") : null) ||
+    tabs[0];
 
-  const partiallyApprovedCount = history.filter((p) => String(p.course_status).toLowerCase() === "partially approved" || (String(p.course_status).toLowerCase() === "approved" && String(p.super_admin_approval_status).toLowerCase() !== "approved")).length;
-  const superAdminApprovedCount = history.filter((p) => String(p.super_admin_approval_status).toLowerCase() === "approved" || (String(p.course_status).toLowerCase() === "super admin approved")).length;
+  const branchAdminApprovedCount = Math.max(
+    approved.length,
+    history.filter((p) => {
+      const cs = String(p.course_status || "").toLowerCase();
+      const ba = String(p.branch_approval_status || "").toLowerCase();
+      const sa = String(p.super_admin_approval_status || "").toLowerCase();
+      return (
+        ba === "approved" ||
+        ba === "partially approved" ||
+        cs === "approved" ||
+        cs === "partially approved" ||
+        cs === "super admin approved" ||
+        sa === "approved"
+      );
+    }).length
+  );
+  const superAdminApprovedCount = history.filter((p) => {
+    const sa = String(p.super_admin_approval_status || "").toLowerCase();
+    const cs = String(p.course_status || "").toLowerCase();
+    return sa === "approved" || cs === "super admin approved";
+  }).length;
 
   const summary = [
     { label: "Awaiting approval", value: pending.length, color: "#b0803a" },
-    { label: "Branch admin approvals", value: partiallyApprovedCount, color: "#4b6b8a" },
+    { label: "Branch admin approvals", value: branchAdminApprovedCount, color: "#4b6b8a" },
     { label: "Super admin approvals", value: superAdminApprovedCount, color: "#5c7a5a" },
     { label: "All purchases", value: history.length, color: "#17140f" },
   ];
@@ -1028,6 +1144,7 @@ export default function BranchAdminPurchases() {
                   pending={activeTab === "pending"}
                   approvingId={approvingId}
                   onApprove={approvePurchase}
+                  onReject={handleStartReject}
                   onSelectPurchase={setSelectedPurchase}
                 />
               ))}
@@ -1055,11 +1172,11 @@ export default function BranchAdminPurchases() {
                    <div className="flex flex-col items-end mr-4">
                      <div className="flex items-center gap-2 mb-1">
                         <span className="text-[10px] font-bold uppercase text-slate-400">Branch:</span>
-                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${selectedPurchase.branch_approval_status === 'approved' ? 'bg-emerald-100 text-emerald-700' : selectedPurchase.branch_approval_status === 'pending' ? 'bg-amber-100 text-amber-700' : selectedPurchase.branch_approval_status === 'rejected' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}`}>{selectedPurchase.branch_approval_status}</span>
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${selectedPurchase.branch_approval_status === 'approved' ? 'bg-emerald-100 text-emerald-700' : selectedPurchase.branch_approval_status === 'pending' ? 'bg-amber-100 text-amber-700' : (selectedPurchase.branch_approval_status === 'rejected' || selectedPurchase.rejection_stage === 'branch_admin' || selectedPurchase.branch_rejection_reason) ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}`}>{selectedPurchase.rejection_stage === 'branch_admin' || selectedPurchase.branch_rejection_reason ? 'rejected' : (selectedPurchase.branch_approval_status || '—')}</span>
                      </div>
                      <div className="flex items-center gap-2">
                         <span className="text-[10px] font-bold uppercase text-slate-700">Super Admin:</span>
-                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase border ${selectedPurchase.super_admin_approval_status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : selectedPurchase.super_admin_approval_status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200 shadow-inner' : selectedPurchase.super_admin_approval_status === 'rejected' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>{selectedPurchase.super_admin_approval_status}</span>
+                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase border ${selectedPurchase.super_admin_approval_status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : selectedPurchase.super_admin_approval_status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200 shadow-inner' : (selectedPurchase.super_admin_approval_status === 'rejected' || selectedPurchase.rejection_stage === 'super_admin' || selectedPurchase.super_admin_rejection_reason) ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>{selectedPurchase.rejection_stage === 'super_admin' || selectedPurchase.super_admin_rejection_reason ? 'rejected' : (selectedPurchase.super_admin_approval_status || '—')}</span>
                      </div>
                    </div>
                    <button onClick={() => setSelectedPurchase(null)} className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition bg-slate-50 border border-slate-200">
@@ -1209,14 +1326,14 @@ export default function BranchAdminPurchases() {
                         <div className="p-5 grid grid-cols-2 gap-5">
                            <div>
                              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1.5">Branch Approval</p>
-                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${selectedPurchase.branch_approval_status === 'approved' ? 'bg-emerald-100 text-emerald-700' : selectedPurchase.branch_approval_status === 'pending' ? 'bg-amber-100 text-amber-700' : selectedPurchase.branch_approval_status === 'rejected' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}`}>
-                                {selectedPurchase.branch_approval_status || '—'}
+                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${selectedPurchase.branch_approval_status === 'approved' ? 'bg-emerald-100 text-emerald-700' : selectedPurchase.branch_approval_status === 'pending' ? 'bg-amber-100 text-amber-700' : (selectedPurchase.branch_approval_status === 'rejected' || selectedPurchase.rejection_stage === 'branch_admin' || selectedPurchase.branch_rejection_reason) ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}`}>
+                                {selectedPurchase.rejection_stage === 'branch_admin' || selectedPurchase.branch_rejection_reason ? 'rejected' : (selectedPurchase.branch_approval_status || '—')}
                              </span>
                            </div>
                            <div>
                              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1.5">Super Admin Approval</p>
-                             <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase border ${selectedPurchase.super_admin_approval_status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : selectedPurchase.super_admin_approval_status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200 shadow-inner' : selectedPurchase.super_admin_approval_status === 'rejected' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-                                {selectedPurchase.super_admin_approval_status || '—'}
+                             <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase border ${selectedPurchase.super_admin_approval_status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : selectedPurchase.super_admin_approval_status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200 shadow-inner' : (selectedPurchase.super_admin_approval_status === 'rejected' || selectedPurchase.rejection_stage === 'super_admin' || selectedPurchase.super_admin_rejection_reason) ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                                {selectedPurchase.rejection_stage === 'super_admin' || selectedPurchase.super_admin_rejection_reason ? 'rejected' : (selectedPurchase.super_admin_approval_status || '—')}
                              </span>
                            </div>
                            <div>
@@ -1225,10 +1342,28 @@ export default function BranchAdminPurchases() {
                                 {selectedPurchase.payment_status || '—'}
                              </span>
                            </div>
-                           {selectedPurchase.super_admin_rejection_reason && (
+                           {(selectedPurchase.branch_rejection_reason || (selectedPurchase.rejection_stage === 'branch_admin' && (selectedPurchase.rejection_reason || selectedPurchase.reason))) && (
+                             <div className="col-span-2 mt-2">
+                               <p className="text-[10px] uppercase font-bold text-rose-500 tracking-wider mb-1.5">Branch Admin Rejection Reason</p>
+                               <p className="text-sm font-medium text-rose-700 bg-rose-50 p-3 rounded-xl border border-rose-100">
+                                 {selectedPurchase.branch_rejection_reason || selectedPurchase.rejection_reason || selectedPurchase.reason}
+                               </p>
+                             </div>
+                           )}
+                           {(selectedPurchase.super_admin_rejection_reason || (selectedPurchase.rejection_stage === 'super_admin' && (selectedPurchase.rejection_reason || selectedPurchase.reason))) && (
+                             <div className="col-span-2 mt-2">
+                               <p className="text-[10px] uppercase font-bold text-rose-500 tracking-wider mb-1.5">Super Admin Rejection Reason</p>
+                               <p className="text-sm font-medium text-rose-700 bg-rose-50 p-3 rounded-xl border border-rose-100">
+                                 {selectedPurchase.super_admin_rejection_reason || selectedPurchase.rejection_reason || selectedPurchase.reason}
+                               </p>
+                             </div>
+                           )}
+                           {!selectedPurchase.branch_rejection_reason && !selectedPurchase.super_admin_rejection_reason && (selectedPurchase.rejection_reason || selectedPurchase.reason) && (
                              <div className="col-span-2 mt-2">
                                <p className="text-[10px] uppercase font-bold text-rose-500 tracking-wider mb-1.5">Rejection Reason</p>
-                               <p className="text-sm font-medium text-rose-700 bg-rose-50 p-3 rounded-xl border border-rose-100">{selectedPurchase.super_admin_rejection_reason}</p>
+                               <p className="text-sm font-medium text-rose-700 bg-rose-50 p-3 rounded-xl border border-rose-100">
+                                 {selectedPurchase.rejection_reason || selectedPurchase.reason}
+                               </p>
                              </div>
                            )}
                         </div>
@@ -1254,7 +1389,11 @@ export default function BranchAdminPurchases() {
                      <div className="mt-4 space-y-3">
                        {enrichedInstallments.map((inst, idx) => {
                          const instStatus = String(inst.status || "pending").toLowerCase();
-                         const isDue = inst.is_due === true;
+                         const isDue = instStatus !== "paid" && (
+                           inst.due_date
+                             ? new Date(inst.due_date) <= new Date(new Date().setHours(23, 59, 59, 999))
+                             : inst.is_due === true
+                         );
                          const isRejected = Boolean(inst.is_rejected || instStatus === "rejected");
                          const isPendingReview = Boolean(inst.is_pending_review || instStatus === "awaiting_review");
 
@@ -1418,31 +1557,81 @@ export default function BranchAdminPurchases() {
 
              {/* Footer Actions */}
              <div className="shrink-0 p-5 sm:px-6 border-t border-[#e3ddd0] bg-white flex flex-col gap-3 rounded-b-2xl">
-                <div className="flex justify-end gap-3 items-center w-full">
-                  <button
-                     onClick={() => setSelectedPurchase(null)}
-                     className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 transition border border-transparent"
-                  >
-                     Close
-                  </button>
-                  {activeTab === 'pending' && (
+                {rejectingPurchaseId === (selectedPurchase.enrollment_id ?? selectedPurchase.id) ? (
+                  <div className="flex flex-col gap-3 w-full animate-in slide-in-from-bottom-2">
+                    <label className="text-sm font-bold text-slate-700">Rejection Reason</label>
+                    <textarea 
+                      value={rejectReason}
+                      onChange={(e) => setRejectReason(e.target.value)}
+                      placeholder="Please specify why this purchase is being rejected by branch admin..."
+                      className="w-full rounded-xl border border-slate-300 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+                      rows={3}
+                    />
+                    <div className="flex justify-end gap-3 items-center mt-2">
+                      <button
+                         onClick={() => {
+                           setRejectingPurchaseId(null);
+                           setRejectReason('');
+                         }}
+                         className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 transition border border-transparent"
+                      >
+                         Cancel
+                      </button>
+                      <button
+                        onClick={() => handleReject(selectedPurchase.enrollment_id ?? selectedPurchase.id, rejectReason)}
+                        disabled={isRejecting}
+                        className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 transition shadow-md disabled:opacity-60"
+                      >
+                         {isRejecting ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                         ) : (
+                            <X className="h-4 w-4" />
+                         )}
+                         Confirm Rejection
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-end gap-3 items-center w-full">
                     <button
-                      onClick={() => {
-                         approvePurchase(selectedPurchase.enrollment_id ?? selectedPurchase.id);
+                       onClick={() => {
                          setSelectedPurchase(null);
-                      }}
-                      disabled={approvingId !== null}
-                      className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-[#9c6b2e] hover:bg-[#7a5220] transition shadow-md disabled:opacity-60"
+                         setRejectingPurchaseId(null);
+                         setRejectReason('');
+                       }}
+                       className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 transition border border-transparent"
                     >
-                       {approvingId === (selectedPurchase.enrollment_id ?? selectedPurchase.id) ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                       ) : (
-                          <CheckCircle2 className="h-4 w-4" />
-                       )}
-                       Approve
+                       Close
                     </button>
-                  )}
-                </div>
+                    {(activeTab === 'pending' || selectedPurchase.branch_approval_status === 'pending') && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setRejectingPurchaseId(selectedPurchase.enrollment_id ?? selectedPurchase.id)}
+                          className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 transition shadow-sm"
+                        >
+                           <X className="h-4 w-4" />
+                           Reject
+                        </button>
+                        <button
+                          onClick={() => {
+                             approvePurchase(selectedPurchase.enrollment_id ?? selectedPurchase.id);
+                             setSelectedPurchase(null);
+                          }}
+                          disabled={approvingId !== null}
+                          className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-[#9c6b2e] hover:bg-[#7a5220] transition shadow-md disabled:opacity-60"
+                        >
+                           {approvingId === (selectedPurchase.enrollment_id ?? selectedPurchase.id) ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                           ) : (
+                              <CheckCircle2 className="h-4 w-4" />
+                           )}
+                           Approve
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
              </div>
           </div>
         </div>

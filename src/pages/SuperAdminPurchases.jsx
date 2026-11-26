@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Building2,
@@ -37,6 +37,7 @@ import {
   approvePurchaseAsSuperAdminApi,
   rejectPurchaseAsSuperAdminApi,
   getSuperAdminRejectedPurchasesApi,
+  getSuperAdminBranchRejectedPurchasesApi,
 } from '../services/superadmin';
 import { getEnrollmentInstallmentsApi } from '../services/enrollments';
 
@@ -137,6 +138,7 @@ const TABS = [
   { id: 'pending', label: 'Pending', icon: Clock },
   { id: 'approved', label: 'Approved', icon: CheckCircle2 },
   { id: 'rejected', label: 'Rejected', icon: X },
+  { id: 'branch_rejected', label: 'Branch Rejected', icon: XCircle },
   { id: 'history', label: 'History', icon: ShoppingCart },
 ];
 
@@ -147,18 +149,34 @@ const SuperAdminPurchases = () => {
   const [activeTab, setActiveTab] = useState('pending');
   const [branches, setBranches] = useState([]);
   const [selectedBranchId, setSelectedBranchId] = useState('');
-  const [purchases, setPurchases] = useState([]);
+  const [pendingPurchases, setPendingPurchases] = useState([]);
+  const [approvedPurchases, setApprovedPurchases] = useState([]);
+  const [rejectedPurchases, setRejectedPurchases] = useState([]);
+  const [branchRejectedPurchases, setBranchRejectedPurchases] = useState([]);
+  const [historyPurchases, setHistoryPurchases] = useState([]);
+  const fetchIdRef = useRef(0);
+
+  const purchases = useMemo(() => {
+    if (activeTab === 'pending') return pendingPurchases;
+    if (activeTab === 'approved') return approvedPurchases;
+    if (activeTab === 'rejected') return rejectedPurchases;
+    if (activeTab === 'branch_rejected') return branchRejectedPurchases;
+    return historyPurchases;
+  }, [activeTab, pendingPurchases, approvedPurchases, rejectedPurchases, branchRejectedPurchases, historyPurchases]);
+
+  const tabCounts = useMemo(() => ({
+    pending: pendingPurchases.length,
+    approved: approvedPurchases.length,
+    rejected: rejectedPurchases.length,
+    branch_rejected: branchRejectedPurchases.length,
+    history: historyPurchases.length,
+  }), [pendingPurchases, approvedPurchases, rejectedPurchases, branchRejectedPurchases, historyPurchases]);
+
   const [loading, setLoading] = useState(false);
   const [approvingId, setApprovingId] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [selectedPurchase, setSelectedPurchase] = useState(null);
-  const [tabCounts, setTabCounts] = useState({
-    pending: 0,
-    approved: 0,
-    rejected: 0,
-    history: 0,
-  });
   const [rejectingPurchaseId, setRejectingPurchaseId] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
 
@@ -175,51 +193,78 @@ const SuperAdminPurchases = () => {
       });
   }, [token]);
 
-  const loadPurchases = async (tab = activeTab, branchId = selectedBranchId) => {
+  const normalizeArray = (res) => {
+    if (Array.isArray(res)) return res;
+    if (res && typeof res === 'object') {
+      const keys = ['purchases', 'enrollments', 'pending', 'approved', 'rejected', 'items', 'data'];
+      for (const k of keys) {
+        if (Array.isArray(res[k])) return res[k];
+      }
+    }
+    return [];
+  };
+
+  const loadPurchases = async (arg1, arg2) => {
     if (!token) return;
+    const fetchId = ++fetchIdRef.current;
     setLoading(true);
     setError('');
     setSuccess('');
     try {
+      const branchId = typeof arg1 === 'string' && ['pending', 'approved', 'rejected', 'branch_rejected', 'history'].includes(arg1)
+        ? (arg2 !== undefined ? arg2 : selectedBranchId)
+        : (arg1 !== undefined ? arg1 : selectedBranchId);
+
       const bId = branchId ? Number(branchId) : undefined;
-      const [pendingRes, approvedRes, rejectedRes, historyRes] = await Promise.allSettled([
+      const [pendingRes, approvedRes, rejectedRes, branchRejectedRes, historyRes] = await Promise.allSettled([
         getSuperAdminPendingPurchasesApi(token, bId),
         getSuperAdminApprovedPurchasesApi(token, bId),
         getSuperAdminRejectedPurchasesApi(token, bId),
+        getSuperAdminBranchRejectedPurchasesApi(token, bId),
         getSuperAdminPurchaseHistoryApi(token, bId),
       ]);
 
-      const pendingData = pendingRes.status === 'fulfilled' && Array.isArray(pendingRes.value) ? pendingRes.value : [];
-      const approvedData = approvedRes.status === 'fulfilled' && Array.isArray(approvedRes.value) ? approvedRes.value : [];
-      const rejectedData = rejectedRes.status === 'fulfilled' && Array.isArray(rejectedRes.value) ? rejectedRes.value : [];
-      const historyData = historyRes.status === 'fulfilled' && Array.isArray(historyRes.value) ? historyRes.value : [];
+      if (fetchId !== fetchIdRef.current) return;
 
-      setTabCounts({
-        pending: pendingData.length,
-        approved: approvedData.length,
-        rejected: rejectedData.length,
-        history: historyData.length,
+      const pendingData = normalizeArray(pendingRes.status === 'fulfilled' ? pendingRes.value : []);
+      const approvedData = normalizeArray(approvedRes.status === 'fulfilled' ? approvedRes.value : []);
+      const rawRejectedData = normalizeArray(rejectedRes.status === 'fulfilled' ? rejectedRes.value : []);
+      const rawBranchRejectedData = normalizeArray(branchRejectedRes.status === 'fulfilled' ? branchRejectedRes.value : []);
+      const historyData = normalizeArray(historyRes.status === 'fulfilled' ? historyRes.value : []);
+
+      // Filter super admin rejected: exclude branch admin rejections so they never leak into the super admin rejected tab
+      const superAdminRejectedData = rawRejectedData.filter((p) => {
+        const stage = String(p.rejection_stage || '').toLowerCase();
+        if (stage === 'branch_admin' || stage === 'branch') return false;
+        return true;
       });
 
-      if (tab === 'pending') {
-        setPurchases(pendingData);
-      } else if (tab === 'approved') {
-        setPurchases(approvedData);
-      } else if (tab === 'rejected') {
-        setPurchases(rejectedData);
-      } else {
-        setPurchases(historyData);
-      }
+      // Filter branch rejected: ensure only branch admin rejections are shown
+      const branchRejectedData = rawBranchRejectedData.filter((p) => {
+        const stage = String(p.rejection_stage || '').toLowerCase();
+        if (stage === 'super_admin' || stage === 'superadmin') return false;
+        return true;
+      });
+
+      setPendingPurchases(pendingData);
+      setApprovedPurchases(approvedData);
+      setRejectedPurchases(superAdminRejectedData);
+      setBranchRejectedPurchases(branchRejectedData);
+      setHistoryPurchases(historyData);
     } catch (err) {
-      setError(err.message || 'Failed to load purchases.');
+      if (fetchId === fetchIdRef.current) {
+        setError(err.message || 'Failed to load purchases.');
+      }
     } finally {
-      setLoading(false);
+      if (fetchId === fetchIdRef.current) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    loadPurchases(activeTab, selectedBranchId);
-  }, [activeTab, selectedBranchId, token]);
+    loadPurchases(selectedBranchId);
+  }, [selectedBranchId, token]);
 
   useEffect(() => {
     if (!selectedPurchase) return;
@@ -657,7 +702,7 @@ const SuperAdminPurchases = () => {
             <NavLogoutButton redirectTo="/super-admin/login" />
           </div>
         </header>
-
+   
         <div className="w-full px-4 py-6 sm:px-8 sm:py-8 lg:px-10 space-y-6">
           {error && (
             <div
@@ -823,7 +868,9 @@ const SuperAdminPurchases = () => {
                             {p.course_title || p.course_name || '—'}
                           </td>
                           <td className="px-4 py-3">
-                            <span className="text-emerald-600 font-bold text-xs">Paid</span>
+                            <span className="text-emerald-600 font-bold text-xs">
+                              {p.payment_status ? (String(p.payment_status).toLowerCase() === 'paid' ? 'Paid' : String(p.payment_status).toUpperCase()) : 'Paid'}
+                            </span>
                           </td>
                           <td className="px-4 py-3 font-bold text-sm">
                             {Number(p.balance_amount) > 0 ? (
@@ -881,11 +928,11 @@ const SuperAdminPurchases = () => {
                    <div className="flex flex-col items-end mr-4">
                      <div className="flex items-center gap-2 mb-1">
                         <span className="text-[10px] font-bold uppercase text-slate-400">Branch:</span>
-                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${selectedPurchase.branch_approval_status === 'approved' ? 'bg-emerald-100 text-emerald-700' : selectedPurchase.branch_approval_status === 'pending' ? 'bg-amber-100 text-amber-700' : selectedPurchase.branch_approval_status === 'rejected' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}`}>{selectedPurchase.branch_approval_status}</span>
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${selectedPurchase.branch_approval_status === 'approved' ? 'bg-emerald-100 text-emerald-700' : selectedPurchase.branch_approval_status === 'pending' ? 'bg-amber-100 text-amber-700' : (selectedPurchase.branch_approval_status === 'rejected' || activeTab === 'branch_rejected' || selectedPurchase.branch_rejection_reason) ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}`}>{activeTab === 'branch_rejected' || selectedPurchase.branch_rejection_reason ? 'rejected' : (selectedPurchase.branch_approval_status || '—')}</span>
                      </div>
                      <div className="flex items-center gap-2">
                         <span className="text-[10px] font-bold uppercase text-slate-700">Super Admin:</span>
-                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase border ${selectedPurchase.super_admin_approval_status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : selectedPurchase.super_admin_approval_status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200 shadow-inner' : selectedPurchase.super_admin_approval_status === 'rejected' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>{selectedPurchase.super_admin_approval_status}</span>
+                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase border ${selectedPurchase.super_admin_approval_status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : selectedPurchase.super_admin_approval_status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200 shadow-inner' : selectedPurchase.super_admin_approval_status === 'rejected' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>{selectedPurchase.super_admin_approval_status || '—'}</span>
                      </div>
                    </div>
                    <button onClick={() => setSelectedPurchase(null)} className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition bg-slate-50 border border-slate-200">
@@ -1035,8 +1082,8 @@ const SuperAdminPurchases = () => {
                         <div className="p-5 grid grid-cols-2 gap-5">
                            <div>
                              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1.5">Branch Approval</p>
-                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${selectedPurchase.branch_approval_status === 'approved' ? 'bg-emerald-100 text-emerald-700' : selectedPurchase.branch_approval_status === 'pending' ? 'bg-amber-100 text-amber-700' : selectedPurchase.branch_approval_status === 'rejected' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}`}>
-                                {selectedPurchase.branch_approval_status || '—'}
+                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${selectedPurchase.branch_approval_status === 'approved' ? 'bg-emerald-100 text-emerald-700' : selectedPurchase.branch_approval_status === 'pending' ? 'bg-amber-100 text-amber-700' : (selectedPurchase.branch_approval_status === 'rejected' || activeTab === 'branch_rejected' || selectedPurchase.branch_rejection_reason) ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}`}>
+                                {activeTab === 'branch_rejected' || selectedPurchase.branch_rejection_reason ? 'rejected' : (selectedPurchase.branch_approval_status || '—')}
                              </span>
                            </div>
                            <div>
@@ -1051,10 +1098,24 @@ const SuperAdminPurchases = () => {
                                 {selectedPurchase.payment_status || '—'}
                              </span>
                            </div>
+                           {(selectedPurchase.branch_rejection_reason || (activeTab === 'branch_rejected' && (selectedPurchase.rejection_reason || selectedPurchase.reason))) && (
+                             <div className="col-span-2 mt-2">
+                               <p className="text-[10px] uppercase font-bold text-rose-500 tracking-wider mb-1.5">Branch Admin Rejection Reason</p>
+                               <p className="text-sm font-medium text-rose-700 bg-rose-50 p-3 rounded-xl border border-rose-100">
+                                 {selectedPurchase.branch_rejection_reason || selectedPurchase.rejection_reason || selectedPurchase.reason}
+                               </p>
+                             </div>
+                           )}
                            {selectedPurchase.super_admin_rejection_reason && (
                              <div className="col-span-2 mt-2">
-                               <p className="text-[10px] uppercase font-bold text-rose-500 tracking-wider mb-1.5">Rejection Reason</p>
+                               <p className="text-[10px] uppercase font-bold text-rose-500 tracking-wider mb-1.5">Super Admin Rejection Reason</p>
                                <p className="text-sm font-medium text-rose-700 bg-rose-50 p-3 rounded-xl border border-rose-100">{selectedPurchase.super_admin_rejection_reason}</p>
+                             </div>
+                           )}
+                           {!selectedPurchase.branch_rejection_reason && !selectedPurchase.super_admin_rejection_reason && activeTab !== 'branch_rejected' && (selectedPurchase.rejection_reason || selectedPurchase.reason) && (
+                             <div className="col-span-2 mt-2">
+                               <p className="text-[10px] uppercase font-bold text-rose-500 tracking-wider mb-1.5">Rejection Reason</p>
+                               <p className="text-sm font-medium text-rose-700 bg-rose-50 p-3 rounded-xl border border-rose-100">{selectedPurchase.rejection_reason || selectedPurchase.reason}</p>
                              </div>
                            )}
                         </div>
@@ -1080,7 +1141,11 @@ const SuperAdminPurchases = () => {
                      <div className="mt-4 space-y-3">
                        {enrichedInstallments.map((inst, idx) => {
                          const instStatus = String(inst.status || "pending").toLowerCase();
-                         const isDue = inst.is_due === true;
+                         const isDue = instStatus !== "paid" && (
+                           inst.due_date
+                             ? new Date(inst.due_date) <= new Date(new Date().setHours(23, 59, 59, 999))
+                             : inst.is_due === true
+                         );
                          const isRejected = Boolean(inst.is_rejected || instStatus === "rejected");
                          const isPendingReview = Boolean(inst.is_pending_review || instStatus === "awaiting_review");
 

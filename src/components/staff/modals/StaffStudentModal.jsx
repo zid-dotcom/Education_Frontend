@@ -510,7 +510,11 @@ const StaffStudentModal = ({
                       <div className="space-y-3">
                         {enrichedInstallments.map((inst, idx) => {
                           const instStatus = String(inst.status || "pending").toLowerCase();
-                          const isDue = inst.is_due === true;
+                          const isDue = instStatus !== "paid" && (
+                            inst.due_date
+                              ? new Date(inst.due_date) <= new Date(new Date().setHours(23, 59, 59, 999))
+                              : inst.is_due === true
+                          );
                           const isRejected = Boolean(inst.is_rejected || instStatus === "rejected");
                           const isPendingReview = Boolean(
                             inst.is_pending_review ||

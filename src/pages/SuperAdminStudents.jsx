@@ -40,6 +40,7 @@ import {
   getSuperAdminInstallmentStudentsApi,
   getSuperAdminFullyPaidStudentsApi,
   getSuperAdminBranchAdminInstallmentHistoryApi,
+  getSuperAdminBranchAdminOnlineInstallmentHistoryApi,
   updateSuperAdminStudentStatusApi,
 } from '../services/superadmin';
 import { getEnrollmentInstallmentsApi } from '../services/enrollments';
@@ -96,6 +97,14 @@ const formatDateClean = (date) => {
   } catch {
     return { date: String(date), time: '' };
   }
+};
+
+const getTodayDateString = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 const normalizeArray = (res) => {
@@ -245,13 +254,19 @@ const SuperAdminStudents = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [branches, setBranches] = useState([]);
   const [selectedBranchId, setSelectedBranchId] = useState('');
-  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'installment' | 'fully_paid' | 'history'
+  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'installment' | 'fully_paid' | 'history' | 'online_history'
 
   // Data states
   const [students, setStudents] = useState([]);
   const [installmentStudents, setInstallmentStudents] = useState([]);
   const [fullyPaidStudents, setFullyPaidStudents] = useState([]);
   const [paymentHistory, setPaymentHistory] = useState([]);
+  const [onlinePaymentHistory, setOnlinePaymentHistory] = useState([]);
+  const [onlineHistoryStatus, setOnlineHistoryStatus] = useState('approved'); // 'approved' | 'rejected' | 'all'
+  const [onlineHistoryToday, setOnlineHistoryToday] = useState(true);
+  const [onlineHistoryFromDate, setOnlineHistoryFromDate] = useState('');
+  const [onlineHistoryToDate, setOnlineHistoryToDate] = useState('');
+  const [onlineHistoryLoading, setOnlineHistoryLoading] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Feedback & Selection states
@@ -339,7 +354,43 @@ const SuperAdminStudents = () => {
 
   useEffect(() => {
     loadAllData(selectedBranchId);
+    fetchOnlineHistory();
   }, [token, selectedBranchId]);
+
+  // 3. Fetch online installment payment history from branch admin reviews
+  const fetchOnlineHistory = async () => {
+    if (!token) return;
+    setOnlineHistoryLoading(true);
+    try {
+      const params = {
+        branch_id: selectedBranchId || undefined,
+        status: onlineHistoryStatus || undefined,
+        today: onlineHistoryToday ? true : undefined,
+      };
+      if (!onlineHistoryToday) {
+        if (onlineHistoryFromDate) {
+          params.date_from = onlineHistoryFromDate;
+          params.from_date = onlineHistoryFromDate;
+        }
+        if (onlineHistoryToDate) {
+          params.date_to = onlineHistoryToDate;
+          params.to_date = onlineHistoryToDate;
+        }
+      }
+      const res = await getSuperAdminBranchAdminOnlineInstallmentHistoryApi(token, params);
+      setOnlinePaymentHistory(normalizeArray(res));
+    } catch (err) {
+      console.warn('Could not load online payment history:', err);
+      setOnlinePaymentHistory([]);
+    } finally {
+      setOnlineHistoryLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!token) return;
+    fetchOnlineHistory();
+  }, [token, selectedBranchId, onlineHistoryStatus, onlineHistoryToday, onlineHistoryFromDate, onlineHistoryToDate]);
 
   // Due students with active outstanding dues
   const effectiveInstallmentStudents = useMemo(() => {
@@ -1029,6 +1080,48 @@ const SuperAdminStudents = () => {
     });
   }, [paymentHistory, searchTerm]);
 
+  const filteredOnlinePaymentHistory = useMemo(() => {
+    let list = onlinePaymentHistory;
+    // Client-side date range verification when custom date range is used
+    if (!onlineHistoryToday && (onlineHistoryFromDate || onlineHistoryToDate)) {
+      list = list.filter((item) => {
+        const rawDate = item.payment_date || item.reviewed_at || item.created_at || '';
+        const itemDate = rawDate ? String(rawDate).slice(0, 10) : '';
+        if (onlineHistoryFromDate && itemDate && itemDate < onlineHistoryFromDate) return false;
+        if (onlineHistoryToDate && itemDate && itemDate > onlineHistoryToDate) return false;
+        return true;
+      });
+    }
+
+    if (onlineHistoryStatus && onlineHistoryStatus !== 'all') {
+      list = list.filter((item) => {
+        const itemStatus = String(item.approval_status || item.status || '').toLowerCase();
+        if (onlineHistoryStatus === 'approved' && itemStatus !== 'approved') return false;
+        if (onlineHistoryStatus === 'rejected' && itemStatus !== 'rejected') return false;
+        return true;
+      });
+    }
+
+    if (!searchTerm.trim()) return list;
+    const term = searchTerm.toLowerCase();
+    return list.filter((h) => {
+      const studentName = (h.student_name || h.name || h.student?.name || '').toLowerCase();
+      const course = (h.course_title || h.course_name || '').toLowerCase();
+      const branch = (h.branch_name || h.branch?.name || '').toLowerCase();
+      const ref = (h.razorpay_payment_id || h.payment_reference || h.reference_id || '').toLowerCase();
+      const orderId = (h.razorpay_order_id || '').toLowerCase();
+      const enrId = String(h.enrollment_id || h.id || '');
+      return (
+        studentName.includes(term) ||
+        course.includes(term) ||
+        branch.includes(term) ||
+        ref.includes(term) ||
+        orderId.includes(term) ||
+        enrId.includes(term)
+      );
+    });
+  }, [onlinePaymentHistory, searchTerm, onlineHistoryToday, onlineHistoryFromDate, onlineHistoryToDate, onlineHistoryStatus]);
+
   return (
     <div
       className="min-h-screen md:flex max-w-full overflow-x-hidden"
@@ -1123,7 +1216,7 @@ const SuperAdminStudents = () => {
           )}
 
           {/* Top Metric Cards (Clickable Tabs) */}
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             {/* 1. All Students */}
             <div
               onClick={() => setActiveTab('all')}
@@ -1235,6 +1328,34 @@ const SuperAdminStudents = () => {
               </p>
               <p className="mt-1 text-[11px] text-stone-400">
                 Installment records
+              </p>
+            </div>
+
+            {/* 5. Online Payment History */}
+            <div
+              onClick={() => setActiveTab('online_history')}
+              className={`sa-card rounded-2xl p-4 sm:p-5 bg-white border cursor-pointer ${
+                activeTab === 'online_history'
+                  ? 'border-blue-600 ring-2 ring-blue-600/20 shadow-sm'
+                  : 'border-[#e3ddd0]'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold text-blue-800 uppercase tracking-wider">
+                  Online History
+                </p>
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+                  <CreditCard className="h-4 w-4" />
+                </div>
+              </div>
+              <p
+                className="mt-2 text-2xl font-bold text-blue-950"
+                style={{ fontFamily: "'Fraunces', serif" }}
+              >
+                {onlineHistoryLoading ? '…' : onlinePaymentHistory.length}
+              </p>
+              <p className="mt-1 text-[11px] text-blue-700 font-semibold">
+                Razorpay reviews
               </p>
             </div>
           </div>
@@ -1363,6 +1484,25 @@ const SuperAdminStudents = () => {
                 }`}
               >
                 {paymentHistory.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('online_history')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+                activeTab === 'online_history'
+                  ? 'bg-blue-700 text-white shadow-xs'
+                  : 'bg-white text-stone-600 hover:bg-stone-100 border border-[#e3ddd0]'
+              }`}
+            >
+              <CreditCard className="h-3.5 w-3.5" />
+              <span>Online Payment History</span>
+              <span
+                className={`ml-1 rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
+                  activeTab === 'online_history' ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-800'
+                }`}
+              >
+                {onlinePaymentHistory.length}
               </span>
             </button>
           </div>
@@ -1910,6 +2050,262 @@ const SuperAdminStudents = () => {
                   </div>
                 )
               )}
+
+              {/* ───────────────────────────────────────────────────
+                 VIEW 5: ONLINE PAYMENT HISTORY TAB (Razorpay Reviews)
+                 Columns: # | Paid Date & Time | Student Details | Branch | Course | Installment | Amount | Razorpay ID | Status | Actions
+                 ─────────────────────────────────────────────────── */}
+              {activeTab === 'online_history' && (
+                <div className="space-y-4">
+                  {/* Filters: Status & Date Range */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 sm:p-4 rounded-2xl border border-[#e3ddd0] shadow-2xs">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-bold text-stone-600 mr-1">Status:</span>
+                      {[
+                        { id: 'approved', label: 'Approved' },
+                        { id: 'rejected', label: 'Rejected' },
+                        { id: 'all', label: 'All Reviews' },
+                      ].map((tab) => (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setOnlineHistoryStatus(tab.id)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                            onlineHistoryStatus === tab.id
+                              ? 'bg-[#9c6b2e] text-white shadow-xs'
+                              : 'bg-stone-50 text-stone-600 hover:bg-stone-100 border border-stone-200'
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOnlineHistoryFromDate('');
+                          setOnlineHistoryToDate('');
+                          setOnlineHistoryToday(true);
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                          onlineHistoryToday
+                            ? 'bg-amber-600 text-white shadow-xs'
+                            : 'bg-stone-50 text-stone-600 hover:bg-stone-100 border border-stone-200'
+                        }`}
+                      >
+                        <Calendar className="h-3.5 w-3.5" />
+                        Today's Payments
+                      </button>
+
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="font-semibold text-stone-500">From:</span>
+                        <input
+                          type="date"
+                          value={onlineHistoryFromDate}
+                          onChange={(e) => {
+                            setOnlineHistoryFromDate(e.target.value);
+                            setOnlineHistoryToday(false);
+                          }}
+                          className="px-2.5 py-1.5 rounded-xl border border-[#e3ddd0] bg-stone-50 text-xs font-semibold text-stone-700 focus:outline-none focus:ring-1 focus:ring-[#9c6b2e]"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="font-semibold text-stone-500">To:</span>
+                        <input
+                          type="date"
+                          value={onlineHistoryToDate}
+                          onChange={(e) => {
+                            setOnlineHistoryToDate(e.target.value);
+                            setOnlineHistoryToday(false);
+                          }}
+                          className="px-2.5 py-1.5 rounded-xl border border-[#e3ddd0] bg-stone-50 text-xs font-semibold text-stone-700 focus:outline-none focus:ring-1 focus:ring-[#9c6b2e]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {onlineHistoryLoading ? (
+                    <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-[#e3ddd0]">
+                      <Loader2 className="h-8 w-8 animate-spin text-[#9c6b2e]" />
+                      <p className="mt-3 text-xs font-semibold text-stone-500">
+                        Loading online payment history...
+                      </p>
+                    </div>
+                  ) : filteredOnlinePaymentHistory.length === 0 ? (
+                    <div className="rounded-2xl px-5 py-16 text-center text-sm bg-white border border-[#e3ddd0]">
+                      <CreditCard className="h-10 w-10 text-stone-300 mx-auto mb-2" />
+                      <p className="font-semibold text-slate-700">No online payment history found.</p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        {searchTerm
+                          ? 'No online payments matching your search criteria.'
+                          : 'Online Razorpay installment reviews will appear here.'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="overflow-hidden rounded-2xl bg-white border border-[#e3ddd0] shadow-2xs">
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[1020px] text-left text-sm">
+                          <thead>
+                            <tr className="border-b border-[#e3ddd0] bg-[#faf8f4]">
+                              {['#', 'Paid Date & Time', 'Student Details', 'Branch', 'Course', 'Installment', 'Amount', 'Razorpay ID', 'Status', 'Actions'].map(
+                                (h) => (
+                                  <th
+                                    key={h}
+                                    className={`px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-[#9c6b2e] ${
+                                      h === 'Actions' ? 'text-right' : ''
+                                    }`}
+                                  >
+                                    {h}
+                                  </th>
+                                )
+                              )}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#f1ede4]">
+                            {filteredOnlinePaymentHistory.map((item, idx) => {
+                              const studentName = item.student_name || item.name || item.student?.name || 'Student';
+                              const enrId = item.enrollment_id || item.id;
+                              const courseTitle = item.course_title || item.course_name || 'Course';
+                              const branchName = item.branch_name || item.branch?.name || '—';
+                              const status = String(item.status || item.approval_status || 'approved').toLowerCase();
+                              const isApproved = status === 'approved';
+                              const isRejected = status === 'rejected';
+                              const dt = formatDateClean(item.reviewed_at || item.payment_date || item.created_at);
+                              const rzpId = item.razorpay_payment_id || item.payment_reference || item.reference_id || '—';
+                              const orderId = item.razorpay_order_id;
+                              const instNum = item.installment_number || 1;
+
+                              return (
+                                <tr key={item.id || item.payment_id || idx} className="sa-row transition hover:bg-stone-50/70">
+                                  {/* 1. Number Index */}
+                                  <td className="px-4 py-3.5 text-xs font-bold font-mono text-[#9c6b2e] w-12">
+                                    {idx + 1}
+                                  </td>
+
+                                  {/* 2. Paid Date & Time */}
+                                  <td className="px-4 py-3.5 whitespace-nowrap">
+                                    <div className="flex items-center gap-2">
+                                      <Calendar className="h-3.5 w-3.5 text-stone-400 shrink-0" />
+                                      <div>
+                                        <p className="font-semibold text-slate-800 text-xs">{dt.date}</p>
+                                        {dt.time && <p className="text-[10px] text-stone-400 font-medium">{dt.time}</p>}
+                                      </div>
+                                    </div>
+                                  </td>
+
+                                  {/* 3. Student Details */}
+                                  <td className="px-4 py-3.5">
+                                    <div className="flex items-center gap-3 min-w-[170px]">
+                                      <Avatar name={studentName} />
+                                      <div className="min-w-0">
+                                        <p className="font-bold text-slate-900 text-sm truncate">{studentName}</p>
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                          <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-stone-100 text-stone-600 border border-stone-200">
+                                            Enr #{enrId}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </td>
+
+                                  {/* 4. Branch */}
+                                  <td className="px-4 py-3.5 whitespace-nowrap">
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-stone-100 text-stone-700 border border-stone-200/80">
+                                      <Building2 className="h-3.5 w-3.5 text-[#9c6b2e] shrink-0" />
+                                      <span className="truncate max-w-[160px]">{branchName}</span>
+                                    </span>
+                                  </td>
+
+                                  {/* 5. Course */}
+                                  <td className="px-4 py-3.5">
+                                    <div className="flex items-center gap-1.5 min-w-[160px] max-w-[220px]">
+                                      <BookOpen className="h-3.5 w-3.5 text-stone-400 shrink-0" />
+                                      <span className="text-xs font-semibold text-slate-800 line-clamp-2" title={courseTitle}>
+                                        {courseTitle}
+                                      </span>
+                                    </div>
+                                  </td>
+
+                                  {/* 6. Installment */}
+                                  <td className="px-4 py-3.5 whitespace-nowrap">
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-200">
+                                      Installment #{instNum}
+                                    </span>
+                                  </td>
+
+                                  {/* 7. Amount */}
+                                  <td className="px-4 py-3.5 whitespace-nowrap">
+                                    <p className="font-bold text-slate-900 text-sm">
+                                      {fmt(item.amount ?? item.installment_amount ?? item.paid_amount)}
+                                    </p>
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700">
+                                      <CreditCard className="h-3 w-3" />
+                                      Razorpay
+                                    </span>
+                                  </td>
+
+                                  {/* 8. Razorpay ID */}
+                                  <td className="px-4 py-3.5">
+                                    <div className="min-w-[140px]">
+                                      <p className="text-xs font-mono font-semibold text-slate-800 truncate" title={rzpId}>
+                                        {rzpId}
+                                      </p>
+                                      {orderId && (
+                                        <p className="text-[10px] font-mono text-stone-400 truncate mt-0.5" title={orderId}>
+                                          Order: {orderId}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </td>
+
+                                  {/* 9. Status */}
+                                  <td className="px-4 py-3.5 whitespace-nowrap">
+                                    {isApproved ? (
+                                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+                                        Approved
+                                      </span>
+                                    ) : isRejected ? (
+                                      <div>
+                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                          <span className="h-1.5 w-1.5 rounded-full bg-rose-600" />
+                                          Rejected
+                                        </span>
+                                        {item.rejection_reason && (
+                                          <p className="text-[10px] text-rose-600 font-medium truncate max-w-[130px] mt-0.5" title={item.rejection_reason}>
+                                            {item.rejection_reason}
+                                          </p>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <StatusPill status={status} />
+                                    )}
+                                  </td>
+
+                                  {/* 10. Actions */}
+                                  <td className="px-4 py-3.5 whitespace-nowrap text-right">
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedPaymentRecord(item)}
+                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-stone-700 bg-stone-50 hover:bg-stone-100 transition whitespace-nowrap border border-stone-200 shadow-2xs cursor-pointer hover:border-stone-300 active:scale-95"
+                                    >
+                                      <Eye className="h-3.5 w-3.5 text-[#9c6b2e]" />
+                                      View Details
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
@@ -2358,7 +2754,11 @@ const SuperAdminStudents = () => {
                   <div className="mt-4 space-y-3">
                     {enrichedInstallments.map((inst, idx) => {
                       const instStatus = String(inst.status || "pending").toLowerCase();
-                      const isDue = inst.is_due === true;
+                      const isDue = instStatus !== "paid" && (
+                        inst.due_date
+                          ? new Date(inst.due_date) <= new Date(new Date().setHours(23, 59, 59, 999))
+                          : inst.is_due === true
+                      );
                       const isRejected = Boolean(inst.is_rejected || instStatus === "rejected");
                       const isPendingReview = Boolean(inst.is_pending_review || instStatus === "awaiting_review");
 

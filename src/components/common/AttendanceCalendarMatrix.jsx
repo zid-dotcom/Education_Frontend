@@ -519,6 +519,9 @@ const AttendanceCalendarMatrix = ({
     if (typeof onMonthChange === "function") {
       onMonthChange(nextDate);
     }
+    setTimeout(() => {
+      scrollToToday("smooth");
+    }, 150);
   };
 
   // Robust holiday list extraction supporting both array and wrapped object ({ holidays: [...] })
@@ -699,6 +702,118 @@ const AttendanceCalendarMatrix = ({
     };
   }, [daysInMonth, people, recordsMap]);
 
+  // Calendar horizontal scrolling & auto-centering refs
+  const tableScrollContainerRef = useRef(null);
+  const topScrollRef = useRef(null);
+  const tableRef = useRef(null);
+  const isSyncingTop = useRef(false);
+  const isSyncingBottom = useRef(false);
+  const [contentScrollWidth, setContentScrollWidth] = useState(1500);
+
+  const hasTodayInMonth = useMemo(() => {
+    return daysInMonth.some((d) => d.isToday);
+  }, [daysInMonth]);
+
+  const todayDayNum = useMemo(() => {
+    const d = daysInMonth.find((d) => d.isToday);
+    return d ? d.dayNum : null;
+  }, [daysInMonth]);
+
+  // Keep content scroll width updated so top scrollbar track matches table's scrollable width
+  useEffect(() => {
+    const updateWidth = () => {
+      if (tableRef.current) {
+        setContentScrollWidth(tableRef.current.scrollWidth || tableRef.current.offsetWidth || 1500);
+      }
+    };
+    updateWidth();
+    let ro;
+    if (typeof ResizeObserver !== "undefined" && tableRef.current) {
+      ro = new ResizeObserver(() => updateWidth());
+      ro.observe(tableRef.current);
+    }
+    window.addEventListener("resize", updateWidth);
+    return () => {
+      window.removeEventListener("resize", updateWidth);
+      if (ro) ro.disconnect();
+    };
+  }, [daysInMonth, filteredPeople]);
+
+  // Two-way synchronization between top scrollbar and table container
+  const handleTopScroll = () => {
+    if (isSyncingTop.current) {
+      isSyncingTop.current = false;
+      return;
+    }
+    isSyncingBottom.current = true;
+    if (tableScrollContainerRef.current && topScrollRef.current) {
+      tableScrollContainerRef.current.scrollLeft = topScrollRef.current.scrollLeft;
+    }
+  };
+
+  const handleBottomScroll = () => {
+    if (isSyncingBottom.current) {
+      isSyncingBottom.current = false;
+      return;
+    }
+    isSyncingTop.current = true;
+    if (topScrollRef.current && tableScrollContainerRef.current) {
+      topScrollRef.current.scrollLeft = tableScrollContainerRef.current.scrollLeft;
+    }
+  };
+
+  // Quick horizontal scroll buttons (left/right)
+  const handleStepScroll = (direction) => {
+    const container = tableScrollContainerRef.current;
+    if (!container) return;
+    const step = 260;
+    container.scrollBy({
+      left: direction === "left" ? -step : step,
+      behavior: "smooth",
+    });
+  };
+
+  // Center today's date column in the visible date viewport
+  const scrollToToday = (behavior = "smooth") => {
+    const container = tableScrollContainerRef.current;
+    if (!container) return;
+
+    const todayEl = container.querySelector('[data-is-today="true"]');
+    if (!todayEl) return;
+
+    // Sticky column header (Staff Name / Staff Profile)
+    const stickyHeader = container.querySelector("th.sticky");
+    const stickyWidth = stickyHeader ? stickyHeader.offsetWidth : 200;
+
+    const viewportWidth = container.clientWidth;
+    const visibleDateAreaWidth = viewportWidth - stickyWidth;
+
+    const targetScrollLeft =
+      todayEl.offsetLeft + todayEl.offsetWidth / 2 - stickyWidth - visibleDateAreaWidth / 2;
+
+    container.scrollTo({
+      left: Math.max(0, targetScrollLeft),
+      behavior: behavior,
+    });
+  };
+
+  // Auto-scroll to center today's date whenever viewing the current month (e.g. on open or month reset)
+  useEffect(() => {
+    const hasToday = daysInMonth.some((d) => d.isToday);
+    if (!hasToday) {
+      if (tableScrollContainerRef.current) {
+        tableScrollContainerRef.current.scrollTo({ left: 0, behavior: "smooth" });
+      }
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      scrollToToday("smooth");
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [year, monthIndex]);
+
   // Close popover when clicking outside (deferred so current click doesn't close it)
   useEffect(() => {
     if (!activeCell) return;
@@ -791,6 +906,22 @@ const AttendanceCalendarMatrix = ({
 
   return (
     <div className="w-full space-y-6">
+      <style>{`
+        .custom-calendar-scrollbar::-webkit-scrollbar {
+          height: 8px;
+        }
+        .custom-calendar-scrollbar::-webkit-scrollbar-track {
+          background: #f7f3eb;
+          border-radius: 4px;
+        }
+        .custom-calendar-scrollbar::-webkit-scrollbar-thumb {
+          background: #d4cbbe;
+          border-radius: 4px;
+        }
+        .custom-calendar-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #9c6b2e;
+        }
+      `}</style>
       {/* MAIN CONTAINER (Left Summary Panel + Right Calendar Matrix Grid) */}
       <div className={`w-full ${isExpandedLayout ? "flex flex-col xl:flex-row gap-6 items-start" : "grid grid-cols-1 lg:grid-cols-12 gap-6 items-start"}`}>
         {/* ========================================================= */}
@@ -1086,10 +1217,65 @@ const AttendanceCalendarMatrix = ({
           </div>
 
           {/* ========================================================= */}
+          {/* TOP HORIZONTAL SCROLL CONTROLLER / SYNCED SCROLLBAR       */}
+          {/* ========================================================= */}
+          <div className="flex items-center gap-2 px-3 sm:px-4 py-2 border-b border-[#e3ddd0] bg-[#faf8f4] select-none">
+            {/* Scroll Left Button */}
+            <button
+              type="button"
+              onClick={() => handleStepScroll("left")}
+              className="p-1.5 rounded-lg border border-[#e3ddd0] bg-white hover:bg-[#f1ede4] text-stone-600 hover:text-stone-900 transition shadow-2xs cursor-pointer shrink-0"
+              title="Scroll calendar left"
+              aria-label="Scroll left"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+
+            {/* Top Synchronized Scroll Track */}
+            <div
+              ref={topScrollRef}
+              onScroll={handleTopScroll}
+              className="flex-1 overflow-x-auto custom-calendar-scrollbar py-1"
+              style={{ scrollbarWidth: "thin" }}
+            >
+              <div style={{ width: `${contentScrollWidth}px`, height: "2px" }} />
+            </div>
+
+            {/* Scroll Right Button */}
+            <button
+              type="button"
+              onClick={() => handleStepScroll("right")}
+              className="p-1.5 rounded-lg border border-[#e3ddd0] bg-white hover:bg-[#f1ede4] text-stone-600 hover:text-stone-900 transition shadow-2xs cursor-pointer shrink-0"
+              title="Scroll calendar right"
+              aria-label="Scroll right"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+
+            {/* Jump to Today Center Button */}
+            {hasTodayInMonth && (
+              <button
+                type="button"
+                onClick={() => scrollToToday("smooth")}
+                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-300 text-xs font-bold text-amber-900 transition shadow-2xs cursor-pointer whitespace-nowrap"
+                title="Center on Today"
+              >
+                <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                <span>Today (Day {todayDayNum})</span>
+              </button>
+            )}
+          </div>
+
+          {/* ========================================================= */}
           {/* HORIZONTALLY SCROLLABLE MATRIX TABLE                      */}
           {/* ========================================================= */}
-          <div className="relative overflow-x-auto w-full">
-            <table className="w-full border-collapse text-left">
+          <div
+            ref={tableScrollContainerRef}
+            onScroll={handleBottomScroll}
+            className="relative overflow-x-auto w-full custom-calendar-scrollbar"
+            style={{ scrollbarWidth: "thin" }}
+          >
+            <table ref={tableRef} className="w-full border-collapse text-left">
               {/* Table Header: Names Column + Day Columns (MON 2, TUE 3...) */}
               <thead>
                 <tr className="border-b border-[#e3ddd0] bg-[#faf8f4] text-slate-600 select-none">
@@ -1102,6 +1288,7 @@ const AttendanceCalendarMatrix = ({
                   {daysInMonth.map((day) => (
                     <th
                       key={day.dateStr}
+                      data-is-today={day.isToday ? "true" : undefined}
                       className={`py-3 px-1.5 text-center border-r border-[#efe9dd] last:border-r-0 ${
                         day.holiday
                           ? "min-w-[100px] sm:min-w-[120px] bg-[#fef4e2] font-extrabold ring-1 ring-[#e5af4b]/70"

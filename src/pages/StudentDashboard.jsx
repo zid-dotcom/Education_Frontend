@@ -117,13 +117,19 @@ export const isInstallmentPaidOrSubmitted = (inst) => {
   );
 };
 
-export const checkIsInstallmentDue = (inst, isPaid) => {
-  if (isPaid || inst?.is_paid) return false;
+export const isDateOver = (dueDate) => {
+  if (!dueDate) return false;
+  try {
+    const raw = String(dueDate).trim();
+    const d = new Date(raw);
+    if (!isNaN(d.getTime())) {
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      return d.getTime() <= today.getTime();
+    }
 
-  const rawDate = inst?.due_date;
-  if (rawDate) {
-    const s = String(rawDate).trim().split("T")[0];
-    const parts = s.replace(/\//g, "-").split("-");
+    const datePart = raw.split("T")[0].split(" ")[0];
+    const parts = datePart.replace(/\//g, "-").split("-");
     if (parts.length === 3) {
       let isoDate = "";
       if (parts[0].length === 4) {
@@ -134,19 +140,36 @@ export const checkIsInstallmentDue = (inst, isPaid) => {
         isoDate = `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
       }
       if (isoDate) {
-        const todayIso = new Date().toISOString().split("T")[0];
+        const now = new Date();
+        const todayIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+          .toISOString()
+          .split("T")[0];
         return isoDate <= todayIso;
       }
     }
-    const d = new Date(rawDate);
-    if (!isNaN(d.getTime())) {
-      const today = new Date();
-      today.setHours(23, 59, 59, 999);
-      return d <= today;
-    }
+    return false;
+  } catch {
+    return false;
+  }
+};
+
+export const checkIsInstallmentDue = (inst, isPaid) => {
+  if (!inst) return false;
+  if (isPaid || inst.is_paid || inst.is_paid_resolved) return false;
+  const statusStr = String(inst.status || '').toLowerCase().trim();
+  if (statusStr === 'paid' || statusStr === 'pending_review' || isInstallmentPaidOrSubmitted(inst)) {
+    return false;
   }
 
-  return Boolean(inst?.is_due === true || String(inst?.is_due).toLowerCase() === "true");
+  // An installment is only due if its due date has arrived or passed
+  if (inst.due_date) {
+    return isDateOver(inst.due_date);
+  }
+
+  return Boolean(
+    (inst.is_due === true || String(inst.is_due).toLowerCase() === "true") &&
+    statusStr === "due"
+  );
 };
 
 export const enrichInstallmentsWithPayments = (installments = [], enrollment = {}) => {
@@ -325,7 +348,7 @@ export const enrichInstallmentsWithPayments = (installments = [], enrollment = {
       ...inst,
       ...matchingPayment,
       installment_number: instNum,
-      is_due: inst.is_due,
+      is_due: inst.due_date ? isDateOver(inst.due_date) : Boolean(inst.is_due),
       due_date: inst.due_date || matchingPayment.due_date,
       cash_amount: rawCash,
       upi_amount: rawUpi,
@@ -1272,18 +1295,16 @@ const StudentDashboard = () => {
     }
 
     const computeDueSummary = (enrichedList, nextUnpaid, enr, detailsObj = {}) => {
+      // An installment is only due if its due date has arrived or passed
       const dueList = enrichedList.filter((i) => {
         if (isInstallmentPaidOrSubmitted(i)) return false;
-        return (
-          i.is_due === true ||
-          String(i.is_due).toLowerCase() === 'true' ||
-          checkIsInstallmentDue(i, false) ||
-          String(i.status || '').toLowerCase() === 'due'
-        );
+        return checkIsInstallmentDue(i, false);
       });
 
-      const unpaidList = dueList.length > 0 ? dueList : (nextUnpaid ? [nextUnpaid] : []);
-      const numbers = unpaidList.map((inst, idx) => inst.installment_number || idx + 1);
+      const isNextDue = nextUnpaid ? checkIsInstallmentDue(nextUnpaid, false) : false;
+      const isDue = dueList.length > 0 || isNextDue;
+
+      const numbers = dueList.map((inst, idx) => inst.installment_number || idx + 1);
 
       let dueTermsText = '';
       let pendingDescription = '';
@@ -1293,28 +1314,29 @@ const StudentDashboard = () => {
       } else if (numbers.length > 1) {
         dueTermsText = `${numbers.slice(0, -1).join(', ')} and ${numbers[numbers.length - 1]}`;
         pendingDescription = `Currently installment #${numbers.slice(0, -1).join(', #')} and #${numbers[numbers.length - 1]} is Due`;
-      } else if (nextUnpaid?.installment_number) {
+      } else if (isNextDue && nextUnpaid?.installment_number) {
         dueTermsText = `${nextUnpaid.installment_number}`;
         pendingDescription = `Currently installment #${nextUnpaid.installment_number} is Due`;
       } else {
-        pendingDescription = 'Currently installment is Due';
+        dueTermsText = nextUnpaid?.installment_number ? `${nextUnpaid.installment_number}` : '';
+        pendingDescription = '';
       }
 
       const totalDueAmount = dueList.length > 0
         ? dueList.reduce((sum, i) => sum + Number(i.remaining_amount ?? i.amount ?? 0), 0)
-        : Number(nextUnpaid?.remaining_amount ?? nextUnpaid?.amount ?? 0);
+        : (isNextDue ? Number(nextUnpaid?.remaining_amount ?? nextUnpaid?.amount ?? 0) : 0);
 
-      const isOverdue = unpaidList.some((i) => checkIsInstallmentDue(i, false));
       const earliestDueDate = dueList[0]?.due_date || nextUnpaid?.due_date;
 
       return {
         dueInstallments: dueList,
         dueTermsText,
         pendingDescription,
-        totalDueAmount: totalDueAmount > 0 ? totalDueAmount : Number(nextUnpaid?.amount || 0),
-        isOverdue,
+        totalDueAmount,
+        isDue,
+        isOverdue: isDue,
         earliestDueDate,
-        hasDue: dueList.length > 0 || isOverdue || Number(detailsObj.balance_amount ?? enr.balance_amount ?? 0) > 0,
+        hasDue: isDue,
       };
     };
 
@@ -2623,8 +2645,8 @@ const StudentDashboard = () => {
               onSelectAnnouncement={(ann) => setSelectedAnnouncement(ann)}
             />
 
-            {/* Installment Due Details Section (Prominent in Red Color for Easy Access & Understanding) */}
-            {nextDueInstallment && (
+            {/* Installment Due Details Section (Prominent in Red Color for Easy Access & Understanding) - Only shown if an installment is actually due */}
+            {nextDueInstallment && nextDueInstallment.isDue && (
               <div className="rounded-3xl border-2 border-red-200/90 bg-gradient-to-br from-red-50/80 via-white to-rose-50/40 p-5 sm:p-6 shadow-sm shadow-red-500/5 mb-7 relative overflow-hidden">
                 {/* Soft decorative glow in background */}
                 <div className="absolute top-0 right-0 w-80 h-full bg-gradient-to-l from-red-100/40 via-red-50/20 to-transparent pointer-events-none" />

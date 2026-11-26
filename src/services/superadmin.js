@@ -87,6 +87,7 @@ export async function createSuperAdminBranchCourseApi(branchId, formData, token)
   return parseResponse(res, 'Failed to create course.');
 }
 
+
 export async function createBulkSuperAdminBranchCourseApi(formData, token) {
   const res = await fetch(`${API_BASE_URL}/super-admin/courses/branches/bulk`, {
     method: 'POST',
@@ -368,7 +369,7 @@ export async function getSuperAdminBranchAdminAttendanceApi(branchId, token, dat
   const res = await fetch(url, { headers: getHeaders(token) });
   return parseResponse(res, 'Failed to load admin attendance.');
 }
-
+    
 /**
  * Super Admin - Attendance Adjustments Audit Log
  * GET /super-admin/attendance/adjustments
@@ -440,7 +441,17 @@ export async function getSuperAdminRejectedPurchasesApi(token, branchId) {
     ? `${API_BASE_URL}/enrollments/super-admin/rejected?branch_id=${branchId}`
     : `${API_BASE_URL}/enrollments/super-admin/rejected`;
   const res = await fetch(url, { headers: getHeaders(token) });
+  if (res.status === 404) return [];
   return parseResponse(res, 'Failed to load rejected purchases.');
+}
+
+export async function getSuperAdminBranchRejectedPurchasesApi(token, branchId) {
+  const url = branchId
+    ? `${API_BASE_URL}/enrollments/super-admin/branch-rejected?branch_id=${branchId}`
+    : `${API_BASE_URL}/enrollments/super-admin/branch-rejected`;
+  const res = await fetch(url, { headers: getHeaders(token) });
+  if (res.status === 404) return [];
+  return parseResponse(res, 'Failed to load branch rejected purchases.');
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
@@ -549,6 +560,40 @@ export async function getSuperAdminBranchAdminInstallmentHistoryApi(branchId, to
     headers: getHeaders(token),
   });
   return parseResponse(res, 'Failed to load installment payment history.');
+}
+
+/**
+ * Super Admin - Online Installment Payment History
+ * GET /enrollments/super-admin/branch-admin-online-installment-history?branch_id=...&status=...&today=...
+ */
+export async function getSuperAdminBranchAdminOnlineInstallmentHistoryApi(token, params = {}) {
+  const query = new URLSearchParams();
+  if (params.branch_id && params.branch_id !== 'all' && params.branch_id !== '') {
+    query.append('branch_id', params.branch_id);
+  }
+  if (params.status) {
+    query.append('status', params.status);
+  }
+  // Backend requires: "Use either today=true or a date range, not both"
+  if (params.today) {
+    query.append('today', 'true');
+  } else {
+    const from = params.date_from || params.from_date || params.fromDate;
+    const to = params.date_to || params.to_date || params.toDate;
+    if (from) {
+      query.append('date_from', from);
+      query.append('from_date', from);
+    }
+    if (to) {
+      query.append('date_to', to);
+      query.append('to_date', to);
+    }
+  }
+  const url = `${API_BASE_URL}/enrollments/super-admin/branch-admin-online-installment-history${query.toString() ? `?${query.toString()}` : ''}`;
+  const res = await fetch(url, {
+    headers: getHeaders(token),
+  });
+  return parseResponse(res, 'Failed to load online installment payment history.');
 }
 
 // ─── Staff Verification ───────────────────────────────────────────────────────

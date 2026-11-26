@@ -1,11 +1,16 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const parseResponse = async (response, fallbackMessage) => {
-  const data = await response.json();
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
   if (!response.ok) {
-    const detail = Array.isArray(data.detail)
+    const detail = Array.isArray(data?.detail)
       ? data.detail.map((item) => item.msg).join(', ')
-      : data.detail;
+      : (data?.detail || data?.message || fallbackMessage);
     throw new Error(detail || fallbackMessage);
   }
   return data;
@@ -165,6 +170,43 @@ export async function getBranchAdminInstallmentPaymentHistoryApi(status = '', to
 }
 
 /**
+ * Fetch reviewed online Razorpay installment payment history with date range and status filters.
+ * GET /enrollments/branch-admin/installment-payments/online-history
+ * Query params: status (approved, rejected, all), today (boolean), from_date, to_date
+ */
+export async function getBranchAdminOnlineInstallmentHistoryApi(token, filters = {}) {
+  const query = new URLSearchParams();
+  if (filters.status) {
+    query.append('status', filters.status);
+  }
+  // Backend requires: "Use either today=true or a date range, not both"
+  if (filters.today) {
+    query.append('today', 'true');
+  } else {
+    const from = filters.date_from || filters.from_date || filters.fromDate;
+    const to = filters.date_to || filters.to_date || filters.toDate;
+    if (from) {
+      query.append('date_from', from);
+      query.append('from_date', from);
+    }
+    if (to) {
+      query.append('date_to', to);
+      query.append('to_date', to);
+    }
+  }
+  const url = `${API_BASE_URL}/enrollments/branch-admin/installment-payments/online-history${query.toString() ? `?${query.toString()}` : ''}`;
+  const response = await fetch(url, {
+    headers: {
+      Accept: 'application/json',
+      'ngrok-skip-browser-warning': '69420',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: 'include',
+  });
+  return parseResponse(response, 'Failed to load online installment payment history.');
+}
+
+/**
  * Change a branch student's status:
  * PATCH /branch-admin/students/{student_id}/status
  */
@@ -184,4 +226,4 @@ export async function updateBranchAdminStudentStatusApi(studentId, status, token
     }),
   });
   return parseResponse(response, 'Failed to update branch student status.');
-}
+}

@@ -63,3 +63,18 @@ export async function approveBranchAdminPurchaseApi(enrollmentId, token) {
   const response = await fetch(`${API_BASE_URL}/enrollments/branch-admin/${enrollmentId}/approve`, authOptions(token, 'PUT'));
   return parseResponse(response, 'Failed to approve purchase.');
 }
+
+export async function rejectBranchAdminPurchaseApi(enrollmentId, reason, token) {
+  const response = await fetch(`${API_BASE_URL}/enrollments/branch-admin/${enrollmentId}/reject`, {
+    method: 'PUT',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      'ngrok-skip-browser-warning': '69420',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: 'include',
+    body: JSON.stringify({ reason }),
+  });
+  return parseResponse(response, 'Failed to reject purchase.');
+}

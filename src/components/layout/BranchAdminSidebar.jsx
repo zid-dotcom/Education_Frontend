@@ -5,6 +5,8 @@ import {
   BookOpen,
   CalendarCheck,
   CheckCircle2,
+  Clock,
+  CreditCard,
   GraduationCap,
   IndianRupee,
   LayoutDashboard,
@@ -15,6 +17,7 @@ import {
   UserPlus,
   UserRoundSearch,
   Users,
+  Wallet,
   Activity,
   Receipt,
   Star,
@@ -88,7 +91,10 @@ const NAV_GROUPS = [
     label: "Students",
     items: [
       { id: "registration", backendKey: "register_student", label: "Register student", icon: UserPlus, path: "/branch-admin/student-registration" },
-      { id: "enrollments", backendKey: "view_students", label: "View students", icon: Users, path: "/branch-admin/enrollments" },
+      { id: "enrollments", backendKey: "view_students", label: "All students", icon: Users, path: "/branch-admin/enrollments" },
+      { id: "installments-balance", backendKey: "view_students", label: "Pending Installments", icon: Wallet, path: "/branch-admin/enrollments/installments-balance" },
+      { id: "fully-paid", backendKey: "view_students", label: "Fully Paid", icon: CheckCircle2, path: "/branch-admin/enrollments/fully-paid" },
+      { id: "online-approvals", backendKey: "view_students", label: "Online Payment Approvals", icon: CreditCard, path: "/branch-admin/enrollments/online-approvals" },
       { id: "fees-due", backendKey: "fees_due_students", label: "Fees due students", icon: IndianRupee, path: "/branch-admin/fees-due" },
       { id: "enquiries", backendKey: "enquiries", label: "Enquiries", icon: MessageCircle, path: "/branch-admin/enquiries" },
     ],
@@ -139,6 +145,7 @@ const BranchAdminSidebar = ({
   const navRef = useRef(null);
   const [unreadMessageCount, setUnreadMessageCount] = React.useState(0);
   const [pendingApprovalCount, setPendingApprovalCount] = React.useState(0);
+  const [pendingOnlineApprovalCount, setPendingOnlineApprovalCount] = React.useState(0);
   const [navSettings, setNavSettings] = React.useState(() => {
     try {
       const cached = localStorage.getItem("branchAdminNavSettings");
@@ -254,8 +261,9 @@ const BranchAdminSidebar = ({
           }).length;
         }
 
-        // 3. Fallback to pending online installment payments if purchases pending is 0
-        if (count === 0 && pendingPaymentsRes.status === "fulfilled") {
+        // 3. Online installment payments count for online-approvals badge
+        let onlineCount = 0;
+        if (pendingPaymentsRes.status === "fulfilled") {
           const val = pendingPaymentsRes.value;
           const list = Array.isArray(val)
             ? val
@@ -266,12 +274,18 @@ const BranchAdminSidebar = ({
                 : Array.isArray(val?.data)
                   ? val.data
                   : [];
-          count = list.length;
+          onlineCount = list.length;
         }
 
-        if (isMounted) setPendingApprovalCount(count);
+        if (isMounted) {
+          setPendingApprovalCount(count);
+          setPendingOnlineApprovalCount(onlineCount);
+        }
       } catch {
-        if (isMounted) setPendingApprovalCount(0);
+        if (isMounted) {
+          setPendingApprovalCount(0);
+          setPendingOnlineApprovalCount(0);
+        }
       }
     };
 
@@ -379,7 +393,7 @@ const BranchAdminSidebar = ({
 
       {/* ---- Sidebar ---- */}
       <aside
-        className={`branch-admin-sidebar fixed inset-y-0 left-0 z-40 flex w-60 shrink-0 flex-col transition-transform duration-300 md:sticky md:top-0 md:h-screen md:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        className={`branch-admin-sidebar fixed inset-y-0 left-0 z-40 flex w-[268px] shrink-0 flex-col transition-transform duration-300 md:sticky md:top-0 md:h-screen md:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
           }`}
         style={{
           ...sans,
@@ -445,7 +459,7 @@ const BranchAdminSidebar = ({
                         type="button"
                         onClick={() => goTo(path)}
                         aria-current={isActive ? "page" : undefined}
-                        className={`relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${isActive ? "font-medium" : "hover:bg-[#f1ede4]"
+                        className={`relative flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] transition-colors ${isActive ? "font-medium" : "hover:bg-[#f1ede4]"
                           } ${FOCUS_RING}`}
                         style={{
                           background: isActive ? "#f7efe0" : undefined,
@@ -455,7 +469,7 @@ const BranchAdminSidebar = ({
                         {isActive && (
                           <span
                             aria-hidden="true"
-                            className="absolute -left-3 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full"
+                            className="absolute -left-2.5 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full"
                             style={{ background: "#9c6b2e" }}
                           />
                         )}
@@ -463,7 +477,7 @@ const BranchAdminSidebar = ({
                           className="h-4 w-4 shrink-0"
                           style={{ color: isActive ? "#9c6b2e" : "#a39a8c" }}
                         />
-                        <span className="min-w-0 flex-1 truncate">{label}</span>
+                        <span className="min-w-0 flex-1 truncate" title={label}>{label}</span>
                         {showUnreadCount && (
                           <span
                             className="flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold"
@@ -480,6 +494,15 @@ const BranchAdminSidebar = ({
                             aria-label={`${pendingApprovalCount} pending course approvals`}
                           >
                             {pendingApprovalCount > 99 ? "99+" : pendingApprovalCount}
+                          </span>
+                        )}
+                        {id === "online-approvals" && pendingOnlineApprovalCount > 0 && (
+                          <span
+                            className="flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold"
+                            style={{ background: "#dc2626", color: "#ffffff" }}
+                            aria-label={`${pendingOnlineApprovalCount} pending online approvals`}
+                          >
+                            {pendingOnlineApprovalCount > 99 ? "99+" : pendingOnlineApprovalCount}
                           </span>
                         )}
                       </button>

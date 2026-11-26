@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Calendar,
   CheckCircle2,
@@ -1156,84 +1157,90 @@ export default function StudentReceipts() {
       {/* =========================================================================
           STUDENT RECEIPT MODAL
          ========================================================================= */}
-      {activeReceipt && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto"
-          style={{ background: "rgba(23,20,15,.6)" }}
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setActiveReceipt(null)}
-        >
+      {activeReceipt &&
+        createPortal(
           <div
-            id="student-receipt-modal"
-            className="relative my-8 w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl border border-[#e3ddd0]"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[99999] flex items-center justify-center p-4 overflow-y-auto"
+            style={{
+              background: "rgba(15, 12, 8, 0.65)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+            }}
+            role="dialog"
+            aria-modal="true"
+            onClick={() => setActiveReceipt(null)}
           >
-            {/* Top Toolbar (No Print button, only Download PDF & Close) */}
             <div
-              className="flex items-center justify-between border-b border-[#e3ddd0] px-6 py-4"
-              style={{ background: "#faf8f4" }}
+              id="student-receipt-modal"
+              className="relative my-8 w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl border border-[#e3ddd0]"
+              onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center gap-2">
-                <Receipt className="h-4 w-4 text-[#9c6b2e]" />
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Payment Receipt
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={
-                    downloadingId ===
-                    (activeReceipt.receipt_id || activeReceipt.id || activeReceipt.receipt_number)
-                  }
-                  onClick={(e) => handleDownload(activeReceipt, e)}
-                  className="flex items-center gap-1.5 rounded-lg bg-[#9c6b2e] px-3.5 py-1.5 text-xs font-bold text-white shadow-2xs transition hover:bg-[#805420] disabled:opacity-50"
-                >
-                  {downloadingId ===
-                  (activeReceipt.receipt_id || activeReceipt.id || activeReceipt.receipt_number) ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Download className="h-3.5 w-3.5" />
-                  )}
-                  <span>Download PDF</span>
-                </button>
+              {/* Top Toolbar (No Print button, only Download PDF & Close) */}
+              <div
+                className="flex items-center justify-between border-b border-[#e3ddd0] px-6 py-4"
+                style={{ background: "#faf8f4" }}
+              >
+                <div className="flex items-center gap-2">
+                  <Receipt className="h-4 w-4 text-[#9c6b2e]" />
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Payment Receipt
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={
+                      downloadingId ===
+                      (activeReceipt.receipt_id || activeReceipt.id || activeReceipt.receipt_number)
+                    }
+                    onClick={(e) => handleDownload(activeReceipt, e)}
+                    className="flex items-center gap-1.5 rounded-lg bg-[#9c6b2e] px-3.5 py-1.5 text-xs font-bold text-white shadow-2xs transition hover:bg-[#805420] disabled:opacity-50"
+                  >
+                    {downloadingId ===
+                    (activeReceipt.receipt_id || activeReceipt.id || activeReceipt.receipt_number) ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Download className="h-3.5 w-3.5" />
+                    )}
+                    <span>Download PDF</span>
+                  </button>
 
+                  <button
+                    type="button"
+                    onClick={() => setActiveReceipt(null)}
+                    className="rounded-lg p-1.5 text-slate-400 hover:bg-[#f1ede4] hover:text-slate-700"
+                    aria-label="Close"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Official Receipt Content rendered via pure voucher component */}
+              <div className="overflow-y-auto max-h-[calc(90vh-140px)] p-4 sm:p-6 bg-[#faf8f4]">
+                <OfficialReceiptVoucherCard
+                  receipt={activeReceipt}
+                  user={user}
+                />
+              </div>
+
+              {/* Modal Bottom Footer */}
+              <div
+                className="flex items-center justify-end gap-3 border-t border-[#e3ddd0] px-6 py-4"
+                style={{ background: "#faf8f4" }}
+              >
                 <button
                   type="button"
                   onClick={() => setActiveReceipt(null)}
-                  className="rounded-lg p-1.5 text-slate-400 hover:bg-[#f1ede4] hover:text-slate-700"
-                  aria-label="Close"
+                  className="rounded-xl border border-[#e3ddd0] bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-[#f1ede4]"
                 >
-                  <X className="h-4 w-4" />
+                  Close
                 </button>
               </div>
             </div>
-
-            {/* Official Receipt Content rendered via pure voucher component */}
-            <div className="overflow-y-auto max-h-[calc(90vh-140px)] p-4 sm:p-6 bg-[#faf8f4]">
-              <OfficialReceiptVoucherCard
-                receipt={activeReceipt}
-                user={user}
-              />
-            </div>
-
-            {/* Modal Bottom Footer */}
-            <div
-              className="flex items-center justify-end gap-3 border-t border-[#e3ddd0] px-6 py-4"
-              style={{ background: "#faf8f4" }}
-            >
-              <button
-                type="button"
-                onClick={() => setActiveReceipt(null)}
-                className="rounded-xl border border-[#e3ddd0] bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-[#f1ede4]"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* Hidden offscreen container for direct PDF export from table rows */}
       <div

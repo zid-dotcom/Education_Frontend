@@ -245,7 +245,7 @@ const SuperAdminStaff = () => {
         name: form.name.trim(),
         email: form.email.trim(),
         phone: form.phone.trim(),
-        address: form.address.trim() || 'Branch Office',
+        address: form.address.trim(),
         salary: Number(form.salary) || 0,
       };
 
@@ -1110,7 +1110,7 @@ const SuperAdminStaff = () => {
                     }
                     className="w-full rounded-xl border border-[#e3ddd0] bg-slate-50 px-4 py-2.5 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9c6b2e]"
                   >
-                    <option value="">Select Course (Optional)</option>
+                    <option value="">Select Course</option>
                     {formCourses.map((c) => (
                       <option
                         key={c.id ?? c.course_id}
