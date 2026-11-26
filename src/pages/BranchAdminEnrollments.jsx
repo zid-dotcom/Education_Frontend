@@ -2802,7 +2802,7 @@ const BranchAdminEnrollments = ({ defaultTab = "all" }) => {
     activeTab === "installment"
       ? "Pending Installments"
       : activeTab === "fully_paid"
-      ? "Fully Paid"
+      ? "Fully Paid Students"
       : activeTab === "approvals"
       ? "Online Payment Approvals"
       : "All Students";
@@ -2985,7 +2985,7 @@ const BranchAdminEnrollments = ({ defaultTab = "all" }) => {
             >
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">
-                  Fully Paid
+                  Fully Paid Students
                 </p>
                 <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
                   <CheckCircle2 className="h-4 w-4" />
@@ -3083,7 +3083,7 @@ const BranchAdminEnrollments = ({ defaultTab = "all" }) => {
                     : "bg-white text-[#5b5346] border border-[#e3ddd0] hover:bg-[#f1ede4]"
                 }`}
               >
-                Fully Paid ({effectiveFullyPaidStudents.length})
+                Fully Paid Students ({effectiveFullyPaidStudents.length})
               </button>
 
               <button

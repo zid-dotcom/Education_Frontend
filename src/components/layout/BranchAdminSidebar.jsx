@@ -93,7 +93,7 @@ const NAV_GROUPS = [
       { id: "registration", backendKey: "register_student", label: "Register student", icon: UserPlus, path: "/branch-admin/student-registration" },
       { id: "enrollments", backendKey: "view_students", label: "All students", icon: Users, path: "/branch-admin/enrollments" },
       { id: "installments-balance", backendKey: "view_students", label: "Pending Installments", icon: Wallet, path: "/branch-admin/enrollments/installments-balance" },
-      { id: "fully-paid", backendKey: "view_students", label: "Fully Paid", icon: CheckCircle2, path: "/branch-admin/enrollments/fully-paid" },
+      { id: "fully-paid", backendKey: "view_students", label: "Fully Paid Students", icon: CheckCircle2, path: "/branch-admin/enrollments/fully-paid" },
       { id: "online-approvals", backendKey: "view_students", label: "Online Payment Approvals", icon: CreditCard, path: "/branch-admin/enrollments/online-approvals" },
       { id: "fees-due", backendKey: "fees_due_students", label: "Fees due students", icon: IndianRupee, path: "/branch-admin/fees-due" },
       { id: "enquiries", backendKey: "enquiries", label: "Enquiries", icon: MessageCircle, path: "/branch-admin/enquiries" },
